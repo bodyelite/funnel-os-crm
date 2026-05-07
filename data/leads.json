@@ -1,0 +1,124 @@
+{
+  "demo_automotora": [
+    {
+      "id": 1778107522761,
+      "name": "Visitante anónimo",
+      "phone": "Pendiente",
+      "source": "Chat Web (Simulador)",
+      "status": "Contactado",
+      "lastInteraction": "2026-05-06T22:46:02.868Z",
+      "interest": "una camioneta",
+      "sessionId": "s_tmmkcyebso_1778107509749"
+    },
+    {
+      "id": 1001,
+      "name": "María González",
+      "phone": "+56 9 8765 4321",
+      "source": "Meta Ads - Campaña Verano",
+      "status": "Calificado",
+      "lastInteraction": "2026-05-06T22:44:11.458Z",
+      "interest": "SUV familiar"
+    },
+    {
+      "id": 1002,
+      "name": "Carlos Rojas",
+      "phone": "+56 9 5544 3322",
+      "source": "Google Ads - Búsqueda",
+      "status": "Contactado",
+      "lastInteraction": "2026-05-06T22:44:11.458Z",
+      "interest": "Camioneta 4x4"
+    },
+    {
+      "id": 1003,
+      "name": "Javiera Muñoz",
+      "phone": "+56 9 7788 9900",
+      "source": "Instagram Orgánico",
+      "status": "Negociación",
+      "lastInteraction": "2026-05-05T22:44:11.458Z",
+      "interest": "Sedán económico"
+    },
+    {
+      "id": 1004,
+      "name": "Diego Fuentes",
+      "phone": "+56 9 2233 4455",
+      "source": "Referido",
+      "status": "Cerrado",
+      "lastInteraction": "2026-05-05T22:44:11.458Z",
+      "interest": "Hatchback"
+    },
+    {
+      "id": 1005,
+      "name": "Antonia Pérez",
+      "phone": "+56 9 6677 8899",
+      "source": "Meta Ads - Retargeting",
+      "status": "Nuevo",
+      "lastInteraction": "2026-05-04T22:44:11.458Z",
+      "interest": "SUV compacto"
+    },
+    {
+      "id": 1006,
+      "name": "Sebastián Vargas",
+      "phone": "+56 9 1122 3344",
+      "source": "Landing Page",
+      "status": "Calificado",
+      "lastInteraction": "2026-05-04T22:44:11.458Z",
+      "interest": "Camioneta diésel"
+    },
+    {
+      "id": 1007,
+      "name": "Camila Soto",
+      "phone": "+56 9 9988 7766",
+      "source": "Google Ads - Display",
+      "status": "Contactado",
+      "lastInteraction": "2026-05-03T22:44:11.458Z",
+      "interest": "Eléctrico"
+    }
+  ],
+  "demo_clinica": [
+    {
+      "id": 2001,
+      "name": "Patricia Rivera",
+      "phone": "+56 9 3344 5566",
+      "source": "Google Ads - Búsqueda",
+      "status": "Calificado",
+      "lastInteraction": "2026-05-06T22:44:11.458Z",
+      "interest": "Consulta dermatología"
+    },
+    {
+      "id": 2002,
+      "name": "Roberto Cárcamo",
+      "phone": "+56 9 7766 5544",
+      "source": "Meta Ads - Salud",
+      "status": "Contactado",
+      "lastInteraction": "2026-05-06T22:44:11.458Z",
+      "interest": "Chequeo preventivo"
+    },
+    {
+      "id": 2003,
+      "name": "Isidora Lagos",
+      "phone": "+56 9 4433 2211",
+      "source": "Landing Page",
+      "status": "Nuevo",
+      "lastInteraction": "2026-05-05T22:44:11.458Z",
+      "interest": "Tratamiento estético"
+    },
+    {
+      "id": 2004,
+      "name": "Fernando Aguilar",
+      "phone": "+56 9 8899 1122",
+      "source": "Referido",
+      "status": "Cerrado",
+      "lastInteraction": "2026-05-05T22:44:11.458Z",
+      "interest": "Cirugía menor"
+    },
+    {
+      "id": 2005,
+      "name": "Constanza Mella",
+      "phone": "+56 9 5566 7788",
+      "source": "Instagram Orgánico",
+      "status": "Negociación",
+      "lastInteraction": "2026-05-04T22:44:11.458Z",
+      "interest": "Plan integral"
+    }
+  ]
+}

@@ -1,0 +1,46 @@
+{
+  "demo_automotora": [
+    {
+      "id": 1,
+      "name": "Meta Ads - Campaña Verano",
+      "spend": 450000,
+      "leads": 38,
+      "conversions": 6,
+      "channel": "meta"
+    },
+    {
+      "id": 2,
+      "name": "Google Ads - Búsqueda",
+      "spend": 320000,
+      "leads": 24,
+      "conversions": 5,
+      "channel": "google"
+    },
+    {
+      "id": 3,
+      "name": "Meta Ads - Retargeting",
+      "spend": 180000,
+      "leads": 19,
+      "conversions": 3,
+      "channel": "meta"
+    }
+  ],
+  "demo_clinica": [
+    {
+      "id": 1,
+      "name": "Google Ads - Salud",
+      "spend": 280000,
+      "leads": 31,
+      "conversions": 8,
+      "channel": "google"
+    },
+    {
+      "id": 2,
+      "name": "Meta Ads - Estética",
+      "spend": 150000,
+      "leads": 14,
+      "conversions": 3,
+      "channel": "meta"
+    }
+  ]
+}
