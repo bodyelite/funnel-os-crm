@@ -368,6 +368,51 @@ tbody tr:last-child td { border-bottom: none; }
 .tm-conv .pct.low { color: var(--warning); }
 .tm-conv .resp { font-size: 10.5px; color: var(--text-mute); margin-top: 3px; font-weight: 500; }
 
+
+/* ── Acordeón SLA / Embudo ── */
+.sla-accordion { display: flex; flex-direction: column; gap: 0; }
+.sla-vendor { border-bottom: 1px solid var(--border); }
+.sla-vendor:last-child { border-bottom: none; }
+.sla-vendor-head {
+  width: 100%; display: grid;
+  grid-template-columns: 36px 1fr auto auto 24px;
+  gap: 14px; align-items: center;
+  padding: 12px 16px; cursor: pointer;
+  background: none; border: none; text-align: left;
+  transition: background var(--t); font-family: inherit;
+}
+.sla-vendor-head:hover { background: var(--surface-alt); }
+.sla-vendor-head.open  { background: var(--surface-alt); }
+.sv-av { width: 36px; height: 36px; border-radius: 50%; background: linear-gradient(135deg, var(--accent), var(--accent-hover)); color: #fff; display: grid; place-items: center; font-weight: 700; font-size: 11px; flex-shrink: 0; }
+.sv-name { font-size: 13px; font-weight: 600; }
+.sv-sub  { font-size: 11px; color: var(--text-mute); margin-top: 1px; }
+.sv-count { font-size: 18px; font-weight: 800; font-variant-numeric: tabular-nums; min-width: 30px; text-align: right; }
+.sv-sla-pills { display: flex; gap: 5px; }
+.sv-pill { font-size: 10.5px; font-weight: 700; padding: 2px 7px; border-radius: 999px; font-variant-numeric: tabular-nums; }
+.sv-pill.fresh    { background: var(--success-soft); color: var(--success); }
+.sv-pill.risk     { background: #fef3c7; color: #b45309; }
+.sv-pill.critical { background: var(--danger-soft); color: var(--danger); }
+.sv-pill.zero { opacity: 0.3; }
+.sv-chevron { width: 22px; height: 22px; display: grid; place-items: center; color: var(--text-mute); font-size: 12px; transition: transform var(--t); }
+.sla-vendor-head.open .sv-chevron { transform: rotate(180deg); color: var(--accent); }
+.sv-body { overflow: hidden; max-height: 0; transition: max-height 320ms cubic-bezier(0.4,0,0.2,1); }
+.sv-body.open { max-height: 1200px; }
+.sv-leads { padding: 0 16px 12px 66px; display: flex; flex-direction: column; gap: 6px; }
+.sv-lead { display: grid; grid-template-columns: 1fr auto auto; gap: 12px; align-items: center; padding: 9px 12px; border-radius: 8px; background: var(--surface-alt); border: 1px solid var(--border); cursor: pointer; transition: border var(--t); }
+.sv-lead:hover { border-color: var(--accent); }
+.sv-lead.danger { border-color: var(--danger-bright); background: var(--danger-soft); }
+.sv-lead.risk   { border-color: #fcd34d; background: #fffbeb; }
+.sv-lead-name { font-size: 12.5px; font-weight: 600; }
+.sv-lead-meta { font-size: 11px; color: var(--text-mute); margin-top: 1px; }
+.sv-lead-time { font-size: 10.5px; font-weight: 700; padding: 3px 8px; border-radius: 6px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.sv-lead-time.fresh    { background: var(--success-soft); color: var(--success); }
+.sv-lead-time.risk     { background: #fef3c7; color: #b45309; }
+.sv-lead-time.critical { background: var(--danger-soft); color: var(--danger); }
+.sv-lead-time.none     { background: var(--surface); color: var(--text-mute); }
+.sv-action { padding: 5px 10px; border-radius: 6px; font-size: 11px; font-weight: 700; cursor: pointer; border: none; white-space: nowrap; background: var(--accent); color: #fff; transition: background var(--t); }
+.sv-action.urgent { background: var(--danger-bright); }
+.sv-action.urgent:hover { background: var(--danger); }
+.sv-action:hover { background: var(--accent-hover); }
 </style>
 </head>
 <body>
@@ -450,7 +495,7 @@ tbody tr:last-child td { border-bottom: none; }
   <div class="kpi-grid" id="funnelGrid" style="margin-bottom: 24px; grid-template-columns: repeat(4, 1fr);"></div>
   <div class="row-2">
     <div class="card">
-      <div class="card-head"><div><h3>🔥 Leads en Riesgo</h3><p>Atención urgente requerida</p></div></div>
+      <div class="card-head" id="listTitle"><div><h3>🔥 Leads en Riesgo</h3><p>Atención urgente requerida</p></div></div>
       <div class="row-list" id="alertList"></div>
     </div>
     <div class="card">
@@ -535,7 +580,7 @@ tbody tr:last-child td { border-bottom: none; }
 <div class="toast" id="toast"></div>
 
 <script>
-const SLA_WARN = 15, SLA_DANGER = 30;
+const SLA_FRESH = 10, SLA_RISK = 20, SLA_CRITICAL = 30;
 
 const ACCESS = {
   semaforo: ['admin'],
@@ -725,133 +770,158 @@ async function mountSemaforo(sec) {
       api('/api/leads').then(r => r.json())
     ]);
 
-    // 1. Matemática Gerencial Exacta (Tu Lógica)
-    const finalStatuses = new Set(['Cerrado', 'Perdido']);
-
-    // Universos
-    const totalLeads = l;
-    const nuevos = l.filter(x => x.status === 'Nuevo');
-    const enProceso = l.filter(x => !finalStatuses.has(x.status) && x.status !== 'Nuevo');
-    const cerradosPerdidos = l.filter(x => finalStatuses.has(x.status));
-
-    // 2. El SLA (Los de arriba) APLICA SOLO A LOS NUEVOS (La Bandeja)
-    const danger = nuevos.filter(x => calcMin(x.lastInteraction) > SLA_DANGER);
-    const warn = nuevos.filter(x => calcMin(x.lastInteraction) > SLA_WARN && calcMin(x.lastInteraction) <= SLA_DANGER);
-    const fresh = nuevos.filter(x => calcMin(x.lastInteraction) <= SLA_WARN);
+    const finalStatuses = new Set(['Cerrado', 'Abandonado']);
+    const nuevos        = l.filter(x => x.status === 'Nuevo');
+    const slaFresh      = nuevos.filter(x => calcMin(x.lastInteraction) <= SLA_FRESH);
+    const slaRisk       = nuevos.filter(x => (calcMin(x.lastInteraction) > SLA_FRESH && calcMin(x.lastInteraction) <= SLA_RISK) || x.reassigned);
+    const slaCritical   = nuevos.filter(x => calcMin(x.lastInteraction) > SLA_RISK && calcMin(x.lastInteraction) <= SLA_CRITICAL && !x.reassigned);
 
     const groups = {
-      danger, warn, fresh,
-      total: totalLeads,
-      nuevo: nuevos,
-      proceso: enProceso,
-      finalizado: cerradosPerdidos
+      fresh:       slaFresh,
+      risk:        slaRisk,
+      critical:    slaCritical,
+      nuevo:       nuevos,
+      enProceso:   l.filter(x => x.status === 'En Proceso'),
+      agendado:    l.filter(x => x.status === 'Agendado'),
+      seguimiento: l.filter(x => x.status === 'Seguimiento'),
+      cerrado:     l.filter(x => x.status === 'Cerrado'),
+      abandonado:  l.filter(x => x.status === 'Abandonado'),
+      total:       l
     };
 
-    sec.querySelector('#kpiGrid').innerHTML = `
-      <div class="kpi filter-btn ${groups.danger.length>0?'danger':''}" data-key="danger" data-title="🔴 QUEMADOS (Nuevos)" data-sub="> 30 min sin que nadie los toque" style="cursor:pointer; transition:transform 0.2s;" onmouseover="this.style.transform='scale(1.02)'" onmouseout="this.style.transform='scale(1)'">
-        <div class="kpi-lbl">🔴 QUEMADOS</div><div class="kpi-val ${groups.danger.length>0?'danger':''}">${groups.danger.length}</div><div class="kpi-foot" style="text-decoration: underline;">Click para ver</div>
-      </div>
-      <div class="kpi filter-btn" data-key="warn" data-title="🟡 EN RIESGO (Nuevos)" data-sub="15 a 30 min en espera" style="background: linear-gradient(180deg, #fef3c7, var(--surface)); border-color: #fcd34d; cursor:pointer; transition:transform 0.2s;" onmouseover="this.style.transform='scale(1.02)'" onmouseout="this.style.transform='scale(1)'">
-        <div class="kpi-lbl">🟡 EN RIESGO</div><div class="kpi-val" style="color: #b45309;">${groups.warn.length}</div><div class="kpi-foot" style="text-decoration: underline;">Click para ver</div>
-      </div>
-      <div class="kpi filter-btn success" data-key="fresh" data-title="🟢 FRESCOS (Nuevos)" data-sub="< 15 min de espera" style="cursor:pointer; transition:transform 0.2s;" onmouseover="this.style.transform='scale(1.02)'" onmouseout="this.style.transform='scale(1)'">
-        <div class="kpi-lbl">🟢 FRESCOS</div><div class="kpi-val success">${groups.fresh.length}</div><div class="kpi-foot" style="text-decoration: underline;">Click para ver</div>
-      </div>
-      <div class="kpi"><div class="kpi-lbl">TIEMPO PROM. TOTAL</div><div class="kpi-val">${k.avgResponseMin}<span style="font-size:18px;color:var(--text-mute);">m</span></div><div class="kpi-foot">Pendiente de optimizar</div></div>
-    `;
+    const kpiBtn = (key, emoji, lbl, val, sub, extra='') =>
+      `<div class="kpi filter-btn ${val>0&&key==='critical'?'danger':key==='fresh'?'success':''}"
+        data-key="${key}" data-title="${emoji} ${lbl}" data-sub="${sub}"
+        style="cursor:pointer;transition:transform 0.2s;${extra}"
+        onmouseover="this.style.transform='scale(1.02)'" onmouseout="this.style.transform='scale(1)'">
+        <div class="kpi-lbl">${emoji} ${lbl}</div>
+        <div class="kpi-val ${val>0&&key==='critical'?'danger':key==='fresh'?'success':''}" ${key==='risk'?'style="color:#b45309;"':''}>${val}</div>
+        <div class="kpi-foot" style="text-decoration:underline;">Click para ver</div>
+      </div>`;
 
-    sec.querySelector('#funnelGrid').innerHTML = `
-       <div class="kpi filter-btn" data-key="total" data-title="🌍 UNIVERSO TOTAL" data-sub="Todos los leads en el sistema" style="padding: 12px 16px; cursor:pointer; transition:transform 0.2s; background: linear-gradient(180deg, #f8fafc, var(--surface)); border-color: #cbd5e1;" onmouseover="this.style.transform='scale(1.02)'" onmouseout="this.style.transform='scale(1)'">
-         <div class="kpi-lbl">Total Leads</div><div class="kpi-val" style="font-size: 22px;">${groups.total.length}</div><div class="kpi-foot" style="font-size:10px;">${groups.nuevo.length} + ${groups.proceso.length} + ${groups.finalizado.length}</div>
-       </div>
-       <div class="kpi filter-btn" data-key="nuevo" data-title="🏷️ NUEVOS (Bandeja SLA)" data-sub="Nadie los ha contactado aún" style="padding: 12px 16px; cursor:pointer; transition:transform 0.2s;" onmouseover="this.style.transform='scale(1.02)'" onmouseout="this.style.transform='scale(1)'">
-         <div class="kpi-lbl">Nuevos (SLA)</div><div class="kpi-val" style="font-size: 22px;">${groups.nuevo.length}</div><div class="kpi-foot" style="font-size:10px;">Suma de los de arriba</div>
-       </div>
-       <div class="kpi filter-btn" data-key="proceso" data-title="💼 EN PROCESO" data-sub="Ya contactados por los vendedores" style="padding: 12px 16px; border-color: #c4b5fd; cursor:pointer; transition:transform 0.2s;" onmouseover="this.style.transform='scale(1.02)'" onmouseout="this.style.transform='scale(1)'">
-         <div class="kpi-lbl">En Proceso</div><div class="kpi-val" style="font-size: 22px; color: #6d28d9;">${groups.proceso.length}</div><div class="kpi-foot" style="font-size:10px;">Atendiéndose</div>
-       </div>
-       <div class="kpi filter-btn" data-key="finalizado" data-title="🏁 CERRADOS / PERDIDOS" data-sub="Gestión comercial terminada" style="padding: 12px 16px; border-color: #86efac; cursor:pointer; transition:transform 0.2s;" onmouseover="this.style.transform='scale(1.02)'" onmouseout="this.style.transform='scale(1)'">
-         <div class="kpi-lbl">Cerrados / Perdidos</div><div class="kpi-val success" style="font-size: 22px;">${groups.finalizado.length}</div><div class="kpi-foot" style="font-size:10px;">Venta o descarte</div>
-       </div>
-    `;
+    sec.querySelector('#kpiGrid').innerHTML =
+      kpiBtn('critical','🔴','CRÍTICOS',  groups.critical.length, '20-30 min sin contacto') +
+      kpiBtn('risk',    '🟡','EN RIESGO', groups.risk.length,     '10-20 min o reasignados','background:linear-gradient(180deg,#fef3c7,var(--surface));border-color:#fcd34d;') +
+      kpiBtn('fresh',   '🟢','FRESCOS',   groups.fresh.length,    '< 10 min de espera') +
+      `<div class="kpi"><div class="kpi-lbl">PROM. NUEVOS</div><div class="kpi-val">${k.avgResponseMin}<span style="font-size:18px;color:var(--text-mute);">m</span></div><div class="kpi-foot">Tiempo espera prom.</div></div>`;
 
-    const renderList = (key, title, subtitle) => {
-      const items = groups[key].sort((a, b) => calcMin(b.lastInteraction) - calcMin(a.lastInteraction));
-      sec.querySelector('#listTitle').innerHTML = `<h3>${title}</h3><p>${subtitle}</p>`;
-      sec.querySelector('#alertList').innerHTML = items.length
-        ? items.map(x => {
-            const isRed = x.status === 'Nuevo' && calcMin(x.lastInteraction) > SLA_DANGER;
-            const isFinal = finalStatuses.has(x.status);
-            return `
-          <div class="item ${isRed ? 'danger' : ''}" onclick="openModal(${x.id})" style="${!isRed && !isFinal && calcMin(x.lastInteraction) > SLA_WARN ? 'background: #fffbeb;' : ''}">
-            <div class="row-avatar">${initials(x.name)}</div>
-            <div class="row-info">
-              <div class="row-name">${escape(x.name)} ${isRed ? '🚨' : ''}</div>
-              <div class="row-meta" style="font-weight: 600; color: ${isFinal ? 'var(--text-mute)' : 'var(--accent)'};">Vendedor: ${escape(x.assignedTo || 'Sin asignar')} · Estado: ${x.status}</div>
+    const funBtn = (key, emoji, lbl, val, sub, border='', txtColor='') =>
+      `<div class="kpi filter-btn" data-key="${key}" data-title="${emoji} ${lbl}" data-sub="${sub}"
+        style="padding:12px 16px;cursor:pointer;transition:transform 0.2s;${border}"
+        onmouseover="this.style.transform='scale(1.02)'" onmouseout="this.style.transform='scale(1)'">
+        <div class="kpi-lbl">${lbl}</div>
+        <div class="kpi-val" style="font-size:22px;${txtColor}">${val}</div>
+      </div>`;
+
+    sec.querySelector('#funnelGrid').innerHTML =
+      funBtn('nuevo',       '🏷️','Nuevos',      groups.nuevo.length,       'En bandeja SLA','border-color:#94a3b8;') +
+      funBtn('enProceso',   '💼','En Proceso',   groups.enProceso.length,   'Ya contactados','border-color:#c4b5fd;','color:#6d28d9;') +
+      funBtn('agendado',    '📅','Agendados',    groups.agendado.length,    'Visita/rellamado','border-color:#93c5fd;','color:#1d4ed8;') +
+      funBtn('seguimiento', '🔄','Seguimiento',  groups.seguimiento.length, 'Asistió sin cierre','border-color:#fbbf24;','color:#b45309;') +
+      funBtn('cerrado',     '✅','Cerrados',     groups.cerrado.length,     'Venta concretada','border-color:#86efac;','color:var(--success);') +
+      funBtn('abandonado',  '❌','Abandonados',  groups.abandonado.length,  'Dijeron NO','border-color:#fca5a5;','color:var(--danger);');
+
+    const slaClass = x => {
+      if (finalStatuses.has(x.status)) return 'none';
+      const m = calcMin(x.lastInteraction);
+      if (m > SLA_CRITICAL) return 'critical';
+      if (m > SLA_RISK || x.reassigned) return 'risk';
+      return 'fresh';
+    };
+
+    const renderLeadRow = x => {
+      const sc = slaClass(x);
+      const isFinal = finalStatuses.has(x.status);
+      return `<div class="sv-lead ${sc==='critical'?'danger':sc==='risk'?'risk':''}" onclick="openModal(${x.id})">
+        <div>
+          <div class="sv-lead-name">${escape(x.name)}${x.reassigned?' 🔄':''}</div>
+          <div class="sv-lead-meta">${escape(x.interest||x.source||'-')} · ${x.status}</div>
+        </div>
+        <div class="sv-lead-time ${isFinal?'none':sc}">${isFinal?'-':fmtSLA(x.lastInteraction)}</div>
+        <button class="sv-action ${sc==='critical'?'urgent':''}" onclick="event.stopPropagation();openModal(${x.id})">
+          ${sc==='critical'?'🚨 LLAMAR':sc==='risk'?'⚠️ APURAR':'VER'}
+        </button>
+      </div>`;
+    };
+
+    const renderAccordion = (items, title, subtitle) => {
+      sec.querySelector('#listTitle').innerHTML = `<div><h3>${title}</h3><p>${subtitle}</p></div>`;
+      if (!items.length) {
+        sec.querySelector('#alertList').innerHTML = '<div class="empty" style="padding:30px;">✅ Sin resultados en esta categoría.</div>';
+        return;
+      }
+      const byVendor = {};
+      items.forEach(x => {
+        const k = x.assignedTo || '__none__';
+        if (!byVendor[k]) byVendor[k] = { name: x.assignedTo || 'Sin asignar', leads: [] };
+        byVendor[k].leads.push(x);
+      });
+      const rows = Object.values(byVendor).sort((a,b) => b.leads.length - a.leads.length);
+      sec.querySelector('#alertList').innerHTML = `<div class="sla-accordion">${
+        rows.map((v, i) => {
+          const nd = v.leads.filter(x => slaClass(x)==='critical').length;
+          const nr = v.leads.filter(x => slaClass(x)==='risk').length;
+          const nf = v.leads.filter(x => slaClass(x)==='fresh').length;
+          return `<div class="sla-vendor" id="sv-${i}">
+            <button class="sla-vendor-head" onclick="toggleSV('${i}')">
+              <div class="sv-av">${initials(v.name)}</div>
+              <div><div class="sv-name">${escape(v.name)}</div><div class="sv-sub">${v.leads.length} lead${v.leads.length!==1?'s':''}</div></div>
+              <div class="sv-sla-pills">
+                <span class="sv-pill critical ${nd===0?'zero':''}">🔴 ${nd}</span>
+                <span class="sv-pill risk ${nr===0?'zero':''}">🟡 ${nr}</span>
+                <span class="sv-pill fresh ${nf===0?'zero':''}">🟢 ${nf}</span>
+              </div>
+              <span class="sv-count">${v.leads.length}</span>
+              <span class="sv-chevron">▼</span>
+            </button>
+            <div class="sv-body" id="svb-${i}">
+              <div class="sv-leads">
+                ${v.leads.sort((a,b)=>calcMin(b.lastInteraction)-calcMin(a.lastInteraction)).map(renderLeadRow).join('')}
+              </div>
             </div>
-            <div class="row-time" style="${isFinal ? 'background: var(--surface-alt); color: var(--text-mute);' : (!isRed ? 'background: #fef3c7; color: #b45309;' : '')}">${isFinal ? '-' : fmtSLA(x.lastInteraction)}</div>
-            <button class="row-action" style="${isFinal ? 'background: var(--success);' : (!isRed ? 'background: #f59e0b;' : '')}" onclick="event.stopPropagation();openModal(${x.id})">${isFinal ? 'VER' : (isRed ? '🚨 LLAMAR' : '⚠️ APURAR')}</button>
-          </div>`}).join('')
-        : '<div class="empty" style="padding: 30px;">✅ Sin resultados en esta categoría.</div>';
+          </div>`;
+        }).join('')
+      }</div>`;
+      if (rows.length && rows[0].leads.some(x => slaClass(x)==='critical')) toggleSV('0');
     };
 
     sec.querySelectorAll('.filter-btn').forEach(btn => {
-      btn.addEventListener('click', () => { renderList(btn.dataset.key, btn.dataset.title, btn.dataset.sub); });
+      btn.addEventListener('click', () => {
+        sec.querySelectorAll('.filter-btn').forEach(b => b.style.outline='');
+        btn.style.outline='2px solid var(--accent)';
+        renderAccordion(groups[btn.dataset.key]||[], btn.dataset.title, btn.dataset.sub);
+      });
     });
 
-    renderList('danger', '🔥 Leads en Riesgo', 'Atención urgente requerida');
+    renderAccordion(groups.critical, '🔴 Críticos — Intervención Inmediata', 'Leads sin contacto entre 20-30 min');
 
     sec.querySelector('#teamList').innerHTML = t.length ? `
-      <table class="team-matrix">
-        <thead>
-          <tr>
-            <th>👤 Vendedor</th>
-            <th>📥 Bandeja (SLA)</th>
-            <th>💼 Gestión</th>
-            <th>🏁 Resultados</th>
-            <th>🏆 Conversión</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${t.map(v => {
-            const convCls = v.conversion === 0 ? 'zero'
-              : v.conversion >= 60 ? 'high'
-              : v.conversion >= 30 ? 'mid' : 'low';
-            return `
-              <tr>
-                <td>
-                  <div class="tm-vendor">
-                    <div class="tm-av">${initials(v.name)}</div>
-                    <div>
-                      <div class="tm-name">${escape(v.name)}</div>
-                      <div class="tm-status">Activo</div>
-                    </div>
-                  </div>
-                </td>
-                <td>
-                  <div class="tm-sla">
-                    <span class="tm-sla-cell d ${v.sla.danger === 0 ? 'zero' : ''}" title="Quemados (>30 min)">🔴 ${v.sla.danger}</span>
-                    <span class="tm-sla-cell w ${v.sla.warn === 0 ? 'zero' : ''}" title="En riesgo (15-30 min)">🟡 ${v.sla.warn}</span>
-                    <span class="tm-sla-cell f ${v.sla.fresh === 0 ? 'zero' : ''}" title="Frescos (<15 min)">🟢 ${v.sla.fresh}</span>
-                  </div>
-                </td>
-                <td><span class="tm-gestion">${v.enProceso}</span></td>
-                <td>
-                  <div class="tm-results">
-                    <span class="closed">${v.closed}</span>
-                    <span class="lost">${v.lost} perdidos</span>
-                  </div>
-                </td>
-                <td>
-                  <div class="tm-conv">
-                    <div class="pct ${convCls}">${v.conversion}%</div>
-                    <div class="resp">⏱ Resp. prom: ~${v.avgResp}m</div>
-                  </div>
-                </td>
-              </tr>`;
-          }).join('')}
-        </tbody>
-      </table>`
+      <div class="sla-accordion">
+        ${t.map((v, i) => {
+          const ri = 'tm-' + i;
+          const all = v.leads || [];
+          return `<div class="sla-vendor" id="${ri}">
+            <button class="sla-vendor-head" onclick="toggleSV('${ri}')">
+              <div class="sv-av">${initials(v.name)}</div>
+              <div><div class="sv-name">${escape(v.name)}</div><div class="sv-sub">${v.total} leads · ${v.byStatus.cerrado} cerrados</div></div>
+              <div class="sv-sla-pills">
+                <span class="sv-pill critical ${(v.sla?.critical||0)===0?'zero':''}">🔴 ${v.sla?.critical||0}</span>
+                <span class="sv-pill risk ${(v.sla?.risk||0)===0?'zero':''}">🟡 ${v.sla?.risk||0}</span>
+                <span class="sv-pill fresh ${(v.sla?.fresh||0)===0?'zero':''}">🟢 ${v.sla?.fresh||0}</span>
+              </div>
+              <span class="sv-count">${v.total}</span>
+              <span class="sv-chevron">▼</span>
+            </button>
+            <div class="sv-body" id="svb-${ri}">
+              <div class="sv-leads">
+                ${all.length
+                  ? all.sort((a,b)=>calcMin(b.lastInteraction)-calcMin(a.lastInteraction)).map(renderLeadRow).join('')
+                  : '<div style="font-size:12px;color:var(--text-mute);padding:8px 0;">Sin leads asignados.</div>'}
+              </div>
+            </div>
+          </div>`;
+        }).join('')}
+      </div>`
       : '<div class="empty">Sin vendedores cargados.</div>';
   } catch (e) { showToast('Error al cargar Semáforo'); }
 }
@@ -1205,6 +1275,15 @@ renderQuickLogins();
     localStorage.removeItem('crm_session');
   }
 })();
+
+function toggleSV(id) {
+  const head = document.querySelector(`[onclick="toggleSV('${id}')"]`);
+  const body = document.getElementById('svb-' + id);
+  if (!head || !body) return;
+  const open = body.classList.contains('open');
+  body.classList.toggle('open', !open);
+  head.classList.toggle('open', !open);
+}
 
 setInterval(() => {
   if (!currentUser || $('modalBg').classList.contains('show')) return;

@@ -1,124 +1,93 @@
 {
   "demo_automotora": [
     {
-      "id": 1778107522761,
-      "name": "Visitante anónimo",
-      "phone": "Pendiente",
-      "source": "Chat Web (Simulador)",
-      "status": "Contactado",
-      "lastInteraction": "2026-05-06T22:46:02.868Z",
-      "interest": "una camioneta",
-      "sessionId": "s_tmmkcyebso_1778107509749"
-    },
-    {
       "id": 1001,
-      "name": "María González",
-      "phone": "+56 9 8765 4321",
-      "source": "Meta Ads - Campaña Verano",
-      "status": "Calificado",
-      "lastInteraction": "2026-05-06T22:44:11.458Z",
-      "interest": "SUV familiar"
+      "name": "Juan Pérez",
+      "phone": "+56 9 8877 6655",
+      "source": "Chileautos",
+      "status": "Cerrado",
+      "lastInteraction": "2026-05-07T21:56:57.504Z",
+      "interest": "Toyota RAV4 2021",
+      "chatHistory": [
+        {
+          "role": "user",
+          "content": "Hola, me interesa la RAV4 que tienen publicada."
+        },
+        {
+          "role": "bot",
+          "content": "¡Hola Juan! Excelente elección. ¿Tienes algún vehículo para dejar en parte de pago o buscas financiamiento?"
+        },
+        {
+          "role": "user",
+          "content": "Sí, tengo un Chevrolet Corsa año 2000 y necesito crédito para la diferencia."
+        },
+        {
+          "role": "bot",
+          "content": "Perfecto, he registrado tus datos. Un asesor te llamará en minutos para evaluar el Corsa y pre-aprobar tu crédito."
+        },
+        {
+          "role": "agent",
+          "content": "tu auto esta al dia?",
+          "ts": 1778191017504,
+          "agent": "gerente"
+        }
+      ],
+      "assignedTo": "vendedor1",
+      "reassigned": true,
+      "reassignedAt": "2026-05-07T21:02:56.982Z",
+      "alertLevel": "none",
+      "botActive": false
     },
     {
       "id": 1002,
-      "name": "Carlos Rojas",
-      "phone": "+56 9 5544 3322",
-      "source": "Google Ads - Búsqueda",
+      "name": "María Ignacia López",
+      "phone": "+56 9 3344 9988",
+      "source": "Meta Ads - Liquidación",
       "status": "Contactado",
-      "lastInteraction": "2026-05-06T22:44:11.458Z",
-      "interest": "Camioneta 4x4"
+      "lastInteraction": "2026-05-07T14:05:00.000Z",
+      "interest": "Toyota Hilux Diésel",
+      "chatHistory": [
+        {
+          "role": "user",
+          "content": "Busco una camioneta para la faena."
+        },
+        {
+          "role": "bot",
+          "content": "Hola María. Para trabajo pesado la Hilux Diésel es ideal. ¿La compra sería al contado o con financiamiento empresa?"
+        },
+        {
+          "role": "user",
+          "content": "Compra contado, tengo el vale vista listo pero necesito entrega inmediata."
+        }
+      ],
+      "alertLevel": "red",
+      "botActive": true
     },
     {
       "id": 1003,
-      "name": "Javiera Muñoz",
-      "phone": "+56 9 7788 9900",
+      "name": "Carlos Santibáñez",
+      "phone": "+56 9 2211 4433",
       "source": "Instagram Orgánico",
-      "status": "Negociación",
-      "lastInteraction": "2026-05-05T22:44:11.458Z",
-      "interest": "Sedán económico"
-    },
-    {
-      "id": 1004,
-      "name": "Diego Fuentes",
-      "phone": "+56 9 2233 4455",
-      "source": "Referido",
-      "status": "Cerrado",
-      "lastInteraction": "2026-05-05T22:44:11.458Z",
-      "interest": "Hatchback"
-    },
-    {
-      "id": 1005,
-      "name": "Antonia Pérez",
-      "phone": "+56 9 6677 8899",
-      "source": "Meta Ads - Retargeting",
-      "status": "Nuevo",
-      "lastInteraction": "2026-05-04T22:44:11.458Z",
-      "interest": "SUV compacto"
-    },
-    {
-      "id": 1006,
-      "name": "Sebastián Vargas",
-      "phone": "+56 9 1122 3344",
-      "source": "Landing Page",
       "status": "Calificado",
-      "lastInteraction": "2026-05-04T22:44:11.458Z",
-      "interest": "Camioneta diésel"
-    },
-    {
-      "id": 1007,
-      "name": "Camila Soto",
-      "phone": "+56 9 9988 7766",
-      "source": "Google Ads - Display",
-      "status": "Contactado",
-      "lastInteraction": "2026-05-03T22:44:11.458Z",
-      "interest": "Eléctrico"
+      "lastInteraction": "2026-05-07T13:55:00.000Z",
+      "interest": "Sedán económico",
+      "chatHistory": [
+        {
+          "role": "user",
+          "content": "Cual es el auto mas barato q tienen?"
+        },
+        {
+          "role": "bot",
+          "content": "Hola Carlos. Tenemos opciones desde los $5.000.000. ¿Qué presupuesto mensual tienes en mente para las cuotas?"
+        },
+        {
+          "role": "user",
+          "content": "no se, solo estoy mirando por ahora"
+        }
+      ],
+      "alertLevel": "red",
+      "botActive": true
     }
   ],
-  "demo_clinica": [
-    {
-      "id": 2001,
-      "name": "Patricia Rivera",
-      "phone": "+56 9 3344 5566",
-      "source": "Google Ads - Búsqueda",
-      "status": "Calificado",
-      "lastInteraction": "2026-05-06T22:44:11.458Z",
-      "interest": "Consulta dermatología"
-    },
-    {
-      "id": 2002,
-      "name": "Roberto Cárcamo",
-      "phone": "+56 9 7766 5544",
-      "source": "Meta Ads - Salud",
-      "status": "Contactado",
-      "lastInteraction": "2026-05-06T22:44:11.458Z",
-      "interest": "Chequeo preventivo"
-    },
-    {
-      "id": 2003,
-      "name": "Isidora Lagos",
-      "phone": "+56 9 4433 2211",
-      "source": "Landing Page",
-      "status": "Nuevo",
-      "lastInteraction": "2026-05-05T22:44:11.458Z",
-      "interest": "Tratamiento estético"
-    },
-    {
-      "id": 2004,
-      "name": "Fernando Aguilar",
-      "phone": "+56 9 8899 1122",
-      "source": "Referido",
-      "status": "Cerrado",
-      "lastInteraction": "2026-05-05T22:44:11.458Z",
-      "interest": "Cirugía menor"
-    },
-    {
-      "id": 2005,
-      "name": "Constanza Mella",
-      "phone": "+56 9 5566 7788",
-      "source": "Instagram Orgánico",
-      "status": "Negociación",
-      "lastInteraction": "2026-05-04T22:44:11.458Z",
-      "interest": "Plan integral"
-    }
-  ]
+  "demo_clinica": []
 }

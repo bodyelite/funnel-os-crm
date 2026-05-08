@@ -1,0 +1,48 @@
+{
+  "demo_automotora": [
+    {
+      "username": "gerente",
+      "password": "demo",
+      "name": "Andrés Salas",
+      "role": "admin"
+    },
+    {
+      "username": "vendedor1",
+      "password": "demo",
+      "name": "Rodrigo Vidal",
+      "role": "vendedor"
+    },
+    {
+      "username": "vendedor2",
+      "password": "demo",
+      "name": "Camila Aravena",
+      "role": "vendedor"
+    },
+    {
+      "username": "recepcion",
+      "password": "demo",
+      "name": "Daniela Ortiz",
+      "role": "secretaria"
+    }
+  ],
+  "demo_clinica": [
+    {
+      "username": "gerente",
+      "password": "demo",
+      "name": "Dr. Hernán Vidal",
+      "role": "admin"
+    },
+    {
+      "username": "vendedor1",
+      "password": "demo",
+      "name": "Karina Bravo",
+      "role": "vendedor"
+    },
+    {
+      "username": "recepcion",
+      "password": "demo",
+      "name": "Marcela Tapia",
+      "role": "secretaria"
+    }
+  ]
+}
