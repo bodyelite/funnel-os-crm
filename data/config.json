@@ -6,11 +6,11 @@
     "accentColor": "#2563eb",
     "stages": [
       "Nuevo",
-      "Contactado",
-      "Calificado",
-      "Negociación",
+      "En Proceso",
+      "Agendado",
+      "Seguimiento",
       "Cerrado",
-      "Perdido"
+      "Abandonado"
     ]
   },
   "demo_clinica": {
@@ -20,11 +20,11 @@
     "accentColor": "#0d9488",
     "stages": [
       "Nuevo",
-      "Contactado",
+      "En Proceso",
       "Agendado",
-      "Atendido",
+      "Seguimiento",
       "Cerrado",
-      "Perdido"
+      "Abandonado"
     ]
   }
 }

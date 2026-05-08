@@ -1,93 +1,136 @@
 {
   "demo_automotora": [
     {
-      "id": 1001,
+      "id": 101,
       "name": "Juan Pérez",
-      "phone": "+56 9 8877 6655",
-      "source": "Chileautos",
-      "status": "Cerrado",
-      "lastInteraction": "2026-05-07T21:56:57.504Z",
-      "interest": "Toyota RAV4 2021",
-      "chatHistory": [
-        {
-          "role": "user",
-          "content": "Hola, me interesa la RAV4 que tienen publicada."
-        },
-        {
-          "role": "bot",
-          "content": "¡Hola Juan! Excelente elección. ¿Tienes algún vehículo para dejar en parte de pago o buscas financiamiento?"
-        },
-        {
-          "role": "user",
-          "content": "Sí, tengo un Chevrolet Corsa año 2000 y necesito crédito para la diferencia."
-        },
-        {
-          "role": "bot",
-          "content": "Perfecto, he registrado tus datos. Un asesor te llamará en minutos para evaluar el Corsa y pre-aprobar tu crédito."
-        },
-        {
-          "role": "agent",
-          "content": "tu auto esta al dia?",
-          "ts": 1778191017504,
-          "agent": "gerente"
-        }
-      ],
+      "phone": "+56 9 1111 1111",
+      "source": "Meta Ads",
+      "status": "Nuevo",
       "assignedTo": "vendedor1",
+      "lastInteraction": "2026-05-08T22:10:24.928Z",
+      "interest": "Peugeot 3008 - Busco info",
+      "alertLevel": "risk",
+      "botActive": true
+    },
+    {
+      "id": 102,
+      "name": "María López",
+      "phone": "+56 9 2222 2222",
+      "source": "Chileautos",
+      "status": "Nuevo",
+      "assignedTo": "vendedor1",
+      "lastInteraction": "2026-05-08T22:30:28.879Z",
+      "interest": "SUV Familiar urgente",
+      "alertLevel": "risk",
+      "botActive": true,
       "reassigned": true,
-      "reassignedAt": "2026-05-07T21:02:56.982Z",
-      "alertLevel": "none",
-      "botActive": false
+      "reassignedAt": "2026-05-08T22:30:28.879Z"
     },
     {
-      "id": 1002,
-      "name": "María Ignacia López",
-      "phone": "+56 9 3344 9988",
-      "source": "Meta Ads - Liquidación",
-      "status": "Contactado",
-      "lastInteraction": "2026-05-07T14:05:00.000Z",
-      "interest": "Toyota Hilux Diésel",
-      "chatHistory": [
-        {
-          "role": "user",
-          "content": "Busco una camioneta para la faena."
-        },
-        {
-          "role": "bot",
-          "content": "Hola María. Para trabajo pesado la Hilux Diésel es ideal. ¿La compra sería al contado o con financiamiento empresa?"
-        },
-        {
-          "role": "user",
-          "content": "Compra contado, tengo el vale vista listo pero necesito entrega inmediata."
-        }
-      ],
-      "alertLevel": "red",
+      "id": 103,
+      "name": "Carlos Ruiz",
+      "phone": "+56 9 3333 3333",
+      "source": "Google Ads",
+      "status": "Nuevo",
+      "assignedTo": "vendedor2",
+      "lastInteraction": "2026-05-08T22:20:28.231Z",
+      "interest": "Camioneta 4x4 Diésel",
+      "alertLevel": "risk",
+      "botActive": true,
+      "reassigned": true,
+      "reassignedAt": "2026-05-08T22:20:28.231Z"
+    },
+    {
+      "id": 104,
+      "name": "Ana Silva",
+      "phone": "+56 9 4444 4444",
+      "source": "Instagram",
+      "status": "Nuevo",
+      "assignedTo": "gerente",
+      "lastInteraction": "2026-05-08T22:03:24.929Z",
+      "reassigned": true,
+      "reassignedAt": "2026-05-08T22:03:24.929Z",
+      "interest": "Sedán Económico",
+      "alertLevel": "critical",
       "botActive": true
     },
     {
-      "id": 1003,
-      "name": "Carlos Santibáñez",
-      "phone": "+56 9 2211 4433",
-      "source": "Instagram Orgánico",
-      "status": "Calificado",
-      "lastInteraction": "2026-05-07T13:55:00.000Z",
-      "interest": "Sedán económico",
-      "chatHistory": [
-        {
-          "role": "user",
-          "content": "Cual es el auto mas barato q tienen?"
-        },
-        {
-          "role": "bot",
-          "content": "Hola Carlos. Tenemos opciones desde los $5.000.000. ¿Qué presupuesto mensual tienes en mente para las cuotas?"
-        },
-        {
-          "role": "user",
-          "content": "no se, solo estoy mirando por ahora"
-        }
-      ],
-      "alertLevel": "red",
+      "id": 105,
+      "name": "Pedro Gómez",
+      "phone": "+56 9 5555 5555",
+      "source": "Landing Page",
+      "status": "Nuevo",
+      "assignedTo": "gerente",
+      "lastInteraction": "2026-05-08T21:57:24.929Z",
+      "reassigned": true,
+      "reassignedAt": "2026-05-08T21:57:24.929Z",
+      "interest": "Auto Eléctrico",
+      "alertLevel": "critical",
       "botActive": true
+    },
+    {
+      "id": 106,
+      "name": "Laura Torres",
+      "phone": "+56 9 6666 6666",
+      "source": "Web",
+      "status": "En Proceso",
+      "assignedTo": "vendedor1",
+      "lastInteraction": "2026-05-08T21:30:24.929Z",
+      "interest": "Peugeot 208 - Crédito evaluando",
+      "botActive": true
+    },
+    {
+      "id": 107,
+      "name": "Diego Castro",
+      "phone": "+56 9 7777 7777",
+      "source": "Chileautos",
+      "status": "En Proceso",
+      "assignedTo": "vendedor2",
+      "lastInteraction": "2026-05-08T20:15:24.929Z",
+      "interest": "Camioneta Trabajo",
+      "botActive": true
+    },
+    {
+      "id": 108,
+      "name": "Sofía Vargas",
+      "phone": "+56 9 8888 8888",
+      "source": "Meta Ads",
+      "status": "Agendado",
+      "assignedTo": "vendedor1",
+      "lastInteraction": "2026-05-08T17:15:24.929Z",
+      "interest": "Viene el sábado a ver la SUV",
+      "botActive": true
+    },
+    {
+      "id": 109,
+      "name": "Lucas Medina",
+      "phone": "+56 9 9999 9999",
+      "source": "Google",
+      "status": "Seguimiento",
+      "assignedTo": "vendedor2",
+      "lastInteraction": "2026-05-07T22:15:24.929Z",
+      "interest": "Vino al local, lo está pensando con la señora",
+      "botActive": true
+    },
+    {
+      "id": 110,
+      "name": "Camila Rojas",
+      "phone": "+56 9 0000 0000",
+      "source": "Referido",
+      "status": "Cerrado",
+      "assignedTo": "vendedor1",
+      "lastInteraction": "2026-05-06T22:15:24.929Z",
+      "interest": "Venta Concretada - Contado"
+    },
+    {
+      "id": 111,
+      "name": "Matias Pinto",
+      "phone": "+56 9 1212 1212",
+      "source": "Chileautos",
+      "status": "Abandonado",
+      "assignedTo": "vendedor2",
+      "lastInteraction": "2026-05-06T03:35:24.929Z",
+      "interest": "No le dio el crédito bancario"
     }
-  ],
-  "demo_clinica": []
+  ]
 }

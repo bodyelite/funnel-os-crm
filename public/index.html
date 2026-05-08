@@ -160,12 +160,11 @@ input, select, textarea { font-family: inherit; }
 .kcol-name { font-size: 12.5px; font-weight: 700; display: inline-flex; align-items: center; gap: 8px; }
 .kcol-name::before { content: ''; width: 8px; height: 8px; border-radius: 50%; background: var(--text-mute); }
 .kcol[data-s="Nuevo"] .kcol-name::before { background: var(--info); }
-.kcol[data-s="Contactado"] .kcol-name::before { background: var(--warning); }
-.kcol[data-s="Calificado"] .kcol-name::before { background: var(--accent); }
-.kcol[data-s="Negociación"] .kcol-name::before, .kcol[data-s="Agendado"] .kcol-name::before { background: var(--purple); }
-.kcol[data-s="Atendido"] .kcol-name::before { background: var(--accent); }
+.kcol[data-s="En Proceso"] .kcol-name::before { background: var(--warning); }
+.kcol[data-s="Agendado"] .kcol-name::before { background: var(--purple); }
+.kcol[data-s="Seguimiento"] .kcol-name::before { background: #b45309; }
 .kcol[data-s="Cerrado"] .kcol-name::before { background: var(--success); }
-.kcol[data-s="Perdido"] .kcol-name::before { background: var(--danger); }
+.kcol[data-s="Abandonado"] .kcol-name::before { background: var(--danger); }
 .kcol-count { background: var(--surface); border: 1px solid var(--border); color: var(--text-soft); font-size: 11px; font-weight: 700; padding: 1px 8px; border-radius: 999px; font-variant-numeric: tabular-nums; }
 .kcol-body { padding: 12px; display: flex; flex-direction: column; gap: 10px; overflow-y: auto; flex: 1; }
 
@@ -771,41 +770,45 @@ async function mountSemaforo(sec) {
     ]);
 
     const finalStatuses = new Set(['Cerrado', 'Abandonado']);
-    const nuevos        = l.filter(x => x.status === 'Nuevo');
-    const slaFresh      = nuevos.filter(x => calcMin(x.lastInteraction) <= SLA_FRESH);
-    const slaRisk       = nuevos.filter(x => (calcMin(x.lastInteraction) > SLA_FRESH && calcMin(x.lastInteraction) <= SLA_RISK) || x.reassigned);
-    const slaCritical   = nuevos.filter(x => calcMin(x.lastInteraction) > SLA_RISK && calcMin(x.lastInteraction) <= SLA_CRITICAL && !x.reassigned);
+    const SLA_FRESH = 10, SLA_RISK = 20, SLA_CRITICAL = 30;
+
+    const nuevos      = l.filter(x => x.status === 'Nuevo');
+    const slaFresh    = nuevos.filter(x => calcMin(x.lastInteraction) <= SLA_FRESH);
+    const slaRisk     = nuevos.filter(x => (calcMin(x.lastInteraction) > SLA_FRESH && calcMin(x.lastInteraction) <= SLA_RISK) || x.reassigned);
+    const slaCritical = nuevos.filter(x => calcMin(x.lastInteraction) > SLA_RISK && calcMin(x.lastInteraction) <= SLA_CRITICAL && !x.reassigned);
 
     const groups = {
-      fresh:       slaFresh,
-      risk:        slaRisk,
-      critical:    slaCritical,
-      nuevo:       nuevos,
+      fresh: slaFresh, risk: slaRisk, critical: slaCritical,
+      nuevo: nuevos,
       enProceso:   l.filter(x => x.status === 'En Proceso'),
       agendado:    l.filter(x => x.status === 'Agendado'),
       seguimiento: l.filter(x => x.status === 'Seguimiento'),
       cerrado:     l.filter(x => x.status === 'Cerrado'),
       abandonado:  l.filter(x => x.status === 'Abandonado'),
-      total:       l
+      total: l
     };
 
-    const kpiBtn = (key, emoji, lbl, val, sub, extra='') =>
-      `<div class="kpi filter-btn ${val>0&&key==='critical'?'danger':key==='fresh'?'success':''}"
+    const kpiBtn = (key, emoji, lbl, val, sub, extra = '') =>
+      `<div class="kpi filter-btn ${val > 0 && key === 'critical' ? 'danger' : key === 'fresh' ? 'success' : ''}"
         data-key="${key}" data-title="${emoji} ${lbl}" data-sub="${sub}"
         style="cursor:pointer;transition:transform 0.2s;${extra}"
         onmouseover="this.style.transform='scale(1.02)'" onmouseout="this.style.transform='scale(1)'">
         <div class="kpi-lbl">${emoji} ${lbl}</div>
-        <div class="kpi-val ${val>0&&key==='critical'?'danger':key==='fresh'?'success':''}" ${key==='risk'?'style="color:#b45309;"':''}>${val}</div>
+        <div class="kpi-val ${val > 0 && key === 'critical' ? 'danger' : key === 'fresh' ? 'success' : ''}"
+          ${key === 'risk' ? 'style="color:#b45309;"' : ''}>${val}</div>
         <div class="kpi-foot" style="text-decoration:underline;">Click para ver</div>
       </div>`;
 
     sec.querySelector('#kpiGrid').innerHTML =
-      kpiBtn('critical','🔴','CRÍTICOS',  groups.critical.length, '20-30 min sin contacto') +
-      kpiBtn('risk',    '🟡','EN RIESGO', groups.risk.length,     '10-20 min o reasignados','background:linear-gradient(180deg,#fef3c7,var(--surface));border-color:#fcd34d;') +
-      kpiBtn('fresh',   '🟢','FRESCOS',   groups.fresh.length,    '< 10 min de espera') +
-      `<div class="kpi"><div class="kpi-lbl">PROM. NUEVOS</div><div class="kpi-val">${k.avgResponseMin}<span style="font-size:18px;color:var(--text-mute);">m</span></div><div class="kpi-foot">Tiempo espera prom.</div></div>`;
+      kpiBtn('critical', '🔴', 'CRÍTICOS',  groups.critical.length, '20-30 min sin contacto') +
+      kpiBtn('risk',     '🟡', 'EN RIESGO', groups.risk.length,     '10-20 min o reasignados',
+             'background:linear-gradient(180deg,#fef3c7,var(--surface));border-color:#fcd34d;') +
+      kpiBtn('fresh',    '🟢', 'FRESCOS',   groups.fresh.length,    '< 10 min de espera') +
+      `<div class="kpi"><div class="kpi-lbl">PROM. NUEVOS</div>
+        <div class="kpi-val">${k.avgResponseMin}<span style="font-size:18px;color:var(--text-mute);">m</span></div>
+        <div class="kpi-foot">Tiempo espera prom.</div></div>`;
 
-    const funBtn = (key, emoji, lbl, val, sub, border='', txtColor='') =>
+    const funBtn = (key, emoji, lbl, val, sub, border = '', txtColor = '') =>
       `<div class="kpi filter-btn" data-key="${key}" data-title="${emoji} ${lbl}" data-sub="${sub}"
         style="padding:12px 16px;cursor:pointer;transition:transform 0.2s;${border}"
         onmouseover="this.style.transform='scale(1.02)'" onmouseout="this.style.transform='scale(1)'">
@@ -814,12 +817,12 @@ async function mountSemaforo(sec) {
       </div>`;
 
     sec.querySelector('#funnelGrid').innerHTML =
-      funBtn('nuevo',       '🏷️','Nuevos',      groups.nuevo.length,       'En bandeja SLA','border-color:#94a3b8;') +
-      funBtn('enProceso',   '💼','En Proceso',   groups.enProceso.length,   'Ya contactados','border-color:#c4b5fd;','color:#6d28d9;') +
-      funBtn('agendado',    '📅','Agendados',    groups.agendado.length,    'Visita/rellamado','border-color:#93c5fd;','color:#1d4ed8;') +
-      funBtn('seguimiento', '🔄','Seguimiento',  groups.seguimiento.length, 'Asistió sin cierre','border-color:#fbbf24;','color:#b45309;') +
-      funBtn('cerrado',     '✅','Cerrados',     groups.cerrado.length,     'Venta concretada','border-color:#86efac;','color:var(--success);') +
-      funBtn('abandonado',  '❌','Abandonados',  groups.abandonado.length,  'Dijeron NO','border-color:#fca5a5;','color:var(--danger);');
+      funBtn('nuevo',       '🏷️',  'Nuevos',       groups.nuevo.length,       'En bandeja SLA',     'border-color:#94a3b8;') +
+      funBtn('enProceso',   '💼',  'En Proceso',   groups.enProceso.length,   'Ya contactados',     'border-color:#c4b5fd;', 'color:#6d28d9;') +
+      funBtn('agendado',    '📅',  'Agendados',    groups.agendado.length,    'Visita/rellamado',   'border-color:#93c5fd;', 'color:#1d4ed8;') +
+      funBtn('seguimiento', '🔄',  'Seguimiento',  groups.seguimiento.length, 'Asistió sin cierre', 'border-color:#fbbf24;', 'color:#b45309;') +
+      funBtn('cerrado',     '✅', 'Cerrados',     groups.cerrado.length,     'Venta concretada',   'border-color:#86efac;', 'color:var(--success);') +
+      funBtn('abandonado',  '❌', 'Abandonados',  groups.abandonado.length,  'Dijeron NO',         'border-color:#fca5a5;', 'color:var(--danger);');
 
     const slaClass = x => {
       if (finalStatuses.has(x.status)) return 'none';
@@ -832,14 +835,16 @@ async function mountSemaforo(sec) {
     const renderLeadRow = x => {
       const sc = slaClass(x);
       const isFinal = finalStatuses.has(x.status);
-      return `<div class="sv-lead ${sc==='critical'?'danger':sc==='risk'?'risk':''}" onclick="openModal(${x.id})">
+      return `<div class="sv-lead ${sc === 'critical' ? 'is-critical' : sc === 'risk' ? 'is-risk' : ''}"
+        onclick="openModal(${x.id})">
         <div>
-          <div class="sv-lead-name">${escape(x.name)}${x.reassigned?' 🔄':''}</div>
-          <div class="sv-lead-meta">${escape(x.interest||x.source||'-')} · ${x.status}</div>
+          <div class="sv-lead-name">${escape(x.name)}${x.reassigned ? ' 🔄' : ''}</div>
+          <div class="sv-lead-meta">${escape(x.interest || x.source || '-')} · ${x.status}</div>
         </div>
-        <div class="sv-lead-time ${isFinal?'none':sc}">${isFinal?'-':fmtSLA(x.lastInteraction)}</div>
-        <button class="sv-action ${sc==='critical'?'urgent':''}" onclick="event.stopPropagation();openModal(${x.id})">
-          ${sc==='critical'?'🚨 LLAMAR':sc==='risk'?'⚠️ APURAR':'VER'}
+        <div class="sv-lead-time ${isFinal ? 'none' : sc}">${isFinal ? '-' : fmtSLA(x.lastInteraction)}</div>
+        <button class="sv-action ${sc === 'critical' ? 'urgent' : ''}"
+          onclick="event.stopPropagation();openModal(${x.id})">
+          ${sc === 'critical' ? '🚨 LLAMAR' : sc === 'risk' ? '⚠️ APURAR' : 'VER'}
         </button>
       </div>`;
     };
@@ -847,84 +852,105 @@ async function mountSemaforo(sec) {
     const renderAccordion = (items, title, subtitle) => {
       sec.querySelector('#listTitle').innerHTML = `<div><h3>${title}</h3><p>${subtitle}</p></div>`;
       if (!items.length) {
-        sec.querySelector('#alertList').innerHTML = '<div class="empty" style="padding:30px;">✅ Sin resultados en esta categoría.</div>';
+        sec.querySelector('#alertList').innerHTML =
+          '<div class="empty" style="padding:30px;">✅ Sin resultados en esta categoría.</div>';
         return;
       }
       const byVendor = {};
       items.forEach(x => {
-        const k = x.assignedTo || '__none__';
-        if (!byVendor[k]) byVendor[k] = { name: x.assignedTo || 'Sin asignar', leads: [] };
-        byVendor[k].leads.push(x);
+        const key = x.assignedTo || '__none__';
+        if (!byVendor[key]) {
+          const member = t.find(v => v.username === x.assignedTo);
+          byVendor[key] = { name: member ? member.name : (x.assignedTo || 'Sin asignar'), leads: [] };
+        }
+        byVendor[key].leads.push(x);
       });
-      const rows = Object.values(byVendor).sort((a,b) => b.leads.length - a.leads.length);
-      sec.querySelector('#alertList').innerHTML = `<div class="sla-accordion">${
+      const rows = Object.values(byVendor).sort((a, b) => b.leads.length - a.leads.length);
+      sec.querySelector('#alertList').innerHTML = '<div class="sla-accordion">' +
         rows.map((v, i) => {
-          const nd = v.leads.filter(x => slaClass(x)==='critical').length;
-          const nr = v.leads.filter(x => slaClass(x)==='risk').length;
-          const nf = v.leads.filter(x => slaClass(x)==='fresh').length;
-          return `<div class="sla-vendor" id="sv-${i}">
-            <button class="sla-vendor-head" onclick="toggleSV('${i}')">
+          const svId   = 'sv-' + i;
+          const nd     = v.leads.filter(x => slaClass(x) === 'critical').length;
+          const nr     = v.leads.filter(x => slaClass(x) === 'risk').length;
+          const nf     = v.leads.filter(x => slaClass(x) === 'fresh').length;
+          const avgMin  = v.leads.length
+            ? Math.round(v.leads.reduce((s, x) => s + calcMin(x.lastInteraction), 0) / v.leads.length)
+            : 0;
+          const wasOpen = (window.openAccordionIds || new Set()).has(svId);
+          return `<div class="sla-vendor" id="${svId}">
+            <button class="sla-vendor-head ${wasOpen ? 'open' : ''}" onclick="toggleSV('${svId}')">
               <div class="sv-av">${initials(v.name)}</div>
-              <div><div class="sv-name">${escape(v.name)}</div><div class="sv-sub">${v.leads.length} lead${v.leads.length!==1?'s':''}</div></div>
+              <div>
+                <div class="sv-name">${escape(v.name)}</div>
+                <div class="sv-sub">${v.leads.length} lead${v.leads.length !== 1 ? 's' : ''} · ⏱ prom ${avgMin}m</div>
+              </div>
               <div class="sv-sla-pills">
-                <span class="sv-pill critical ${nd===0?'zero':''}">🔴 ${nd}</span>
-                <span class="sv-pill risk ${nr===0?'zero':''}">🟡 ${nr}</span>
-                <span class="sv-pill fresh ${nf===0?'zero':''}">🟢 ${nf}</span>
+                <span class="sv-pill critical ${nd === 0 ? 'zero' : ''}">🔴 ${nd}</span>
+                <span class="sv-pill risk ${nr === 0 ? 'zero' : ''}">🟡 ${nr}</span>
+                <span class="sv-pill fresh ${nf === 0 ? 'zero' : ''}">🟢 ${nf}</span>
               </div>
               <span class="sv-count">${v.leads.length}</span>
               <span class="sv-chevron">▼</span>
             </button>
-            <div class="sv-body" id="svb-${i}">
+            <div class="sv-body ${wasOpen ? 'open' : ''}" id="svb-${svId}">
               <div class="sv-leads">
-                ${v.leads.sort((a,b)=>calcMin(b.lastInteraction)-calcMin(a.lastInteraction)).map(renderLeadRow).join('')}
+                ${v.leads.sort((a, b) => calcMin(b.lastInteraction) - calcMin(a.lastInteraction)).map(renderLeadRow).join('')}
               </div>
             </div>
           </div>`;
-        }).join('')
-      }</div>`;
-      if (rows.length && rows[0].leads.some(x => slaClass(x)==='critical')) toggleSV('0');
+        }).join('') + '</div>';
+      const hasState = window.openAccordionIds && window.openAccordionIds.size > 0;
+      if (!hasState && rows.length && rows[0].leads.some(x => slaClass(x) === 'critical')) toggleSV('sv-0');
     };
 
     sec.querySelectorAll('.filter-btn').forEach(btn => {
       btn.addEventListener('click', () => {
-        sec.querySelectorAll('.filter-btn').forEach(b => b.style.outline='');
-        btn.style.outline='2px solid var(--accent)';
-        renderAccordion(groups[btn.dataset.key]||[], btn.dataset.title, btn.dataset.sub);
+        sec.querySelectorAll('.filter-btn').forEach(b => b.style.outline = '');
+        btn.style.outline = '2px solid var(--accent)';
+        renderAccordion(groups[btn.dataset.key] || [], btn.dataset.title, btn.dataset.sub);
       });
     });
 
-    renderAccordion(groups.critical, '🔴 Críticos — Intervención Inmediata', 'Leads sin contacto entre 20-30 min');
+    renderAccordion(groups.critical, '🔴 Críticos', 'Leads sin contacto entre 20-30 min');
 
-    sec.querySelector('#teamList').innerHTML = t.length ? `
-      <div class="sla-accordion">
-        ${t.map((v, i) => {
-          const ri = 'tm-' + i;
-          const all = v.leads || [];
-          return `<div class="sla-vendor" id="${ri}">
-            <button class="sla-vendor-head" onclick="toggleSV('${ri}')">
-              <div class="sv-av">${initials(v.name)}</div>
-              <div><div class="sv-name">${escape(v.name)}</div><div class="sv-sub">${v.total} leads · ${v.byStatus.cerrado} cerrados</div></div>
-              <div class="sv-sla-pills">
-                <span class="sv-pill critical ${(v.sla?.critical||0)===0?'zero':''}">🔴 ${v.sla?.critical||0}</span>
-                <span class="sv-pill risk ${(v.sla?.risk||0)===0?'zero':''}">🟡 ${v.sla?.risk||0}</span>
-                <span class="sv-pill fresh ${(v.sla?.fresh||0)===0?'zero':''}">🟢 ${v.sla?.fresh||0}</span>
-              </div>
-              <span class="sv-count">${v.total}</span>
-              <span class="sv-chevron">▼</span>
-            </button>
-            <div class="sv-body" id="svb-${ri}">
-              <div class="sv-leads">
-                ${all.length
-                  ? all.sort((a,b)=>calcMin(b.lastInteraction)-calcMin(a.lastInteraction)).map(renderLeadRow).join('')
-                  : '<div style="font-size:12px;color:var(--text-mute);padding:8px 0;">Sin leads asignados.</div>'}
-              </div>
+    sec.querySelector('#teamList').innerHTML = t.length ? '<div class="sla-accordion">' +
+      t.map((v, i) => {
+        const ri  = 'tm-' + i;
+        const all = v.leads || [];
+        const ar  = typeof v.avgResp === 'number' ? v.avgResp : 0;
+        const nc  = v.sla ? v.sla.critical || 0 : 0;
+        const nr  = v.sla ? v.sla.risk     || 0 : 0;
+        const nf  = v.sla ? v.sla.fresh    || 0 : 0;
+        const cls = v.byStatus ? `${v.byStatus.cerrado} cerrados` : `${v.closed || 0} cerrados`;
+        const wasOpen = (window.openAccordionIds || new Set()).has(ri);
+        return `<div class="sla-vendor" id="${ri}">
+          <button class="sla-vendor-head ${wasOpen ? 'open' : ''}" onclick="toggleSV('${ri}')">
+            <div class="sv-av">${initials(v.name)}</div>
+            <div>
+              <div class="sv-name">${escape(v.name)}</div>
+              <div class="sv-sub">${v.total} leads · ${cls} · ⏱ prom ${ar}m</div>
             </div>
-          </div>`;
-        }).join('')}
-      </div>`
+            <div class="sv-sla-pills">
+              <span class="sv-pill critical ${nc === 0 ? 'zero' : ''}">🔴 ${nc}</span>
+              <span class="sv-pill risk ${nr === 0 ? 'zero' : ''}">🟡 ${nr}</span>
+              <span class="sv-pill fresh ${nf === 0 ? 'zero' : ''}">🟢 ${nf}</span>
+            </div>
+            <span class="sv-count">${v.total}</span>
+            <span class="sv-chevron">▼</span>
+          </button>
+          <div class="sv-body ${wasOpen ? 'open' : ''}" id="svb-${ri}">
+            <div class="sv-leads">
+              ${all.length
+                ? all.sort((a, b) => calcMin(b.lastInteraction) - calcMin(a.lastInteraction)).map(renderLeadRow).join('')
+                : '<div style="font-size:12px;color:var(--text-mute);padding:8px 0;">Sin leads asignados.</div>'}
+            </div>
+          </div>
+        </div>`;
+      }).join('') + '</div>'
       : '<div class="empty">Sin vendedores cargados.</div>';
+
   } catch (e) { showToast('Error al cargar Semáforo'); }
 }
+
 async function mountPipeline(sec) {
   loadPipeline();
 }
@@ -1283,6 +1309,21 @@ function toggleSV(id) {
   const open = body.classList.contains('open');
   body.classList.toggle('open', !open);
   head.classList.toggle('open', !open);
+  if (!window.openAccordionIds) window.openAccordionIds = new Set();
+  if (!open) window.openAccordionIds.add(id);
+  else window.openAccordionIds.delete(id);
+}
+
+function toggleSV(id) {
+  const head = document.querySelector('[onclick="toggleSV(\'' + id + '\')"]');
+  const body = document.getElementById('svb-' + id);
+  if (!head || !body) return;
+  const open = body.classList.contains('open');
+  body.classList.toggle('open', !open);
+  head.classList.toggle('open', !open);
+  if (!window.openAccordionIds) window.openAccordionIds = new Set();
+  if (!open) window.openAccordionIds.add(id);
+  else window.openAccordionIds.delete(id);
 }
 
 setInterval(() => {
