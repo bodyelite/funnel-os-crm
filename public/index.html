@@ -769,17 +769,22 @@ async function mountSemaforo(sec) {
       api('/api/leads').then(r => r.json())
     ]);
 
+    const SLA_F = 10, SLA_R = 20;
     const finalStatuses = new Set(['Cerrado', 'Abandonado']);
-    const SLA_FRESH = 10, SLA_RISK = 20, SLA_CRITICAL = 30;
 
     const nuevos      = l.filter(x => x.status === 'Nuevo');
-    const slaFresh    = nuevos.filter(x => calcMin(x.lastInteraction) <= SLA_FRESH);
-    const slaRisk     = nuevos.filter(x => (calcMin(x.lastInteraction) > SLA_FRESH && calcMin(x.lastInteraction) <= SLA_RISK) || x.reassigned);
-    const slaCritical = nuevos.filter(x => calcMin(x.lastInteraction) > SLA_RISK && calcMin(x.lastInteraction) <= SLA_CRITICAL && !x.reassigned);
+    const slaFresh    = nuevos.filter(x => calcMin(x.lastInteraction) <= SLA_F);
+    const slaRisk     = nuevos.filter(x =>
+      (calcMin(x.lastInteraction) > SLA_F && calcMin(x.lastInteraction) <= SLA_R) ||
+      (x.reassigned === true && calcMin(x.lastInteraction) <= SLA_R)
+    );
+    const slaCritical = nuevos.filter(x =>
+      calcMin(x.lastInteraction) > SLA_R && !x.reassigned
+    );
 
     const groups = {
       fresh: slaFresh, risk: slaRisk, critical: slaCritical,
-      nuevo: nuevos,
+      nuevo:       nuevos,
       enProceso:   l.filter(x => x.status === 'En Proceso'),
       agendado:    l.filter(x => x.status === 'Agendado'),
       seguimiento: l.filter(x => x.status === 'Seguimiento'),
@@ -788,27 +793,27 @@ async function mountSemaforo(sec) {
       total: l
     };
 
-    const kpiBtn = (key, emoji, lbl, val, sub, extra = '') =>
-      `<div class="kpi filter-btn ${val > 0 && key === 'critical' ? 'danger' : key === 'fresh' ? 'success' : ''}"
+    const kpiBtn = (key, emoji, lbl, val, sub, extra='') =>
+      `<div class="kpi filter-btn ${val>0&&key==='critical'?'danger':key==='fresh'?'success':''}"
         data-key="${key}" data-title="${emoji} ${lbl}" data-sub="${sub}"
         style="cursor:pointer;transition:transform 0.2s;${extra}"
         onmouseover="this.style.transform='scale(1.02)'" onmouseout="this.style.transform='scale(1)'">
         <div class="kpi-lbl">${emoji} ${lbl}</div>
-        <div class="kpi-val ${val > 0 && key === 'critical' ? 'danger' : key === 'fresh' ? 'success' : ''}"
-          ${key === 'risk' ? 'style="color:#b45309;"' : ''}>${val}</div>
+        <div class="kpi-val ${val>0&&key==='critical'?'danger':key==='fresh'?'success':''}"
+          ${key==='risk'?'style="color:#b45309;"':''}>${val}</div>
         <div class="kpi-foot" style="text-decoration:underline;">Click para ver</div>
       </div>`;
 
     sec.querySelector('#kpiGrid').innerHTML =
-      kpiBtn('critical', '🔴', 'CRÍTICOS',  groups.critical.length, '20-30 min sin contacto') +
-      kpiBtn('risk',     '🟡', 'EN RIESGO', groups.risk.length,     '10-20 min o reasignados',
+      kpiBtn('critical','🔴','CRÍTICOS',  groups.critical.length,'> 20 min sin contacto') +
+      kpiBtn('risk',    '🟡','EN RIESGO', groups.risk.length,    '10-20 min o reasignados',
              'background:linear-gradient(180deg,#fef3c7,var(--surface));border-color:#fcd34d;') +
-      kpiBtn('fresh',    '🟢', 'FRESCOS',   groups.fresh.length,    '< 10 min de espera') +
+      kpiBtn('fresh',   '🟢','FRESCOS',   groups.fresh.length,   '< 10 min de espera') +
       `<div class="kpi"><div class="kpi-lbl">PROM. NUEVOS</div>
         <div class="kpi-val">${k.avgResponseMin}<span style="font-size:18px;color:var(--text-mute);">m</span></div>
         <div class="kpi-foot">Tiempo espera prom.</div></div>`;
 
-    const funBtn = (key, emoji, lbl, val, sub, border = '', txtColor = '') =>
+    const funBtn = (key, emoji, lbl, val, sub, border='', txtColor='') =>
       `<div class="kpi filter-btn" data-key="${key}" data-title="${emoji} ${lbl}" data-sub="${sub}"
         style="padding:12px 16px;cursor:pointer;transition:transform 0.2s;${border}"
         onmouseover="this.style.transform='scale(1.02)'" onmouseout="this.style.transform='scale(1)'">
@@ -817,37 +822,40 @@ async function mountSemaforo(sec) {
       </div>`;
 
     sec.querySelector('#funnelGrid').innerHTML =
-      funBtn('nuevo',       '🏷️',  'Nuevos',       groups.nuevo.length,       'En bandeja SLA',     'border-color:#94a3b8;') +
-      funBtn('enProceso',   '💼',  'En Proceso',   groups.enProceso.length,   'Ya contactados',     'border-color:#c4b5fd;', 'color:#6d28d9;') +
-      funBtn('agendado',    '📅',  'Agendados',    groups.agendado.length,    'Visita/rellamado',   'border-color:#93c5fd;', 'color:#1d4ed8;') +
-      funBtn('seguimiento', '🔄',  'Seguimiento',  groups.seguimiento.length, 'Asistió sin cierre', 'border-color:#fbbf24;', 'color:#b45309;') +
-      funBtn('cerrado',     '✅', 'Cerrados',     groups.cerrado.length,     'Venta concretada',   'border-color:#86efac;', 'color:var(--success);') +
-      funBtn('abandonado',  '❌', 'Abandonados',  groups.abandonado.length,  'Dijeron NO',         'border-color:#fca5a5;', 'color:var(--danger);');
+      funBtn('nuevo',       '🏷️','Nuevos',       groups.nuevo.length,       'En bandeja SLA','border-color:#94a3b8;') +
+      funBtn('enProceso',   '💼','En Proceso',   groups.enProceso.length,   'Ya contactados','border-color:#c4b5fd;','color:#6d28d9;') +
+      funBtn('agendado',    '📅','Agendados',    groups.agendado.length,    'Visita/rellamado','border-color:#93c5fd;','color:#1d4ed8;') +
+      funBtn('seguimiento', '🔄','Seguimiento',  groups.seguimiento.length, 'Asistió sin cierre','border-color:#fbbf24;','color:#b45309;') +
+      funBtn('cerrado',     '✅','Cerrados',     groups.cerrado.length,     'Venta concretada','border-color:#86efac;','color:var(--success);') +
+      funBtn('abandonado',  '❌','Abandonados',  groups.abandonado.length,  'Dijeron NO','border-color:#fca5a5;','color:var(--danger);');
 
     const slaClass = x => {
       if (finalStatuses.has(x.status)) return 'none';
+      if (x.status !== 'Nuevo') return 'none';
       const m = calcMin(x.lastInteraction);
-      if (m > SLA_CRITICAL) return 'critical';
-      if (m > SLA_RISK || x.reassigned) return 'risk';
-      return 'fresh';
+      if (m <= SLA_F) return 'fresh';
+      if ((m <= SLA_R) || (x.reassigned === true && m <= SLA_R)) return 'risk';
+      return 'critical'; // >20 min — sin techo, no desaparece
     };
 
     const renderLeadRow = x => {
       const sc = slaClass(x);
       const isFinal = finalStatuses.has(x.status);
-      return `<div class="sv-lead ${sc === 'critical' ? 'is-critical' : sc === 'risk' ? 'is-risk' : ''}"
+      return `<div class="sv-lead ${sc==='critical'?'is-critical':sc==='risk'?'is-risk':''}"
         onclick="openModal(${x.id})">
         <div>
-          <div class="sv-lead-name">${escape(x.name)}${x.reassigned ? ' 🔄' : ''}</div>
-          <div class="sv-lead-meta">${escape(x.interest || x.source || '-')} · ${x.status}</div>
+          <div class="sv-lead-name">${escape(x.name)}${x.reassigned?' 🔄':''}</div>
+          <div class="sv-lead-meta">${escape(x.interest||x.source||'-')} · ${x.status}</div>
         </div>
-        <div class="sv-lead-time ${isFinal ? 'none' : sc}">${isFinal ? '-' : fmtSLA(x.lastInteraction)}</div>
-        <button class="sv-action ${sc === 'critical' ? 'urgent' : ''}"
+        <div class="sv-lead-time ${isFinal?'none':sc}">${isFinal?'-':fmtSLA(x.lastInteraction)}</div>
+        <button class="sv-action ${sc==='critical'?'urgent':''}"
           onclick="event.stopPropagation();openModal(${x.id})">
-          ${sc === 'critical' ? '🚨 LLAMAR' : sc === 'risk' ? '⚠️ APURAR' : 'VER'}
+          ${sc==='critical'?'🚨 LLAMAR':sc==='risk'?'⚠️ APURAR':'VER'}
         </button>
       </div>`;
     };
+
+    const stableId = str => 'sv-' + str.replace(/[^a-zA-Z0-9]/g, '_');
 
     const renderAccordion = (items, title, subtitle) => {
       sec.querySelector('#listTitle').innerHTML = `<div><h3>${title}</h3><p>${subtitle}</p></div>`;
@@ -858,97 +866,105 @@ async function mountSemaforo(sec) {
       }
       const byVendor = {};
       items.forEach(x => {
-        const key = x.assignedTo || '__none__';
-        if (!byVendor[key]) {
+        const rawKey = x.assignedTo || '__none__';
+        if (!byVendor[rawKey]) {
           const member = t.find(v => v.username === x.assignedTo);
-          byVendor[key] = { name: member ? member.name : (x.assignedTo || 'Sin asignar'), leads: [] };
+          byVendor[rawKey] = {
+            svId:  stableId(x.assignedTo || 'sinasignar'),
+            name:  member ? member.name : (x.assignedTo || 'Sin asignar'),
+            leads: []
+          };
         }
-        byVendor[key].leads.push(x);
+        byVendor[rawKey].leads.push(x);
       });
-      const rows = Object.values(byVendor).sort((a, b) => b.leads.length - a.leads.length);
+      const rows = Object.values(byVendor).sort((a,b) => b.leads.length - a.leads.length);
       sec.querySelector('#alertList').innerHTML = '<div class="sla-accordion">' +
-        rows.map((v, i) => {
-          const svId   = 'sv-' + i;
-          const nd     = v.leads.filter(x => slaClass(x) === 'critical').length;
-          const nr     = v.leads.filter(x => slaClass(x) === 'risk').length;
-          const nf     = v.leads.filter(x => slaClass(x) === 'fresh').length;
-          const avgMin  = v.leads.length
-            ? Math.round(v.leads.reduce((s, x) => s + calcMin(x.lastInteraction), 0) / v.leads.length)
-            : 0;
-          const wasOpen = (window.openAccordionIds || new Set()).has(svId);
+        rows.map(v => {
+          const { svId } = v;
+          const nd = v.leads.filter(x => slaClass(x)==='critical').length;
+          const nr = v.leads.filter(x => slaClass(x)==='risk').length;
+          const nf = v.leads.filter(x => slaClass(x)==='fresh').length;
+          const avgMin = v.leads.length
+            ? Math.round(v.leads.reduce((s,x)=>s+calcMin(x.lastInteraction),0)/v.leads.length) : 0;
+          const wasOpen = (window.openAccordionIds||new Set()).has(svId);
           return `<div class="sla-vendor" id="${svId}">
-            <button class="sla-vendor-head ${wasOpen ? 'open' : ''}" onclick="toggleSV('${svId}')">
+            <button class="sla-vendor-head ${wasOpen?'open':''}" onclick="toggleSV('${svId}')">
               <div class="sv-av">${initials(v.name)}</div>
               <div>
                 <div class="sv-name">${escape(v.name)}</div>
-                <div class="sv-sub">${v.leads.length} lead${v.leads.length !== 1 ? 's' : ''} · ⏱ prom ${avgMin}m</div>
+                <div class="sv-sub">${v.leads.length} lead${v.leads.length!==1?'s':''} · ⏱ prom ${avgMin}m</div>
               </div>
               <div class="sv-sla-pills">
-                <span class="sv-pill critical ${nd === 0 ? 'zero' : ''}">🔴 ${nd}</span>
-                <span class="sv-pill risk ${nr === 0 ? 'zero' : ''}">🟡 ${nr}</span>
-                <span class="sv-pill fresh ${nf === 0 ? 'zero' : ''}">🟢 ${nf}</span>
+                <span class="sv-pill critical ${nd===0?'zero':''}">🔴 ${nd}</span>
+                <span class="sv-pill risk ${nr===0?'zero':''}">🟡 ${nr}</span>
+                <span class="sv-pill fresh ${nf===0?'zero':''}">🟢 ${nf}</span>
               </div>
               <span class="sv-count">${v.leads.length}</span>
               <span class="sv-chevron">▼</span>
             </button>
-            <div class="sv-body ${wasOpen ? 'open' : ''}" id="svb-${svId}">
+            <div class="sv-body ${wasOpen?'open':''}" id="svb-${svId}">
               <div class="sv-leads">
-                ${v.leads.sort((a, b) => calcMin(b.lastInteraction) - calcMin(a.lastInteraction)).map(renderLeadRow).join('')}
+                ${v.leads.sort((a,b)=>calcMin(b.lastInteraction)-calcMin(a.lastInteraction)).map(renderLeadRow).join('')}
               </div>
             </div>
           </div>`;
         }).join('') + '</div>';
       const hasState = window.openAccordionIds && window.openAccordionIds.size > 0;
-      if (!hasState && rows.length && rows[0].leads.some(x => slaClass(x) === 'critical')) toggleSV('sv-0');
+      if (!hasState && rows.length && rows[0].leads.some(x=>slaClass(x)==='critical')) {
+        toggleSV(rows[0].svId);
+      }
     };
 
     sec.querySelectorAll('.filter-btn').forEach(btn => {
       btn.addEventListener('click', () => {
-        sec.querySelectorAll('.filter-btn').forEach(b => b.style.outline = '');
-        btn.style.outline = '2px solid var(--accent)';
-        renderAccordion(groups[btn.dataset.key] || [], btn.dataset.title, btn.dataset.sub);
+        sec.querySelectorAll('.filter-btn').forEach(b => b.style.outline='');
+        btn.style.outline='2px solid var(--accent)';
+        renderAccordion(groups[btn.dataset.key]||[], btn.dataset.title, btn.dataset.sub);
       });
     });
 
-    renderAccordion(groups.critical, '🔴 Críticos', 'Leads sin contacto entre 20-30 min');
+    renderAccordion(groups.critical, '🔴 Críticos', 'Leads > 20 min sin contacto');
 
-    sec.querySelector('#teamList').innerHTML = t.length ? '<div class="sla-accordion">' +
-      t.map((v, i) => {
-        const ri  = 'tm-' + i;
-        const all = v.leads || [];
-        const ar  = typeof v.avgResp === 'number' ? v.avgResp : 0;
-        const nc  = v.sla ? v.sla.critical || 0 : 0;
-        const nr  = v.sla ? v.sla.risk     || 0 : 0;
-        const nf  = v.sla ? v.sla.fresh    || 0 : 0;
-        const cls = v.byStatus ? `${v.byStatus.cerrado} cerrados` : `${v.closed || 0} cerrados`;
-        const wasOpen = (window.openAccordionIds || new Set()).has(ri);
-        return `<div class="sla-vendor" id="${ri}">
-          <button class="sla-vendor-head ${wasOpen ? 'open' : ''}" onclick="toggleSV('${ri}')">
-            <div class="sv-av">${initials(v.name)}</div>
-            <div>
-              <div class="sv-name">${escape(v.name)}</div>
-              <div class="sv-sub">${v.total} leads · ${cls} · ⏱ prom ${ar}m</div>
+    sec.querySelector('#teamList').innerHTML = t.length
+      ? '<div class="sla-accordion">' + t.map(v => {
+          const ri  = stableId(v.username || v.name);
+          const all = v.leads || [];
+          const ar  = typeof v.avgResp==='number' ? v.avgResp : 0;
+          const nc  = v.sla ? (v.sla.critical||0) : 0;
+          const nr2 = v.sla ? (v.sla.risk||0)     : 0;
+          const nf  = v.sla ? (v.sla.fresh||0)    : 0;
+          const cls = v.byStatus ? `${v.byStatus.cerrado} cerrados` : `${v.closed||0} cerrados`;
+          const wasOpen = (window.openAccordionIds||new Set()).has(ri);
+          return `<div class="sla-vendor" id="${ri}">
+            <button class="sla-vendor-head ${wasOpen?'open':''}" onclick="toggleSV('${ri}')">
+              <div class="sv-av">${initials(v.name)}</div>
+              <div>
+                <div class="sv-name">${escape(v.name)}</div>
+                <div class="sv-sub">${v.total} leads · ${cls} · ⏱ prom ${ar}m</div>
+              </div>
+              <div class="sv-sla-pills">
+                <span class="sv-pill critical ${nc===0?'zero':''}">🔴 ${nc}</span>
+                <span class="sv-pill risk ${nr2===0?'zero':''}">🟡 ${nr2}</span>
+                <span class="sv-pill fresh ${nf===0?'zero':''}">🟢 ${nf}</span>
+              </div>
+              <span class="sv-count">${v.total}</span>
+              <span class="sv-chevron">▼</span>
+            </button>
+            <div class="sv-body ${wasOpen?'open':''}" id="svb-${ri}">
+              <div class="sv-leads">
+                ${all.length
+                  ? all.sort((a,b)=>calcMin(b.lastInteraction)-calcMin(a.lastInteraction)).map(renderLeadRow).join('')
+                  : '<div style="font-size:12px;color:var(--text-mute);padding:8px 0;">Sin leads asignados.</div>'}
+              </div>
             </div>
-            <div class="sv-sla-pills">
-              <span class="sv-pill critical ${nc === 0 ? 'zero' : ''}">🔴 ${nc}</span>
-              <span class="sv-pill risk ${nr === 0 ? 'zero' : ''}">🟡 ${nr}</span>
-              <span class="sv-pill fresh ${nf === 0 ? 'zero' : ''}">🟢 ${nf}</span>
-            </div>
-            <span class="sv-count">${v.total}</span>
-            <span class="sv-chevron">▼</span>
-          </button>
-          <div class="sv-body ${wasOpen ? 'open' : ''}" id="svb-${ri}">
-            <div class="sv-leads">
-              ${all.length
-                ? all.sort((a, b) => calcMin(b.lastInteraction) - calcMin(a.lastInteraction)).map(renderLeadRow).join('')
-                : '<div style="font-size:12px;color:var(--text-mute);padding:8px 0;">Sin leads asignados.</div>'}
-            </div>
-          </div>
-        </div>`;
-      }).join('') + '</div>'
+          </div>`;
+        }).join('') + '</div>'
       : '<div class="empty">Sin vendedores cargados.</div>';
 
-  } catch (e) { showToast('Error al cargar Semáforo'); }
+  } catch (e) {
+    console.error('mountSemaforo error:', e);
+    showToast('Error al cargar Semáforo');
+  }
 }
 
 async function mountPipeline(sec) {
@@ -964,35 +980,38 @@ async function loadPipeline() {
 }
 
 function renderKanban() {
-  if (!pipeData || currentView !== 'pipeline') return;
-  const host = $('kanban');
-  if (!host) return;
-  host.innerHTML = pipeData.map(col => `
-    <div class="kcol" data-s="${escape(col.stage)}">
-      <div class="kcol-head"><span class="kcol-name">${escape(col.stage)}</span><span class="kcol-count">${col.leads.length}</span></div>
-      <div class="kcol-body">${col.leads.map(cardHTML).join('') || '<div class="empty" style="font-size:12px;padding:14px;">Sin leads</div>'}</div>
-    </div>
-  `).join('');
-
-  const all = pipeData.flatMap(c => c.leads);
-  const active = new Set(['Nuevo','Contactado','Calificado','Negociación','Agendado','Atendido']);
-  const a = all.filter(l => active.has(l.status));
-  const danger = a.filter(l => calcMin(l.lastInteraction) > SLA_DANGER).length;
-  const fresh = a.filter(l => calcMin(l.lastInteraction) <= SLA_WARN).length;
-  $('pipeSub').textContent = currentUser.role === 'vendedor'
-    ? 'Vista filtrada con tus leads asignados.'
-    : 'Vista completa del equipo.';
-  $('kSummary').innerHTML = `
-    <div class="sp"><span class="sp-num">${all.length}</span><span class="sp-lbl">${currentUser.role==='vendedor'?'Mis leads':'Total'}</span></div>
-    <div class="sp success"><span class="sp-num">${fresh}</span><span class="sp-lbl">Frescos</span></div>
-    <div class="sp ${danger>0?'danger':''}"><span class="sp-num">${danger}</span><span class="sp-lbl">SLA excedido</span></div>
-  `;
+  try {
+    if (!pipeData || currentView !== 'pipeline') return;
+    const host = $('kanban');
+    if (!host) return;
+    host.innerHTML = pipeData.map(col => `
+      <div class="kcol" data-s="${escape(col.stage)}">
+        <div class="kcol-head"><span class="kcol-name">${escape(col.stage)}</span><span class="kcol-count">${col.leads.length}</span></div>
+        <div class="kcol-body">${col.leads.map(cardHTML).join('') || '<div class="empty" style="font-size:12px;padding:14px;">Sin leads</div>'}</div>
+      </div>
+    `).join('');
+    const all = pipeData.flatMap(c => c.leads);
+    const active = new Set(['Nuevo','En Proceso','Agendado','Seguimiento']);
+    const a = all.filter(l => active.has(l.status));
+    const danger = a.filter(l => calcMin(l.lastInteraction) > 20).length;
+    const fresh  = a.filter(l => calcMin(l.lastInteraction) <= 10).length;
+    $('pipeSub').textContent = currentUser.role === 'vendedor'
+      ? 'Vista filtrada con tus leads asignados.' : 'Vista completa del equipo.';
+    $('kSummary').innerHTML = `
+      <div class="sp"><span class="sp-num">${all.length}</span><span class="sp-lbl">${currentUser.role==='vendedor'?'Mis leads':'Total'}</span></div>
+      <div class="sp success"><span class="sp-num">${fresh}</span><span class="sp-lbl">Frescos</span></div>
+      <div class="sp ${danger>0?'danger':''}"><span class="sp-num">${danger}</span><span class="sp-lbl">SLA excedido</span></div>
+    `;
+  } catch(e) {
+    console.error('renderKanban error:', e);
+    showToast('Error al renderizar Pipeline');
+  }
 }
 
 function cardHTML(l) {
   const m = calcMin(l.lastInteraction);
   const sla = m > SLA_DANGER ? 'danger' : m > SLA_WARN ? 'warn' : 'fresh';
-  const isFinal = ['Cerrado','Perdido'].includes(l.status);
+  const isFinal = ['Cerrado','Abandonado'].includes(l.status);
   const lvl = isFinal ? 'none' : (l.alertLevel || (m >= 45 ? 'red' : m >= 30 ? 'yellow' : 'none'));
   const alertClass = lvl === 'red' ? 'alert-red alert' : lvl === 'yellow' ? 'alert-yellow' : '';
   const last = l.chatHistory?.length ? l.chatHistory[l.chatHistory.length-1].content : (l.interest || 'Sin interacciones');
@@ -1040,7 +1059,7 @@ function renderMonitorList() {
   $('monList').innerHTML = chats.length ? chats.map(c => {
     const last = c.chatHistory[c.chatHistory.length-1];
     const m = calcMin(c.lastInteraction);
-    const isAlert = m > SLA_DANGER && !['Cerrado','Perdido'].includes(c.status);
+    const isAlert = m > 20 && !['Cerrado','Abandonado'].includes(c.status);
     return `
       <div class="cr ${c.id===activeChatId?'active':''}" onclick="selectChat(${c.id})">
         <div class="cr-avatar">${initials(c.name)}</div>

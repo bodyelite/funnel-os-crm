@@ -6,11 +6,13 @@
       "phone": "+56 9 1111 1111",
       "source": "Meta Ads",
       "status": "Nuevo",
-      "assignedTo": "vendedor1",
-      "lastInteraction": "2026-05-08T22:10:24.928Z",
+      "assignedTo": "gerente",
+      "lastInteraction": "2026-05-08T22:42:40.456Z",
       "interest": "Peugeot 3008 - Busco info",
       "alertLevel": "risk",
-      "botActive": true
+      "botActive": true,
+      "reassigned": true,
+      "reassignedAt": "2026-05-08T22:42:40.456Z"
     },
     {
       "id": 102,
@@ -18,10 +20,10 @@
       "phone": "+56 9 2222 2222",
       "source": "Chileautos",
       "status": "Nuevo",
-      "assignedTo": "vendedor1",
+      "assignedTo": "gerente",
       "lastInteraction": "2026-05-08T22:30:28.879Z",
       "interest": "SUV Familiar urgente",
-      "alertLevel": "risk",
+      "alertLevel": "critical",
       "botActive": true,
       "reassigned": true,
       "reassignedAt": "2026-05-08T22:30:28.879Z"
@@ -32,10 +34,10 @@
       "phone": "+56 9 3333 3333",
       "source": "Google Ads",
       "status": "Nuevo",
-      "assignedTo": "vendedor2",
+      "assignedTo": "gerente",
       "lastInteraction": "2026-05-08T22:20:28.231Z",
       "interest": "Camioneta 4x4 Diésel",
-      "alertLevel": "risk",
+      "alertLevel": "critical",
       "botActive": true,
       "reassigned": true,
       "reassignedAt": "2026-05-08T22:20:28.231Z"
@@ -131,6 +133,73 @@
       "assignedTo": "vendedor2",
       "lastInteraction": "2026-05-06T03:35:24.929Z",
       "interest": "No le dio el crédito bancario"
+    }
+  ],
+  "demo_clinica": [
+    {
+      "id": 2001,
+      "name": "Patricia Rivera",
+      "phone": "+56 9 3344 5566",
+      "source": "Google Ads",
+      "status": "Calificado",
+      "lastInteraction": "2026-05-08T22:30:31.673Z",
+      "interest": "Dermatología",
+      "assignedTo": "vendedor1",
+      "botActive": true,
+      "alertLevel": "none",
+      "model": "Hora Dermatología",
+      "chatHistory": [
+        {
+          "role": "user",
+          "content": "Hora con dermatólogo, manchas en la cara"
+        },
+        {
+          "role": "bot",
+          "content": "Dra. Soto tiene cupos esta semana. ¿Mañana o tarde?"
+        }
+      ]
+    },
+    {
+      "id": 2002,
+      "name": "Roberto Cárcamo",
+      "phone": "+56 9 7766 5544",
+      "source": "Meta Ads",
+      "status": "Contactado",
+      "lastInteraction": "2026-05-08T21:52:31.676Z",
+      "interest": "Chequeo preventivo",
+      "assignedTo": "vendedor1",
+      "botActive": true,
+      "alertLevel": "none",
+      "model": "Medicina General",
+      "chatHistory": []
+    },
+    {
+      "id": 2003,
+      "name": "Isidora Lagos",
+      "phone": "+56 9 4433 2211",
+      "source": "Landing Page",
+      "status": "Nuevo",
+      "lastInteraction": "2026-05-08T19:42:31.676Z",
+      "interest": "Estética",
+      "assignedTo": "vendedor1",
+      "botActive": true,
+      "alertLevel": "critical",
+      "model": "Hora Dermatología",
+      "chatHistory": []
+    },
+    {
+      "id": 2004,
+      "name": "Constanza Mella",
+      "phone": "+56 9 5566 7788",
+      "source": "Instagram",
+      "status": "Negociación",
+      "lastInteraction": "2026-05-08T21:17:31.676Z",
+      "interest": "Plan integral",
+      "assignedTo": "vendedor1",
+      "botActive": true,
+      "alertLevel": "none",
+      "model": "Hora Ginecología",
+      "chatHistory": []
     }
   ]
 }
