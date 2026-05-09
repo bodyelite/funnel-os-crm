@@ -6,7 +6,7 @@ const crypto = require('crypto');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
-const DATA = path.join(__dirname, 'data');
+const DATA = process.env.RENDER ? '/var/data' : path.join(__dirname, 'data');
 if (!fsSync.existsSync(DATA)) fsSync.mkdirSync(DATA, { recursive: true });
 
 app.use(express.json());
