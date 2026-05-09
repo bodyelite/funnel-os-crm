@@ -499,6 +499,44 @@ app.post('/api/chat', async (req, res) => {
   res.json({ reply: null, sessionId, leadCaptured: captured, leadId, botPaused: true });
 });
 
+
+// ===== WEBHOOK WHATSAPP CLOUD API =====
+app.get('/webhook', (req, res) => {
+  const verify_token = 'zara_token_123';
+  let mode = req.query['hub.mode'];
+  let token = req.query['hub.verify_token'];
+  let challenge = req.query['hub.challenge'];
+
+  if (mode && token) {
+    if (mode === 'subscribe' && token === verify_token) {
+      console.log('✅ WEBHOOK VERIFICADO POR META');
+      res.status(200).send(challenge);
+    } else {
+      res.sendStatus(403);
+    }
+  }
+});
+
+app.post('/webhook', (req, res) => {
+  let body = req.body;
+  if (body.object) {
+    if (body.entry && 
+        body.entry[0].changes && 
+        body.entry[0].changes[0] && 
+        body.entry[0].changes[0].value.messages && 
+        body.entry[0].changes[0].value.messages[0]) {
+      
+      let from = body.entry[0].changes[0].value.messages[0].from;
+      let msg_body = body.entry[0].changes[0].value.messages[0].text.body;
+      
+      console.log('💬 [WhatsApp] Mensaje de ' + from + ': ' + msg_body);
+    }
+    res.sendStatus(200);
+  } else {
+    res.sendStatus(404);
+  }
+});
+
 app.use(express.static(path.join(__dirname, 'public')));
 app.get('*', (req, res) => res.sendFile(path.join(__dirname, 'public', 'index.html')));
 
