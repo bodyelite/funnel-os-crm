@@ -1,3 +1,35 @@
+
+// ===== INTELIGENCIA ARTIFICIAL ZARA (OpenAI) =====
+const { OpenAI } = require('openai');
+const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+
+async function getZaraResponse(tenant, history, msg) {
+  try {
+    const cfg = await tRead(F.config, tenant, {});
+    const inv = await tRead(F.inventory, tenant, []);
+    
+    const prompt = `${cfg.prompt_base || 'Eres una asistente de ventas.'}
+    INVENTARIO ACTUAL: ${JSON.stringify(inv)}
+    REGLA: Si el cliente pregunta por un modelo, usa los datos del inventario. Se amable y orientada a cerrar la venta.`;
+
+    const messages = [
+      { role: "system", content: prompt },
+      ...history.map(h => ({ role: h.role === 'user' ? 'user' : 'assistant', content: h.content })),
+      { role: "user", content: msg }
+    ];
+
+    const completion = await openai.chat.completions.create({
+      model: "gpt-4o",
+      messages: messages,
+      temperature: 0.7
+    });
+
+    return completion.choices[0].message.content;
+  } catch (e) {
+    console.error("❌ Error OpenAI:", e);
+    return "Lo siento, tuve un pequeño problema técnico. ¿Podrías repetirme eso?";
+  }
+}
 const express = require('express');
 const path = require('path');
 const fs = require('fs').promises;
@@ -573,7 +605,7 @@ app.post('/webhook', async (req, res) => {
         // Respuesta del Bot
         if (leadsData[tenant][idx].botActive !== false) {
           const step = leadsData[tenant][idx].chatHistory.filter(m => m.role === 'user').length - 1;
-          const reply = mockReply(tenant, msg_body, step);
+          const reply = await getZaraResponse(tenant, leadsData[tenant][idx].chatHistory.slice(0, -1), msg_body);
 
           leadsData[tenant][idx].chatHistory.push({ role: 'bot', content: reply, ts: Date.now() });
           if (step >= 1 && leadsData[tenant][idx].status === 'Nuevo') leadsData[tenant][idx].status = 'Contactado';

@@ -8,6 +8,7 @@
     "dev": "node --watch server.js"
   },
   "dependencies": {
-    "express": "^4.22.1"
+    "express": "^4.22.1",
+    "openai": "^6.37.0"
   }
 }
