@@ -1,0 +1,32 @@
+{
+  "demo_automotora": {
+    "businessName": "Automotora Andes",
+    "industry": "automotora",
+    "currency": "CLP",
+    "accentColor": "#2563eb",
+    "stages": [
+      "Nuevo",
+      "En Proceso",
+      "Lead Calificado - Contacto Agendado",
+      "Agendado",
+      "Seguimiento",
+      "Cerrado",
+      "Abandonado"
+    ]
+  },
+  "demo_clinica": {
+    "businessName": "Clínica Vital",
+    "industry": "clinica",
+    "currency": "CLP",
+    "accentColor": "#0d9488",
+    "stages": [
+      "Nuevo",
+      "En Proceso",
+      "Lead Calificado - Contacto Agendado",
+      "Agendado",
+      "Seguimiento",
+      "Cerrado",
+      "Abandonado"
+    ]
+  }
+}
