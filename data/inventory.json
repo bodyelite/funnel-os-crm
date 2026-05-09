@@ -70,25 +70,5 @@
       "fuel": "Bencina",
       "highlights": "Revisión mecánica completa, aire acondicionado, muy económico."
     }
-  ],
-  "demo_clinica": [
-    {
-      "id": "VIT-DERM",
-      "model": "Hora Dermatología",
-      "stock": 12,
-      "price": 45000
-    },
-    {
-      "id": "VIT-GIN",
-      "model": "Hora Ginecología",
-      "stock": 9,
-      "price": 50000
-    },
-    {
-      "id": "VIT-MG",
-      "model": "Medicina General",
-      "stock": 25,
-      "price": 32000
-    }
   ]
 }
