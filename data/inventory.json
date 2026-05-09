@@ -1,11 +1,84 @@
 {
   "demo_automotora": [
-    { "id": "AND-SUV-001", "model": "SUV Grand Explorer 7 Plazas 2.0T", "year": 2026, "stock": 3, "price": 24990000, "color": "Gris Grafito", "fuel": "Bencina", "highlights": "Techo panorámico, 3 filas de asientos, seguridad 5 estrellas." },
-    { "id": "AND-SUV-002", "model": "SUV Compact Advance 1.5L", "year": 2025, "stock": 5, "price": 18490000, "color": "Blanco Perla", "fuel": "Bencina", "highlights": "Ideal para ciudad, bajo consumo, cámara 360." },
-    { "id": "AND-SUV-003", "model": "SUV Urban Cross (Seminueva)", "year": 2023, "stock": 1, "price": 13990000, "color": "Azul Metálico", "fuel": "Bencina", "highlights": "Poco kilometraje, único dueño, ideal para primer SUV." },
-    { "id": "AND-SED-001", "model": "Sedán Executive 1.6L", "year": 2026, "stock": 8, "price": 14990000, "color": "Negro Profundo", "fuel": "Bencina", "highlights": "Financiamiento desde $190.000 mensuales, entrega inmediata." },
-    { "id": "AND-PCK-001", "model": "Camioneta Workhorse 4x4 Diésel", "year": 2026, "stock": 4, "price": 22990000, "color": "Rojo Carmín", "fuel": "Diésel", "highlights": "Capacidad de carga 1 tonelada, tracción integral, motor turbo." },
-    { "id": "AND-EV-001", "model": "E-City Compact (100% Eléctrico)", "year": 2026, "stock": 2, "price": 19990000, "color": "Verde Mint", "fuel": "Eléctrico", "highlights": "Autonomía 400km, carga rápida, libre de restricción vehicular." },
-    { "id": "AND-USE-001", "model": "Citroën C3 Feel (Usado Selección)", "year": 2019, "stock": 1, "price": 9890000, "color": "Blanco/Rojo", "fuel": "Bencina", "highlights": "Revisión mecánica completa, aire acondicionado, muy económico." }
+    {
+      "id": "AND-SUV-001",
+      "model": "SUV Grand Explorer 7 Plazas 2.0T",
+      "year": 2026,
+      "stock": 3,
+      "price": 24990000,
+      "color": "Gris Grafito",
+      "fuel": "Bencina",
+      "highlights": "Techo panorámico, 3 filas de asientos, seguridad 5 estrellas."
+    },
+    {
+      "id": "AND-SUV-002",
+      "model": "SUV Compact Advance 1.5L",
+      "year": 2025,
+      "stock": 5,
+      "price": 18490000,
+      "color": "Blanco Perla",
+      "fuel": "Bencina",
+      "highlights": "Ideal para ciudad, bajo consumo, cámara 360."
+    },
+    {
+      "id": "AND-SUV-003",
+      "model": "SUV Urban Cross (Seminueva)",
+      "year": 2023,
+      "stock": 1,
+      "price": 13990000,
+      "color": "Azul Metálico",
+      "fuel": "Bencina",
+      "highlights": "Poco kilometraje, único dueño, ideal para primer SUV."
+    },
+    {
+      "id": "AND-SED-001",
+      "model": "Sedán Executive 1.6L",
+      "year": 2026,
+      "stock": 8,
+      "price": 14990000,
+      "color": "Negro Profundo",
+      "fuel": "Bencina",
+      "highlights": "Financiamiento desde $190.000 mensuales, entrega inmediata."
+    },
+    {
+      "id": "AND-PCK-001",
+      "model": "Camioneta Workhorse 4x4 Diésel",
+      "year": 2026,
+      "stock": 4,
+      "price": 22990000,
+      "color": "Rojo Carmín",
+      "fuel": "Diésel",
+      "highlights": "Capacidad de carga 1 tonelada, tracción integral, motor turbo."
+    },
+    {
+      "id": "AND-EV-001",
+      "model": "E-City Compact (100% Eléctrico)",
+      "year": 2026,
+      "stock": 2,
+      "price": 19990000,
+      "color": "Verde Mint",
+      "fuel": "Eléctrico",
+      "highlights": "Autonomía 400km, carga rápida, libre de restricción vehicular."
+    },
+    {
+      "id": "AND-USE-001",
+      "model": "Citroën C3 Feel (Usado Selección)",
+      "year": 2019,
+      "stock": 1,
+      "price": 9890000,
+      "color": "Blanco/Rojo",
+      "fuel": "Bencina",
+      "highlights": "Revisión mecánica completa, aire acondicionado, muy económico."
+    },
+    {
+      "id": "AND-USE-LR001",
+      "model": "Land Rover Discovery Sport 2.0ID Auto 4WD",
+      "year": 2023,
+      "stock": 1,
+      "price": 43690000,
+      "color": "Blanco",
+      "fuel": "Diésel",
+      "highlights": "Garantía mecánica extendida, 3 corridas de asientos, SUV realmente premium, exquisito andar."
+    }
   ]
 }
