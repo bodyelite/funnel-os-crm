@@ -1,6 +1,25 @@
 {
   "demo_automotora": [
     {
+      "id": 1778294546644,
+      "name": "Juan Ignacio (Interés Discovery)",
+      "phone": "+56983302067",
+      "source": "Chileautos",
+      "status": "Nuevo",
+      "lastInteraction": "2026-05-09T02:42:26.644Z",
+      "interest": "Land Rover Discovery Sport 2023 - Ref: AND-USE-LR001",
+      "assignedTo": "vendedor1",
+      "botActive": true,
+      "alertLevel": "high",
+      "chatHistory": [
+        {
+          "role": "user",
+          "content": "Hola, vi la Land Rover Discovery Sport 2023 en Chileautos por $43.690.000. ¿Sigue disponible? Me interesa verla mañana.",
+          "ts": 1778294546660
+        }
+      ]
+    },
+    {
       "id": 101,
       "name": "Juan Pérez",
       "phone": "+56 9 1111 1111",
