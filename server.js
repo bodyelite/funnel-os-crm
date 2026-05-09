@@ -500,7 +500,21 @@ app.post('/api/chat', async (req, res) => {
 });
 
 
+
 // ===== WEBHOOK WHATSAPP CLOUD API =====
+async function sendWhatsAppMessage(to, text) {
+  const token = process.env.WA_TOKEN;
+  const phoneId = process.env.WA_PHONE_ID;
+  if (!token || !phoneId) return console.log("⚠️ Faltan WA_TOKEN o WA_PHONE_ID en Environment");
+  try {
+    await fetch(`https://graph.facebook.com/v17.0/${phoneId}/messages`, {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ messaging_product: 'whatsapp', to: to, type: 'text', text: { body: text } })
+    });
+  } catch(e) { console.error("❌ Error enviando WA:", e); }
+}
+
 app.get('/webhook', (req, res) => {
   const verify_token = 'zara_token_123';
   let mode = req.query['hub.mode'];
@@ -509,7 +523,6 @@ app.get('/webhook', (req, res) => {
 
   if (mode && token) {
     if (mode === 'subscribe' && token === verify_token) {
-      console.log('✅ WEBHOOK VERIFICADO POR META');
       res.status(200).send(challenge);
     } else {
       res.sendStatus(403);
@@ -517,21 +530,64 @@ app.get('/webhook', (req, res) => {
   }
 });
 
-app.post('/webhook', (req, res) => {
+app.post('/webhook', async (req, res) => {
   let body = req.body;
   if (body.object) {
-    if (body.entry && 
-        body.entry[0].changes && 
-        body.entry[0].changes[0] && 
-        body.entry[0].changes[0].value.messages && 
-        body.entry[0].changes[0].value.messages[0]) {
-      
-      let from = body.entry[0].changes[0].value.messages[0].from;
-      let msg_body = body.entry[0].changes[0].value.messages[0].text.body;
-      
-      console.log('💬 [WhatsApp] Mensaje de ' + from + ': ' + msg_body);
-    }
-    res.sendStatus(200);
+    res.sendStatus(200); // 🚀 Responder rápido a Meta para que no corte
+    try {
+      if (body.entry && body.entry[0].changes && body.entry[0].changes[0].value.messages && body.entry[0].changes[0].value.messages[0]) {
+        let msgObj = body.entry[0].changes[0].value.messages[0];
+        let from = msgObj.from;
+        let msg_body = msgObj.text ? msgObj.text.body : null;
+        let contactName = body.entry[0].changes[0].value.contacts ? body.entry[0].changes[0].value.contacts[0].profile.name : 'WhatsApp Lead';
+
+        if (!msg_body) return; // Solo texto por ahora
+
+        console.log('💬 [WhatsApp] Recibido de ' + from + ': ' + msg_body);
+
+        const tenant = 'demo_automotora';
+        const leadsData = await read(F.leads);
+        if (!leadsData[tenant]) leadsData[tenant] = [];
+
+        // Buscar lead por teléfono
+        let idx = leadsData[tenant].findIndex(l => l.phone && l.phone.replace(/D/g, '').includes(from));
+
+        if (idx === -1) {
+          const assigned = await rrNext(tenant) || 'gerente';
+          const newLead = {
+            id: Date.now(), name: contactName, phone: '+' + from,
+            source: 'WhatsApp', status: 'Nuevo',
+            lastInteraction: new Date().toISOString(),
+            interest: msg_body.slice(0, 80),
+            assignedTo: assigned,
+            botActive: true, alertLevel: 'none', chatHistory: []
+          };
+          leadsData[tenant].unshift(newLead);
+          idx = 0;
+        }
+
+        // Guardar historial del usuario
+        leadsData[tenant][idx].chatHistory = leadsData[tenant][idx].chatHistory || [];
+        leadsData[tenant][idx].chatHistory.push({ role: 'user', content: msg_body, ts: Date.now() });
+
+        // Respuesta del Bot
+        if (leadsData[tenant][idx].botActive !== false) {
+          const step = leadsData[tenant][idx].chatHistory.filter(m => m.role === 'user').length - 1;
+          const reply = mockReply(tenant, msg_body, step);
+
+          leadsData[tenant][idx].chatHistory.push({ role: 'bot', content: reply, ts: Date.now() });
+          if (step >= 1 && leadsData[tenant][idx].status === 'Nuevo') leadsData[tenant][idx].status = 'Contactado';
+
+          // 🚀 HABLA ZARA: Disparo de la API a Meta
+          await sendWhatsAppMessage(from, reply);
+        }
+
+        leadsData[tenant][idx].lastInteraction = new Date().toISOString();
+        leadsData[tenant][idx].alertLevel = computeAlertLevel(leadsData[tenant][idx]);
+
+        await write(F.leads, leadsData);
+      }
+    } catch (e) { console.error('Error procesando webhook:', e); }
   } else {
     res.sendStatus(404);
   }
