@@ -9,10 +9,27 @@
       "assignedTo": "gerente",
       "lastInteraction": "2026-05-08T22:42:40.456Z",
       "interest": "Peugeot 3008 - Busco info",
-      "alertLevel": "risk",
+      "alertLevel": "critical",
       "botActive": true,
       "reassigned": true,
-      "reassignedAt": "2026-05-08T22:42:40.456Z"
+      "reassignedAt": "2026-05-08T22:42:40.456Z",
+      "chatHistory": [
+        {
+          "role": "user",
+          "content": "Hola, busco info del Peugeot 3008",
+          "ts": 1778279920456
+        },
+        {
+          "role": "bot",
+          "content": "¡Hola Juan! Excelente elección. ¿Lo buscas para uso familiar o de trabajo?",
+          "ts": 1778280040456
+        },
+        {
+          "role": "user",
+          "content": "Familiar, somos 4. ¿Qué versiones y precios tienen?",
+          "ts": 1778280160456
+        }
+      ]
     },
     {
       "id": 102,
@@ -26,7 +43,24 @@
       "alertLevel": "critical",
       "botActive": true,
       "reassigned": true,
-      "reassignedAt": "2026-05-08T22:30:28.879Z"
+      "reassignedAt": "2026-05-08T22:30:28.879Z",
+      "chatHistory": [
+        {
+          "role": "user",
+          "content": "Necesito una SUV familiar urgente, mi auto murió",
+          "ts": 1778279188879
+        },
+        {
+          "role": "bot",
+          "content": "Entiendo María. Tenemos entrega inmediata en modelos 7 plazas. ¿Tienes un presupuesto inicial en mente?",
+          "ts": 1778279308879
+        },
+        {
+          "role": "user",
+          "content": "Unos 15 millones más o menos. ¿Puedo dar mi auto en parte de pago aunque esté con fallas?",
+          "ts": 1778279428879
+        }
+      ]
     },
     {
       "id": 103,
@@ -40,7 +74,24 @@
       "alertLevel": "critical",
       "botActive": true,
       "reassigned": true,
-      "reassignedAt": "2026-05-08T22:20:28.231Z"
+      "reassignedAt": "2026-05-08T22:20:28.231Z",
+      "chatHistory": [
+        {
+          "role": "user",
+          "content": "Hola, necesito cotizar camioneta 4x4 diésel",
+          "ts": 1778278588231
+        },
+        {
+          "role": "bot",
+          "content": "¡Hola Carlos! Tenemos excelentes opciones para trabajo pesado. ¿Cuántos kilómetros mensuales estimas recorrer?",
+          "ts": 1778278708231
+        },
+        {
+          "role": "user",
+          "content": "Unos 3000 km mensuales. Ojalá con bono de financiamiento y factura a nombre de empresa.",
+          "ts": 1778278828231
+        }
+      ]
     },
     {
       "id": 104,
@@ -54,7 +105,24 @@
       "reassignedAt": "2026-05-08T22:03:24.929Z",
       "interest": "Sedán Económico",
       "alertLevel": "critical",
-      "botActive": true
+      "botActive": true,
+      "chatHistory": [
+        {
+          "role": "user",
+          "content": "Busco un sedán económico automático",
+          "ts": 1778277564929
+        },
+        {
+          "role": "bot",
+          "content": "Hola Ana. Tenemos sedanes automáticos desde $12.990.000. ¿Te interesa dar un pie o financiar el 100%?",
+          "ts": 1778277684929
+        },
+        {
+          "role": "user",
+          "content": "Tengo un pie de 3 millones. ¿Puedo ir a probarlo hoy en la tarde?",
+          "ts": 1778277804929
+        }
+      ]
     },
     {
       "id": 105,
@@ -68,7 +136,24 @@
       "reassignedAt": "2026-05-08T21:57:24.929Z",
       "interest": "Auto Eléctrico",
       "alertLevel": "critical",
-      "botActive": true
+      "botActive": true,
+      "chatHistory": [
+        {
+          "role": "user",
+          "content": "Me interesa el auto eléctrico, ¿cuánta autonomía tiene?",
+          "ts": 1778277204929
+        },
+        {
+          "role": "bot",
+          "content": "Hola Pedro. Nuestro modelo eléctrico tiene hasta 450km de autonomía WLTP. ¿Tienes posibilidad de cargar en casa?",
+          "ts": 1778277324929
+        },
+        {
+          "role": "user",
+          "content": "No, vivo en departamento. ¿Ustedes instalan el cargador o cómo se hace?",
+          "ts": 1778277444929
+        }
+      ]
     },
     {
       "id": 106,
@@ -79,7 +164,30 @@
       "assignedTo": "vendedor1",
       "lastInteraction": "2026-05-08T21:30:24.929Z",
       "interest": "Peugeot 208 - Crédito evaluando",
-      "botActive": true
+      "botActive": false,
+      "chatHistory": [
+        {
+          "role": "user",
+          "content": "Hola, quiero ver el crédito para el Peugeot 208",
+          "ts": 1778275464929
+        },
+        {
+          "role": "bot",
+          "content": "¡Hola Laura! Claro, podemos simularlo. ¿Tienes tus últimas liquidaciones?",
+          "ts": 1778275584929
+        },
+        {
+          "role": "agent",
+          "content": "Hola Laura, soy Rodrigo. Te acabo de enviar la simulación al correo. Cuéntame si te sirve la cuota.",
+          "agent": "vendedor1",
+          "ts": 1778275704929
+        },
+        {
+          "role": "user",
+          "content": "Gracias Rodrigo, la estoy revisando. ¿Se puede bajar un poco si doy más pie?",
+          "ts": 1778275824929
+        }
+      ]
     },
     {
       "id": 107,
@@ -90,7 +198,20 @@
       "assignedTo": "vendedor2",
       "lastInteraction": "2026-05-08T20:15:24.929Z",
       "interest": "Camioneta Trabajo",
-      "botActive": true
+      "botActive": false,
+      "chatHistory": [
+        {
+          "role": "user",
+          "content": "¿Tienen la camioneta de trabajo en color rojo?",
+          "ts": 1778271204929
+        },
+        {
+          "role": "agent",
+          "content": "Hola Diego, soy Camila. Déjame revisar el stock de bodega y te confirmo de inmediato.",
+          "agent": "vendedor2",
+          "ts": 1778271324929
+        }
+      ]
     },
     {
       "id": 108,
@@ -101,7 +222,29 @@
       "assignedTo": "vendedor1",
       "lastInteraction": "2026-05-08T17:15:24.929Z",
       "interest": "Viene el sábado a ver la SUV",
-      "botActive": true
+      "botActive": true,
+      "chatHistory": [
+        {
+          "role": "user",
+          "content": "Quiero agendar una visita para ver la SUV",
+          "ts": 1778260164929
+        },
+        {
+          "role": "bot",
+          "content": "Perfecto Sofía. ¿Qué día y horario te acomoda más?",
+          "ts": 1778260284929
+        },
+        {
+          "role": "user",
+          "content": "El sábado a las 10 am por favor.",
+          "ts": 1778260404929
+        },
+        {
+          "role": "bot",
+          "content": "¡Listo! Te esperamos este sábado a las 10:00 hrs. Tu asesor se contactará contigo pronto.",
+          "ts": 1778260524929
+        }
+      ]
     },
     {
       "id": 109,
@@ -112,7 +255,20 @@
       "assignedTo": "vendedor2",
       "lastInteraction": "2026-05-07T22:15:24.929Z",
       "interest": "Vino al local, lo está pensando con la señora",
-      "botActive": true
+      "botActive": false,
+      "chatHistory": [
+        {
+          "role": "agent",
+          "content": "Hola Lucas, un gusto conocerte hoy en la sucursal. Avísame qué deciden con tu señora sobre el crédito.",
+          "agent": "vendedor2",
+          "ts": 1778192004929
+        },
+        {
+          "role": "user",
+          "content": "Gracias Camila, lo estamos conversando, yo creo que el lunes te damos la respuesta definitiva.",
+          "ts": 1778192124929
+        }
+      ]
     },
     {
       "id": 110,

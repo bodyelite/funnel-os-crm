@@ -769,18 +769,21 @@ async function mountSemaforo(sec) {
       api('/api/leads').then(r => r.json())
     ]);
 
-    const SLA_F = 10, SLA_R = 20;
     const finalStatuses = new Set(['Cerrado', 'Abandonado']);
 
+    // ── Función canónica única: KPIs + acordeón + ranking usan la misma lógica ──
+    const getSlaClass = (lead) => {
+      if (finalStatuses.has(lead.status) || lead.status !== 'Nuevo') return 'none';
+      const m = calcMin(lead.lastInteraction);
+      if (m > 20) return 'critical'; // >20m → crítico SIEMPRE, ignora reassigned
+      if (m > 10 || lead.reassigned) return 'risk';
+      return 'fresh';
+    };
+
     const nuevos      = l.filter(x => x.status === 'Nuevo');
-    const slaFresh    = nuevos.filter(x => calcMin(x.lastInteraction) <= SLA_F);
-    const slaRisk     = nuevos.filter(x =>
-      (calcMin(x.lastInteraction) > SLA_F && calcMin(x.lastInteraction) <= SLA_R) ||
-      (x.reassigned === true && calcMin(x.lastInteraction) <= SLA_R)
-    );
-    const slaCritical = nuevos.filter(x =>
-      calcMin(x.lastInteraction) > SLA_R && !x.reassigned
-    );
+    const slaFresh    = nuevos.filter(x => getSlaClass(x) === 'fresh');
+    const slaRisk     = nuevos.filter(x => getSlaClass(x) === 'risk');
+    const slaCritical = nuevos.filter(x => getSlaClass(x) === 'critical');
 
     const groups = {
       fresh: slaFresh, risk: slaRisk, critical: slaCritical,
@@ -829,14 +832,7 @@ async function mountSemaforo(sec) {
       funBtn('cerrado',     '✅','Cerrados',     groups.cerrado.length,     'Venta concretada','border-color:#86efac;','color:var(--success);') +
       funBtn('abandonado',  '❌','Abandonados',  groups.abandonado.length,  'Dijeron NO','border-color:#fca5a5;','color:var(--danger);');
 
-    const slaClass = x => {
-      if (finalStatuses.has(x.status)) return 'none';
-      if (x.status !== 'Nuevo') return 'none';
-      const m = calcMin(x.lastInteraction);
-      if (m <= SLA_F) return 'fresh';
-      if ((m <= SLA_R) || (x.reassigned === true && m <= SLA_R)) return 'risk';
-      return 'critical'; // >20 min — sin techo, no desaparece
-    };
+    const slaClass = getSlaClass; // alias → función canónica única (patch_v12)
 
     const renderLeadRow = x => {
       const sc = slaClass(x);
@@ -930,9 +926,9 @@ async function mountSemaforo(sec) {
           const ri  = stableId(v.username || v.name);
           const all = v.leads || [];
           const ar  = typeof v.avgResp==='number' ? v.avgResp : 0;
-          const nc  = v.sla ? (v.sla.critical||0) : 0;
-          const nr2 = v.sla ? (v.sla.risk||0)     : 0;
-          const nf  = v.sla ? (v.sla.fresh||0)    : 0;
+          const nc  = all.filter(x => getSlaClass(x) === 'critical').length;
+          const nr2 = all.filter(x => getSlaClass(x) === 'risk').length;
+          const nf  = all.filter(x => getSlaClass(x) === 'fresh').length;
           const cls = v.byStatus ? `${v.byStatus.cerrado} cerrados` : `${v.closed||0} cerrados`;
           const wasOpen = (window.openAccordionIds||new Set()).has(ri);
           return `<div class="sla-vendor" id="${ri}">
@@ -1010,7 +1006,7 @@ function renderKanban() {
 
 function cardHTML(l) {
   const m = calcMin(l.lastInteraction);
-  const sla = m > SLA_DANGER ? 'danger' : m > SLA_WARN ? 'warn' : 'fresh';
+  const sla = m > 20 ? 'danger' : m > 10 ? 'warn' : 'fresh';
   const isFinal = ['Cerrado','Abandonado'].includes(l.status);
   const lvl = isFinal ? 'none' : (l.alertLevel || (m >= 45 ? 'red' : m >= 30 ? 'yellow' : 'none'));
   const alertClass = lvl === 'red' ? 'alert-red alert' : lvl === 'yellow' ? 'alert-yellow' : '';
@@ -1043,7 +1039,8 @@ async function mountMonitor(sec) { loadMonitor(); }
 async function loadMonitor() {
   try {
     const r = await api('/api/leads');
-    chats = (await r.json()).filter(x => Array.isArray(x.chatHistory) && x.chatHistory.length)
+    const FINAL_ST = new Set(['Cerrado', 'Abandonado']);
+    chats = (await r.json()).filter(x => !FINAL_ST.has(x.status)).map(x => ({ ...x, chatHistory: Array.isArray(x.chatHistory) ? x.chatHistory : [] }))
       .sort((a, b) => new Date(b.lastInteraction) - new Date(a.lastInteraction));
     renderMonitorList();
     if (activeChatId) {
@@ -1057,7 +1054,7 @@ function renderMonitorList() {
   if (currentView !== 'monitor') return;
   $('monSub').textContent = chats.length ? `${chats.length} conversaciones activas` : 'Sin conversaciones';
   $('monList').innerHTML = chats.length ? chats.map(c => {
-    const last = c.chatHistory[c.chatHistory.length-1];
+    const last = c.chatHistory && c.chatHistory.length ? c.chatHistory[c.chatHistory.length-1] : null;
     const m = calcMin(c.lastInteraction);
     const isAlert = m > 20 && !['Cerrado','Abandonado'].includes(c.status);
     return `
@@ -1065,7 +1062,7 @@ function renderMonitorList() {
         <div class="cr-avatar">${initials(c.name)}</div>
         <div class="cr-info">
           <div class="cr-top"><span class="cr-name">${escape(c.name)}</span><span class="cr-time">${fmtSLA(c.lastInteraction)}</span></div>
-          <div class="cr-preview">${escape(last.content)}</div>
+          <div class="cr-preview">${last ? escape(last.content) : '<em style="color:var(--text-mute);">Sin mensajes aún</em>'}</div>
         </div>
         <div class="cr-status ${isAlert?'alert':''}"></div>
       </div>`;
@@ -1103,10 +1100,10 @@ function renderConv(c) {
       </label>
     </div>
     <div class="conv-msgs" id="convMsgs">
-      ${c.chatHistory.map(m => {
+      ${c.chatHistory && c.chatHistory.length ? c.chatHistory.map(m => {
         const cls = m.role === 'user' ? 'user' : (m.role === 'agent' ? 'agent' : 'bot');
         return `<div class="conv-bubble ${cls}">${escape(m.content)}${m.ts?`<span class="ts">${fmtTime(m.ts)}</span>`:''}</div>`;
-      }).join('')}
+      }).join('') : '<div style="text-align:center;padding:20px;color:var(--text-mute);">Aún no hay mensajes. Escribe abajo para iniciar.</div>'}
     </div>
     ${canToggle ? `
     <div class="agent-input-bar">

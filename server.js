@@ -252,7 +252,9 @@ app.get('/api/me', auth(), (req, res) => res.json({ user: req.user, tenant: req.
 
 app.get('/api/leads', auth(), async (req, res) => {
   const all = await applySlaRules(req.tenant);
-  res.json(filterByRole(all, req.user));
+  const leads = filterByRole(all, req.user);
+  leads.forEach(l => { if(!Array.isArray(l.chatHistory)) l.chatHistory = []; });
+  res.json(leads);
 });
 
 app.get('/api/leads/:id', auth(), async (req, res) => {
@@ -321,8 +323,8 @@ app.get('/api/dashboard/kpis', auth('admin'), async (req, res) => {
   const minOf = l => (now - new Date(l.lastInteraction).getTime()) / 60000;
   const nuevos = leads.filter(l => l.status === 'Nuevo');
   const slaFresh    = nuevos.filter(l => minOf(l) <= SLA_FRESH).length;
-  const slaRisk     = nuevos.filter(l => minOf(l) > SLA_FRESH && minOf(l) <= SLA_RISK || (l.reassigned && minOf(l) <= SLA_CRITICAL)).length;
-  const slaCritical = nuevos.filter(l => minOf(l) > SLA_RISK && minOf(l) <= SLA_CRITICAL && !l.reassigned).length;
+  const slaRisk     = nuevos.filter(l => (minOf(l) > SLA_FRESH && minOf(l) <= SLA_RISK) || (l.reassigned && minOf(l) <= SLA_RISK)).length;
+  const slaCritical = nuevos.filter(l => minOf(l) > SLA_RISK).length;
   const closed = leads.filter(l => l.status === 'Cerrado').length;
   const active = leads.filter(l => !FINAL_STATUSES.has(l.status));
   const avg = nuevos.length ? Math.round(nuevos.reduce((s, l) => s + minOf(l), 0) / nuevos.length) : 0;
@@ -361,8 +363,8 @@ app.get('/api/dashboard/team', auth('admin'), async (req, res) => {
       total: own.length,
       sla: {
         fresh:    nuevos.filter(l => minOf(l) <= SLA_FRESH).length,
-        risk:     nuevos.filter(l => (minOf(l) > SLA_FRESH && minOf(l) <= SLA_RISK) || l.reassigned).length,
-        critical: nuevos.filter(l => minOf(l) > SLA_RISK && minOf(l) <= SLA_CRITICAL && !l.reassigned).length
+        risk:     nuevos.filter(l => (minOf(l) > SLA_FRESH && minOf(l) <= SLA_RISK) || (l.reassigned && minOf(l) <= SLA_RISK)).length,
+        critical: nuevos.filter(l => minOf(l) > SLA_RISK).length
       },
       byStatus: {
         nuevo:       nuevos.length,
