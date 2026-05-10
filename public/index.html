@@ -8,14 +8,14 @@
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
 :root{
-  --bg:#0f172a; --panel:#1e293b; --panel-2:#334155; --panel-3:#3d5068;
-  --accent:#3b82f6; --accent-dk:#2563eb; --accent-s:rgba(59,130,246,.14);
-  --border:rgba(255,255,255,.08); --border-md:rgba(255,255,255,.15);
-  --text:#e2e8f0; --text-soft:#cbd5e1; --text-mute:#94a3b8;
-  --sig-b:#60a5fa; --sig-y:#fbbf24;
-  --sig-bs:rgba(96,165,250,.16); --sig-ys:rgba(251,191,36,.16);
-  --ok:#34d399; --warn:#fbbf24; --bad:#f87171;
-  --r:10px; --tr:.14s ease;
+  --bg:#0f172a;--panel:#1e293b;--panel-2:#334155;--panel-3:#3d5068;
+  --accent:#3b82f6;--accent-dk:#2563eb;--accent-s:rgba(59,130,246,.14);
+  --border:rgba(255,255,255,.08);--border-md:rgba(255,255,255,.15);
+  --text:#e2e8f0;--text-soft:#cbd5e1;--text-mute:#94a3b8;
+  --ok:#34d399;--warn:#fbbf24;--bad:#f87171;
+  --sig-b:#60a5fa;--sig-y:#fbbf24;
+  --sig-bs:rgba(96,165,250,.16);--sig-ys:rgba(251,191,36,.16);
+  --r:10px;--tr:.13s ease;
 }
 *{box-sizing:border-box;margin:0;padding:0}
 html,body{height:100%}
@@ -23,7 +23,7 @@ body{font-family:'Inter',-apple-system,sans-serif;background:var(--bg);color:var
 ::-webkit-scrollbar{width:4px;height:4px}
 ::-webkit-scrollbar-thumb{background:var(--panel-2);border-radius:4px}
 
-/* Login */
+/* ── Login ── */
 .lw{min-height:100vh;display:grid;place-items:center;
   background:radial-gradient(ellipse at 20% 20%,rgba(59,130,246,.22),transparent 55%),
              radial-gradient(ellipse at 80% 80%,rgba(37,99,235,.18),transparent 55%),var(--bg)}
@@ -32,28 +32,28 @@ body{font-family:'Inter',-apple-system,sans-serif;background:var(--bg);color:var
 .lc .sub{color:var(--text-mute);font-size:12px;margin-bottom:22px}
 .lc label{display:block;font-size:11.5px;color:var(--text-mute);margin:12px 0 5px}
 .lc input,.lc select{width:100%;padding:9px 12px;background:var(--panel-2);border:1px solid var(--border);color:var(--text);border-radius:8px;font-family:inherit;font-size:13px}
-.lc button{width:100%;margin-top:18px;padding:11px;background:var(--accent);border:none;color:#fff;border-radius:8px;font-weight:600;cursor:pointer;transition:background var(--tr);font-family:inherit}
+.lc button{width:100%;margin-top:18px;padding:11px;background:var(--accent);border:none;color:#fff;border-radius:8px;font-weight:600;cursor:pointer;font-family:inherit;transition:background var(--tr)}
 .lc button:hover{background:var(--accent-dk)}
 .lc .err{color:var(--bad);font-size:12px;margin-top:10px;min-height:16px}
 .lc .hint{font-size:11px;color:var(--text-mute);margin-top:14px;line-height:1.5}
 
-/* App */
-.app{display:grid;grid-template-columns:218px 1fr;min-height:100vh}
-.sidebar{background:var(--panel);border-right:1px solid var(--border);padding:20px 12px;display:flex;flex-direction:column}
-.sidebar h1{font-size:14px;font-weight:800;margin-bottom:4px;letter-spacing:-.02em;
-  background:linear-gradient(120deg,#e2e8f0,#93c5fd);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
+/* ── App shell ── */
+.app{display:grid;grid-template-columns:210px 1fr;min-height:100vh}
+.sidebar{background:var(--panel);border-right:1px solid var(--border);padding:18px 12px;display:flex;flex-direction:column}
+.sidebar h1{font-size:14px;font-weight:800;margin-bottom:4px;background:linear-gradient(120deg,#e2e8f0,#93c5fd);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
 .sidebar .who{font-size:11px;color:var(--text-mute);margin-bottom:20px}
-.sidebar nav button{width:100%;text-align:left;background:transparent;border:none;color:var(--text-soft);padding:9px 12px;border-radius:8px;cursor:pointer;margin-bottom:2px;font-size:13px;font-family:inherit;transition:background var(--tr),color var(--tr)}
+.sidebar nav button{width:100%;text-align:left;background:transparent;border:none;color:var(--text-soft);padding:9px 12px;border-radius:8px;cursor:pointer;margin-bottom:2px;font-size:13px;font-family:inherit;transition:all var(--tr)}
 .sidebar nav button:hover{background:var(--panel-2);color:#fff}
 .sidebar nav button.active{background:var(--accent-s);color:var(--accent);font-weight:600;box-shadow:inset 3px 0 0 var(--accent)}
 .sidebar .logout{margin-top:auto;background:transparent;border:1px solid var(--border);color:var(--text-mute);padding:8px;border-radius:8px;cursor:pointer;font-size:12px;font-family:inherit;transition:all var(--tr)}
 .sidebar .logout:hover{color:var(--text);border-color:var(--border-md)}
 .main{padding:18px 22px;overflow-y:auto;max-height:100vh}
 
-/* Toolbar */
+/* ── Toolbar ── */
 .toolbar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;background:var(--panel);border:1px solid var(--border);border-radius:var(--r);padding:10px 14px;margin-bottom:16px}
 .toolbar .lbl{font-size:11px;color:var(--text-mute);font-weight:600;text-transform:uppercase;letter-spacing:.05em}
 .toolbar input[type=date]{background:var(--panel-2);border:1px solid var(--border);color:var(--text);padding:6px 9px;border-radius:7px;font-family:inherit;font-size:12px;color-scheme:dark}
+.toolbar select{background:var(--panel-2);border:1px solid var(--border);color:var(--text);padding:6px 10px;border-radius:7px;font-family:inherit;font-size:12px}
 .quick{display:flex;gap:4px}
 .quick button{background:var(--panel-2);color:var(--text-soft);border:1px solid var(--border);padding:6px 10px;border-radius:6px;cursor:pointer;font-size:12px;font-family:inherit;transition:all var(--tr)}
 .quick button:hover{border-color:var(--border-md);color:var(--text)}
@@ -66,17 +66,36 @@ body{font-family:'Inter',-apple-system,sans-serif;background:var(--bg);color:var
 .subsec::before{content:'';width:3px;height:12px;background:var(--accent);border-radius:2px}
 .view{display:none}.view.active{display:block}
 
-/* KPIs */
-.kpi-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(155px,1fr));gap:10px;margin-bottom:6px}
-.kpi{background:var(--panel);border:1px solid var(--border);border-radius:var(--r);padding:14px;transition:border-color var(--tr),transform var(--tr)}
+/* ── KPI Cards ── */
+.kpi-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;margin-bottom:6px}
+.kpi{background:var(--panel);border:1px solid var(--border);border-radius:var(--r);padding:14px;transition:all var(--tr)}
 .kpi:hover{border-color:var(--border-md);transform:translateY(-1px)}
 .kpi .lbl{font-size:10.5px;color:var(--text-mute);text-transform:uppercase;letter-spacing:.05em;margin-bottom:7px;font-weight:600}
 .kpi .val{font-size:24px;font-weight:700;letter-spacing:-.02em}
 .kpi .sub{font-size:11px;color:var(--text-mute);margin-top:3px}
 .kpi.accent{border-color:rgba(59,130,246,.35);background:linear-gradient(135deg,var(--panel),var(--accent-s))}
 .kpi.accent .val{color:var(--sig-b)}
+.kpi.ok .val{color:var(--ok)}.kpi.warn .val{color:var(--warn)}.kpi.bad .val{color:var(--bad)}
 
-/* Tabla */
+/* ── SLA Matrix ── */
+.sla-matrix{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:6px}
+.sla-card{background:var(--panel);border:1px solid var(--border);border-radius:var(--r);overflow:hidden}
+.sla-head{display:flex;align-items:center;justify-content:space-between;padding:12px 14px 10px;border-bottom:1px solid var(--border)}
+.sla-head .sla-label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em}
+.sla-head .sla-cnt{font-size:22px;font-weight:700}
+.sla-card.fresh .sla-head .sla-label{color:var(--ok)}.sla-card.fresh .sla-head .sla-cnt{color:var(--ok)}
+.sla-card.risk  .sla-head .sla-label{color:var(--warn)}.sla-card.risk  .sla-head .sla-cnt{color:var(--warn)}
+.sla-card.crit  .sla-head .sla-label{color:var(--bad)}.sla-card.crit  .sla-head .sla-cnt{color:var(--bad)}
+.sla-card .sla-hint{font-size:10.5px;color:var(--text-mute);padding:4px 14px 12px}
+.sla-leads{max-height:160px;overflow-y:auto;padding:4px 8px 8px}
+.sla-lead{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center;background:var(--panel-2);border-radius:6px;padding:6px 10px;margin-bottom:4px;font-size:12px;cursor:pointer;transition:background var(--tr)}
+.sla-lead:hover{background:var(--panel-3)}
+.sla-lead .sl-name{font-weight:500}
+.sla-lead .sl-info{font-size:10.5px;color:var(--text-mute)}
+.sla-lead .sl-time{font-size:10.5px;font-weight:600;white-space:nowrap}
+.sla-card.fresh .sl-time{color:var(--ok)}.sla-card.risk .sl-time{color:var(--warn)}.sla-card.crit .sl-time{color:var(--bad)}
+
+/* ── Tabla genérica ── */
 .tw{background:var(--panel);border:1px solid var(--border);border-radius:var(--r);overflow:hidden}
 .tr{display:grid;gap:10px;padding:11px 14px;align-items:center;border-bottom:1px solid var(--border);font-size:12.5px;transition:background var(--tr)}
 .tr:last-child{border-bottom:none}
@@ -84,91 +103,87 @@ body{font-family:'Inter',-apple-system,sans-serif;background:var(--bg);color:var
 .tr:not(.head){cursor:pointer}
 .tr:not(.head):hover{background:var(--panel-2)}
 
-/* Chips */
+/* ── Chips / pills ── */
 .chip{display:inline-block;padding:2px 7px;border-radius:5px;font-size:10.5px;font-weight:600;border:1px solid transparent;white-space:nowrap}
 .chip-src{background:rgba(148,163,184,.11);color:var(--text-mute);border-color:rgba(148,163,184,.2)}
 .chip-usr{background:var(--accent-s);color:var(--accent)}
-
-/* Semáforo */
-.sdot{width:11px;height:11px;border-radius:50%;background:var(--panel-3);border:2px solid var(--panel-2);flex-shrink:0}
-.sdot.b{background:var(--sig-b);box-shadow:0 0 8px var(--sig-b);animation:pulse 1.6s infinite}
-.sdot.y{background:var(--sig-y);box-shadow:0 0 8px var(--sig-y);animation:pulse 1.6s infinite}
-@keyframes pulse{0%,100%{transform:scale(1);opacity:1}50%{transform:scale(1.2);opacity:.8}}
-.sbadge{display:inline-flex;align-items:center;gap:4px;padding:2px 7px;border-radius:999px;font-size:10.5px;font-weight:600}
-.sbadge.b{background:var(--sig-bs);color:var(--sig-b)}
-.sbadge.y{background:var(--sig-ys);color:var(--sig-y)}
-.sbadge.n{background:rgba(148,163,184,.1);color:var(--text-mute)}
-
-/* Status pill */
 .sp{display:inline-block;padding:3px 8px;border-radius:6px;font-size:10.5px;font-weight:600;background:var(--panel-2);color:var(--text-soft);white-space:nowrap}
 .sp.q{background:linear-gradient(90deg,var(--sig-bs),var(--sig-ys));color:#fff}
 .sp.nw{background:rgba(52,211,153,.12);color:var(--ok)}
 .sp.cl{background:rgba(248,113,113,.12);color:var(--bad)}
 .sp.ng{background:rgba(251,191,36,.12);color:var(--warn)}
 
-/* Alert dot */
-.adot{width:8px;height:8px;border-radius:50%;background:var(--panel-3);flex-shrink:0}
-.adot.fresh{background:var(--ok)}.adot.risk{background:var(--warn)}.adot.critical{background:var(--bad);animation:pulse .9s infinite}
+/* ── Semáforo ── */
+.sdot{width:11px;height:11px;border-radius:50%;background:var(--panel-3);border:2px solid var(--panel-2);flex-shrink:0}
+.sdot.b{background:var(--sig-b);box-shadow:0 0 8px var(--sig-b);animation:pls 1.6s infinite}
+.sdot.y{background:var(--sig-y);box-shadow:0 0 8px var(--sig-y);animation:pls 1.6s infinite}
+@keyframes pls{0%,100%{transform:scale(1)}50%{transform:scale(1.2)}}
+.sbadge{display:inline-flex;align-items:center;gap:4px;padding:2px 7px;border-radius:999px;font-size:10.5px;font-weight:600}
+.sbadge.b{background:var(--sig-bs);color:var(--sig-b)}.sbadge.y{background:var(--sig-ys);color:var(--sig-y)}.sbadge.n{background:rgba(148,163,184,.1);color:var(--text-mute)}
 
-/* Kanban compacto */
-.kanban{display:grid;grid-auto-flow:column;grid-auto-columns:220px;gap:8px;overflow-x:auto;padding-bottom:10px}
-.kbc{background:var(--panel);border:1px solid var(--border);border-radius:var(--r);display:flex;flex-direction:column;max-height:calc(100vh - 220px)}
-.kbc-h{display:flex;justify-content:space-between;align-items:center;padding:9px 11px 7px;border-bottom:1px solid var(--border);font-size:10.5px;font-weight:700;color:var(--text-mute);text-transform:uppercase;letter-spacing:.05em}
+/* SLA dot para leads */
+.ald{width:9px;height:9px;border-radius:50%;flex-shrink:0}
+.ald.fresh{background:var(--ok)}.ald.risk{background:var(--warn)}.ald.critical{background:var(--bad);animation:pls .9s infinite}.ald.none{background:var(--panel-3)}
+/* Unread dot */
+.unread-dot{width:8px;height:8px;border-radius:50%;background:var(--bad);flex-shrink:0}
+
+/* ── Kanban ultra-compacto ── */
+.kanban{display:grid;grid-auto-flow:column;grid-auto-columns:190px;gap:7px;overflow-x:auto;padding-bottom:10px}
+.kbc{background:var(--panel);border:1px solid var(--border);border-radius:var(--r);display:flex;flex-direction:column;max-height:calc(50vh - 60px)}
+.kbc-h{display:flex;justify-content:space-between;align-items:center;padding:8px 10px 6px;border-bottom:1px solid var(--border);font-size:10px;font-weight:700;color:var(--text-mute);text-transform:uppercase;letter-spacing:.05em}
 .kbc-h .cnt{background:var(--panel-2);color:var(--text-soft);font-size:10px;padding:1px 6px;border-radius:999px}
 .kbc.qual .kbc-h{background:linear-gradient(90deg,var(--sig-bs),var(--sig-ys));color:#fff}
-.kbc-cards{flex:1;overflow-y:auto;padding:7px;display:flex;flex-direction:column;gap:5px}
-.kcard{background:var(--panel-2);border:1px solid var(--border);border-radius:8px;padding:9px;cursor:pointer;transition:border-color var(--tr),transform var(--tr)}
+.kbc-cards{flex:1;overflow-y:auto;padding:6px;display:flex;flex-direction:column;gap:4px}
+.kcard{background:var(--panel-2);border:1px solid var(--border);border-radius:7px;padding:8px 9px;cursor:pointer;transition:all var(--tr);display:flex;align-items:center;gap:7px}
 .kcard:hover{border-color:var(--border-md);transform:translateY(-1px)}
-.kcard.sb{border-left:3px solid var(--sig-b)}.kcard.sy{border-left:3px solid var(--sig-y)}
-.kcard .kt{display:flex;justify-content:space-between;align-items:flex-start;gap:5px;margin-bottom:4px}
-.kcard .kn{font-weight:600;font-size:12.5px;line-height:1.2;flex:1}
-.kcard .ki{font-size:11px;color:var(--text-mute);margin-bottom:6px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.kcard .kf{display:flex;align-items:center;gap:4px;flex-wrap:wrap}
-.kcard .ktm{font-size:10px;color:var(--text-mute);margin-left:auto}
-.kb-empty{padding:14px;text-align:center;color:var(--text-mute);font-size:11.5px}
+.kcard .kn{font-weight:600;font-size:12px;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.kcard .kt{font-size:10.5px;font-weight:700;white-space:nowrap}
+.kcard.fresh .kt{color:var(--ok)}.kcard.risk .kt{color:var(--warn)}.kcard.critical .kt{color:var(--bad)}
+.kb-empty{padding:12px;text-align:center;color:var(--text-mute);font-size:11.5px}
 
-/* Vendor cards */
-.vgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(245px,1fr));gap:10px}
-.vcard{background:var(--panel);border:1px solid var(--border);border-radius:var(--r);padding:14px;transition:border-color var(--tr)}
-.vcard:hover{border-color:var(--border-md)}
-.vh{display:flex;align-items:center;gap:10px;margin-bottom:10px;padding-bottom:10px;border-bottom:1px solid var(--border)}
-.vav{width:34px;height:34px;border-radius:50%;flex-shrink:0;background:linear-gradient(135deg,var(--accent),var(--accent-dk));display:grid;place-items:center;font-weight:700;font-size:13px;color:#fff}
-.vnm{font-weight:600;font-size:13px}.vrl{font-size:10.5px;color:var(--text-mute)}
-.vtot{margin-left:auto;font-size:20px;font-weight:700;color:var(--accent)}
-.vtot small{display:block;font-size:9px;color:var(--text-mute);font-weight:500;text-align:right;text-transform:uppercase;letter-spacing:.04em}
-.vsla{display:grid;grid-template-columns:repeat(3,1fr);gap:5px;margin-bottom:10px}
-.vsp{text-align:center;padding:5px;border-radius:7px;background:var(--panel-2);font-size:10.5px}
-.vsp .n{display:block;font-size:14px;font-weight:700}
-.vsp.fr .n{color:var(--ok)}.vsp.ri .n{color:var(--warn)}.vsp.cr .n{color:var(--bad)}
-.vleads{display:flex;flex-direction:column;gap:4px;max-height:170px;overflow-y:auto}
-.vlead{display:grid;grid-template-columns:10px 1fr auto;gap:6px;align-items:center;background:var(--panel-2);border-radius:6px;padding:6px 9px;font-size:11.5px;cursor:pointer;border:1px solid transparent;transition:all var(--tr)}
-.vlead:hover{border-color:var(--border-md);background:var(--panel-3)}
-.vln{font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.v-empty{text-align:center;color:var(--text-mute);font-size:11px;padding:12px}
+/* ── Calendario semanal ── */
+.cal-wrap{margin-top:18px}
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:6px}
+.cal-day{background:var(--panel);border:1px solid var(--border);border-radius:8px;overflow:hidden;min-height:80px}
+.cal-day-head{padding:6px 8px;font-size:10.5px;font-weight:700;color:var(--text-mute);border-bottom:1px solid var(--border);text-align:center}
+.cal-day.today .cal-day-head{color:var(--accent);border-color:var(--accent)}
+.cal-day-body{padding:5px;display:flex;flex-direction:column;gap:3px}
+.cal-event{background:var(--accent-s);border-left:2px solid var(--accent);border-radius:4px;padding:4px 6px;font-size:10.5px;cursor:pointer;transition:background var(--tr);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cal-event:hover{background:rgba(59,130,246,.25)}
+.cal-event.agendado{border-color:var(--ok);background:rgba(52,211,153,.1)}
+.cal-event.calificado{border-color:var(--warn);background:rgba(251,191,36,.1)}
 
-/* Equipo */
+/* ── Equipo acordeones ── */
 .tgrid{display:flex;flex-direction:column;gap:8px}
 .tcard{background:var(--panel);border:1px solid var(--border);border-radius:var(--r);overflow:hidden}
-.thead{display:grid;grid-template-columns:14px 1fr auto auto auto;gap:12px;align-items:center;padding:12px 16px;cursor:pointer;transition:background var(--tr)}
+.thead{display:grid;grid-template-columns:14px 1fr repeat(5,auto);gap:12px;align-items:center;padding:12px 16px;cursor:pointer;transition:background var(--tr)}
 .thead:hover{background:var(--panel-2)}
 .chev{font-size:9px;color:var(--text-mute);transition:transform .2s}
 .tcard.open .chev{transform:rotate(90deg)}
 .tnm{font-weight:600;font-size:13.5px}.trl{font-size:10.5px;color:var(--text-mute)}
-.tst{display:flex;flex-direction:column;align-items:center;font-size:10.5px;color:var(--text-mute);gap:1px}
-.tst .n{font-size:16px;font-weight:700;color:var(--text)}
-.tst.fr .n{color:var(--ok)}.tst.ri .n{color:var(--warn)}.tst.cr .n{color:var(--bad)}
-.tbody{display:none;border-top:1px solid var(--border);padding:12px 16px}
+.tstat{display:flex;flex-direction:column;align-items:center;font-size:10px;color:var(--text-mute);gap:1px;min-width:38px}
+.tstat .n{font-size:15px;font-weight:700;color:var(--text)}
+.tstat.fr .n{color:var(--ok)}.tstat.ri .n{color:var(--warn)}.tstat.cr .n{color:var(--bad)}
+.tbody{display:none;border-top:1px solid var(--border);padding:14px 16px}
 .tcard.open .tbody{display:block}
+.team-metrics{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:8px;margin-bottom:14px}
+.tm-box{background:var(--panel-2);border-radius:8px;padding:10px 12px}
+.tm-box .lbl{font-size:10.5px;color:var(--text-mute);margin-bottom:5px;font-weight:600}
+.tm-box .val{font-size:18px;font-weight:700}
 .stg{margin-top:10px}
-.stg-lbl{font-size:10px;font-weight:700;color:var(--text-mute);text-transform:uppercase;letter-spacing:.06em;margin-bottom:5px;padding-left:2px}
+.stg-lbl{font-size:10px;font-weight:700;color:var(--text-mute);text-transform:uppercase;letter-spacing:.06em;margin-bottom:5px}
 .stg-leads{display:flex;flex-direction:column;gap:4px}
-.mlead{display:grid;grid-template-columns:10px 1fr 1fr auto;gap:8px;align-items:center;background:var(--panel-2);border:1px solid var(--border);border-radius:7px;padding:8px 10px;font-size:12px;cursor:pointer;transition:border-color var(--tr)}
+.mlead{display:grid;grid-template-columns:9px 1fr 1fr auto;gap:8px;align-items:center;background:var(--panel-2);border:1px solid var(--border);border-radius:7px;padding:8px 10px;font-size:12px;cursor:pointer;transition:border-color var(--tr)}
 .mlead:hover{border-color:var(--border-md)}
 .mln{font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .mlsrc{font-size:10.5px;color:var(--text-mute);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .mltm{font-size:10px;color:var(--text-mute)}
 
-/* Modal */
+/* ── Analítica ── */
+.analytics-header{display:flex;align-items:center;gap:12px;margin-bottom:16px}
+.analytics-header .sec-title{margin-bottom:0}
+
+/* ── Modal ── */
 .mbg{position:fixed;inset:0;background:rgba(0,0,0,.72);backdrop-filter:blur(5px);display:none;align-items:center;justify-content:center;z-index:200;padding:20px}
 .mbg.show{display:flex}
 .modal{background:var(--panel);border:1px solid var(--border-md);border-radius:14px;width:100%;max-width:740px;max-height:90vh;display:flex;flex-direction:column;box-shadow:0 32px 80px rgba(0,0,0,.65)}
@@ -188,17 +203,23 @@ body{font-family:'Inter',-apple-system,sans-serif;background:var(--bg);color:var
 .col-act{display:flex;flex-direction:column;gap:12px}
 .col-act select,.col-act textarea{width:100%;padding:8px 10px;background:var(--panel-2);border:1px solid var(--border);color:var(--text);border-radius:7px;font-family:inherit;font-size:12.5px;resize:vertical}
 .col-act textarea{min-height:65px}
-.col-act button.primary{width:100%;background:var(--accent);color:#fff;border:none;padding:9px;border-radius:7px;font-weight:600;cursor:pointer;font-size:13px;font-family:inherit;transition:background var(--tr)}
-.col-act button.primary:hover{background:var(--accent-dk)}
-.col-act button.primary:disabled{opacity:.5;cursor:not-allowed}
+.col-act .primary{width:100%;background:var(--accent);color:#fff;border:none;padding:9px;border-radius:7px;font-weight:600;cursor:pointer;font-size:13px;font-family:inherit;transition:background var(--tr)}
+.col-act .primary:hover{background:var(--accent-dk)}
+.col-act .primary:disabled{opacity:.5;cursor:not-allowed}
 .nlist{display:flex;flex-direction:column;gap:5px;max-height:130px;overflow-y:auto}
 .nitem{background:var(--panel-2);border:1px solid var(--border);border-radius:7px;padding:7px 9px;font-size:11.5px;line-height:1.4}
 .nitem .nm{font-size:10px;color:var(--text-mute);margin-top:2px}
 .no-notes{color:var(--text-mute);font-size:11.5px;padding:6px 0}
 
-/* Toast */
+/* ── Toast ── */
 .toast{position:fixed;bottom:22px;right:22px;background:var(--ok);color:#fff;padding:9px 15px;border-radius:8px;font-size:12.5px;font-weight:600;opacity:0;transform:translateY(8px);pointer-events:none;transition:opacity .2s,transform .2s;z-index:300}
 .toast.show{opacity:1;transform:translateY(0)}.toast.err{background:var(--bad)}
+
+@media(max-width:900px){
+  .sla-matrix{grid-template-columns:1fr}
+  .cal-grid{grid-template-columns:repeat(3,1fr)}
+  .mbody{grid-template-columns:1fr}
+}
 </style>
 </head>
 <body>
@@ -224,15 +245,17 @@ body{font-family:'Inter',-apple-system,sans-serif;background:var(--bg);color:var
     <h1 id="bizName">FunnelOS CRM</h1>
     <div class="who" id="uBadge">—</div>
     <nav>
-      <button class="active" data-view="dashboard">📊 Dashboard</button>
+      <button class="active" data-view="dashboard">📊 Operación</button>
       <button data-view="leads">📋 Leads</button>
-      <button data-view="kanban">🗂  Pipeline</button>
+      <button data-view="pipeline">🗂  Pipeline</button>
+      <button data-view="analytics" id="navAnalytics">📈 Analítica</button>
       <button data-view="team" id="navTeam">👥 Equipo</button>
     </nav>
     <button class="logout" id="logoutBtn">Cerrar sesión</button>
   </aside>
   <main class="main">
-    <!-- Toolbar -->
+
+    <!-- Toolbar global -->
     <div class="toolbar">
       <span class="lbl">Rango</span>
       <div class="quick">
@@ -242,32 +265,51 @@ body{font-family:'Inter',-apple-system,sans-serif;background:var(--bg);color:var
       <span class="lbl">Desde</span><input type="date" id="dS">
       <span class="lbl">Hasta</span><input type="date" id="dE">
       <button class="clear" id="dC">Limpiar</button>
-      <span class="ri" id="rInfo">Sin filtro · todos los leads</span>
+      <span class="lbl" id="lblSeller">Vendedor</span>
+      <select id="sellerFilter"><option value="">Todos</option></select>
+      <span class="ri" id="rInfo">Sin filtro</span>
     </div>
 
+    <!-- DASHBOARD OPERACIÓN -->
     <section id="view-dashboard" class="view active">
-      <div class="sec-title">Dashboard</div>
+      <div class="sec-title">Operación en tiempo real</div>
       <div class="kpi-grid" id="kpiGrid"></div>
-      <div class="subsec">Rendimiento por canal</div>
-      <div class="tw" id="chBox"></div>
-      <div class="subsec">Distribución por vendedor</div>
-      <div class="vgrid" id="vGrid"></div>
+      <div class="subsec">Matriz SLA — Leads en estado Nuevo</div>
+      <div class="sla-matrix" id="slaMatrix"></div>
+      <div class="subsec">Rendimiento rápido por vendedor</div>
+      <div class="tw" id="teamQuick"></div>
     </section>
 
+    <!-- LEADS -->
     <section id="view-leads" class="view">
       <div class="sec-title">Leads</div>
       <div class="tw" id="lTable"></div>
     </section>
 
-    <section id="view-kanban" class="view">
+    <!-- PIPELINE -->
+    <section id="view-pipeline" class="view">
       <div class="sec-title">Pipeline Kanban</div>
       <div class="kanban" id="kanban"></div>
+      <div class="cal-wrap">
+        <div class="subsec">Agenda de la semana</div>
+        <div class="cal-grid" id="calGrid"></div>
+      </div>
     </section>
 
+    <!-- ANALÍTICA -->
+    <section id="view-analytics" class="view">
+      <div class="analytics-header">
+        <div class="sec-title">Analítica de Canales</div>
+      </div>
+      <div class="tw" id="chBox"></div>
+    </section>
+
+    <!-- EQUIPO -->
     <section id="view-team" class="view">
-      <div class="sec-title">Equipo</div>
+      <div class="sec-title">Gestión de Equipo</div>
       <div class="tgrid" id="tGrid"></div>
     </section>
+
   </main>
 </div>
 
@@ -303,26 +345,28 @@ body{font-family:'Inter',-apple-system,sans-serif;background:var(--bg);color:var
 
 <script>
 // ════ Estado ════════════════════════════════════════════════════════════════
-const S = {
-  token:  localStorage.getItem('ft')||null,
-  user:   JSON.parse(localStorage.getItem('fu')||'null'),
-  tenant: localStorage.getItem('ftn')||'demo_automotora',
-  config:null, leads:[], kpis:null, team:[], channels:[],
+const S={
+  token:localStorage.getItem('ft')||null,
+  user:JSON.parse(localStorage.getItem('fu')||'null'),
+  tenant:localStorage.getItem('ftn')||'demo_automotora',
+  config:null,leads:[],kpis:null,team:[],channels:[],
   range:{start:null,end:null,quick:'all'},
-  acc: new Set(JSON.parse(localStorage.getItem('fa')||'[]')),
-  pollTimer:null, mid:null
+  seller:'',
+  acc:new Set(JSON.parse(localStorage.getItem('fa')||'[]')),
+  pollTimer:null,mid:null
 };
-const $   = id => document.getElementById(id);
-const esc = s  => String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const ini = n  => (n||'?').split(/\s+/).map(x=>x[0]).filter(Boolean).slice(0,2).join('').toUpperCase();
-const fmtCLP  = n  => '$'+(Number(n)||0).toLocaleString('es-CL');
-const fmtDT   = ts => { try{return new Date(ts).toLocaleString('es-CL',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});}catch{return '';} };
-const fmtTM   = ts => { try{return new Date(ts).toLocaleTimeString('es-CL',{hour:'2-digit',minute:'2-digit'});}catch{return '';} };
+const $=id=>document.getElementById(id);
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const ini=n=>(n||'?').split(/\s+/).map(x=>x[0]).filter(Boolean).slice(0,2).join('').toUpperCase();
+const fmtCLP=n=>'$'+(Number(n)||0).toLocaleString('es-CL');
+const fmtDT=ts=>{try{return new Date(ts).toLocaleString('es-CL',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});}catch{return '';}};
+const fmtTM=ts=>{try{return new Date(ts).toLocaleTimeString('es-CL',{hour:'2-digit',minute:'2-digit'});}catch{return '';}};
+const minAgo=ts=>Math.round((Date.now()-new Date(ts).getTime())/60000);
 
-function toast(msg,err){const t=$('toast');t.textContent=msg;t.classList.toggle('err',!!err);t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2200);}
+function toast(msg,err){const t=$('toast');t.textContent=msg;t.classList.toggle('err',!!err);t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2400);}
 function saveAcc(){localStorage.setItem('fa',JSON.stringify([...S.acc]));}
 
-// ════ API ═══════════════════════════════════════════════════════════════════
+// ════ API ════════════════════════════════════════════════════════════════════
 async function api(method,path,body){
   const h={'Content-Type':'application/json'};
   if(S.token) h['X-Auth-Token']=S.token;
@@ -332,9 +376,15 @@ async function api(method,path,body){
   if(!r.ok) throw new Error(d.error||'Error '+r.status);
   return d;
 }
-function qstr(){const p=[];if(S.range.start)p.push('start='+encodeURIComponent(S.range.start));if(S.range.end)p.push('end='+encodeURIComponent(S.range.end));return p.length?'?'+p.join('&'):'';}
+function qstr(){
+  const p=[];
+  if(S.range.start) p.push('start='+encodeURIComponent(S.range.start));
+  if(S.range.end)   p.push('end='+encodeURIComponent(S.range.end));
+  if(S.seller)      p.push('seller='+encodeURIComponent(S.seller));
+  return p.length?'?'+p.join('&'):'';
+}
 
-// ════ Auth ══════════════════════════════════════════════════════════════════
+// ════ Auth ════════════════════════════════════════════════════════════════════
 $('liB').addEventListener('click',login);
 $('liP').addEventListener('keydown',e=>{if(e.key==='Enter')login();});
 async function login(){
@@ -353,22 +403,35 @@ function logout(){
 }
 $('logoutBtn').addEventListener('click',()=>{api('POST','/api/auth/logout').catch(()=>{});logout();});
 
-// ════ App ════════════════════════════════════════════════════════════════════
+// ════ Enter App ══════════════════════════════════════════════════════════════
 async function enterApp(){
   $('lv').style.display='none';$('av').style.display='grid';
   $('uBadge').textContent=(S.user?.name||'')+' · '+(S.user?.role||'');
-  $('navTeam').style.display=S.user?.role==='admin'?'':'none';
+  const isAdmin=S.user?.role==='admin';
+  $('navTeam').style.display=isAdmin?'':'none';
+  $('navAnalytics').style.display=isAdmin?'':'none';
+  $('lblSeller').style.display=isAdmin?'':'none';
+  $('sellerFilter').style.display=isAdmin?'':'none';
   try{
     S.config=await api('GET','/api/config');
     $('bizName').textContent=S.config.businessName||'FunnelOS CRM';
     if(S.config.accentColor) document.documentElement.style.setProperty('--accent',S.config.accentColor);
+    // Populate seller filter
+    if(isAdmin){
+      const users=await api('GET','/api/users');
+      const sel=$('sellerFilter');
+      sel.innerHTML='<option value="">Todos</option>';
+      users.filter(u=>u.role==='vendedor').forEach(u=>{
+        const o=document.createElement('option');o.value=u.username;o.textContent=u.name;sel.appendChild(o);
+      });
+    }
   }catch{}
   await refresh();
   if(S.pollTimer)clearInterval(S.pollTimer);
   S.pollTimer=setInterval(refresh,8000);
 }
 
-// ════ Filtro fechas ═══════════════════════════════════════════════════════════
+// ════ Filtros ════════════════════════════════════════════════════════════════
 function setQ(q){
   S.range.quick=q;
   const t=new Date();t.setHours(0,0,0,0);
@@ -382,18 +445,19 @@ function setQ(q){
   syncQ();updRI();refresh();
 }
 function syncQ(){document.querySelectorAll('.quick button').forEach(b=>b.classList.toggle('active',b.dataset.q===S.range.quick));}
-function updRI(){$('rInfo').textContent=(S.range.start||S.range.end)?'Filtrando: '+(S.range.start||'—')+' → '+(S.range.end||'—'):'Sin filtro · todos los leads';}
+function updRI(){$('rInfo').textContent=(S.range.start||S.range.end)?'Filtrando: '+(S.range.start||'—')+' → '+(S.range.end||'—'):'Sin filtro';}
 document.querySelectorAll('.quick button').forEach(b=>b.addEventListener('click',()=>setQ(b.dataset.q)));
 $('dS').addEventListener('change',()=>{S.range.start=$('dS').value||null;S.range.quick='custom';syncQ();updRI();refresh();});
 $('dE').addEventListener('change',()=>{S.range.end=$('dE').value||null;S.range.quick='custom';syncQ();updRI();refresh();});
 $('dC').addEventListener('click',()=>setQ('all'));
+$('sellerFilter').addEventListener('change',()=>{S.seller=$('sellerFilter').value;refresh();});
 
 // ════ Refresh ════════════════════════════════════════════════════════════════
 async function refresh(){
   if(!S.token)return;
-  const q=qstr(), isAdmin=S.user?.role==='admin';
+  const q=qstr(),isAdmin=S.user?.role==='admin';
   try{
-    const [leads,kpis,team,channels]=await Promise.all([
+    const[leads,kpis,team,channels]=await Promise.all([
       api('GET','/api/leads'+q),
       isAdmin?api('GET','/api/dashboard/kpis'+q):Promise.resolve(null),
       isAdmin?api('GET','/api/dashboard/team'+q):Promise.resolve([]),
@@ -406,113 +470,126 @@ async function refresh(){
 function renderAll(){
   const isAdmin=S.user?.role==='admin';
   if(isAdmin)renderDash();
-  renderLeads();renderKanban();
-  if(isAdmin)renderTeam();
+  renderLeads();renderKanban();renderCalendar();
+  if(isAdmin){renderAnalytics();renderTeam();}
   if(S.mid&&$('mbg').classList.contains('show'))refreshModalSilent();
 }
 
-// ════ Helpers render ═════════════════════════════════════════════════════════
-function sdot(sig){const c=sig==='BLUE'?'b':sig==='YELLOW'?'y':'';return `<div class="sdot ${c}"></div>`;}
+// ════ Helpers ════════════════════════════════════════════════════════════════
+function sdot(sig){const c=sig==='BLUE'?'b':sig==='YELLOW'?'y':'';return`<div class="sdot ${c}"></div>`;}
 function sbadge(sig){
-  if(sig==='BLUE')  return '<span class="sbadge b">🔵 Agenda firme</span>';
-  if(sig==='YELLOW')return '<span class="sbadge y">🟡 Tibio</span>';
-  return '<span class="sbadge n">—</span>';
+  if(sig==='BLUE')  return'<span class="sbadge b">🔵 Agenda firme</span>';
+  if(sig==='YELLOW')return'<span class="sbadge y">🟡 Tibio</span>';
+  return'<span class="sbadge n">—</span>';
 }
 function stpill(st){
   const q=st==='Lead Calificado - Contacto Agendado';
   const nw=st==='Nuevo',cl=st==='Cerrado',ng=st==='Negociación';
-  const cls=q?'q':nw?'nw':cl?'cl':ng?'ng':'';
-  return `<span class="sp ${cls}">${q?'⭐ Calificado':esc(st)}</span>`;
+  return`<span class="sp ${q?'q':nw?'nw':cl?'cl':ng?'ng':''}">${q?'⭐ Calificado':esc(st)}</span>`;
 }
-function adot(lvl){const c=lvl==='fresh'?'fresh':lvl==='risk'?'risk':lvl==='critical'?'critical':'';return `<div class="adot ${c}"></div>`;}
-function chipSrc(s){return `<span class="chip chip-src">${esc(s||'—')}</span>`;}
-function chipUsr(u){return `<span class="chip chip-usr">@${esc(u||'—')}</span>`;}
+function aldot(lvl){const c={'fresh':'fresh','risk':'risk','critical':'critical'}[lvl]||'none';return`<div class="ald ${c}"></div>`;}
+function chipSrc(s){return`<span class="chip chip-src">${esc(s||'—')}</span>`;}
+function chipUsr(u){return`<span class="chip chip-usr">@${esc(u||'—')}</span>`;}
+function slaClass(lvl){return lvl==='fresh'?'fresh':lvl==='risk'?'risk':lvl==='critical'?'crit':'';}
+function fmtMin(m){if(m<60)return m+'m';return Math.floor(m/60)+'h '+((m%60)+'m');}
 
-// ════ Dashboard ══════════════════════════════════════════════════════════════
+// ════ Dashboard Operación ═══════════════════════════════════════════════════
 function renderDash(){
   const k=S.kpis;
   $('kpiGrid').innerHTML=!k?'':
-    `<div class="kpi"><div class="lbl">Total leads</div><div class="val">${k.total}</div><div class="sub">en el rango</div></div>
-     <div class="kpi"><div class="lbl">Activos</div><div class="val">${k.active}</div><div class="sub">sin cerrar</div></div>
+    `<div class="kpi ok"><div class="lbl">SLA Verde</div><div class="val">${k.slaFresh}</div><div class="sub">< 20 min</div></div>
+     <div class="kpi warn"><div class="lbl">SLA Amarillo</div><div class="val">${k.slaRisk}</div><div class="sub">20-30 min · reasignado</div></div>
+     <div class="kpi bad"><div class="lbl">SLA Rojo</div><div class="val">${k.slaCritical}</div><div class="sub">> 30 min · alerta</div></div>
      <div class="kpi accent"><div class="lbl">Calificados IA</div><div class="val">${k.qualified||0}</div><div class="sub">Marcela detectó agenda</div></div>
+     <div class="kpi"><div class="lbl">Sin leer</div><div class="val" style="color:var(--bad)">${k.unread||0}</div><div class="sub">esperando respuesta</div></div>
      <div class="kpi"><div class="lbl">Cerrados</div><div class="val">${k.closed}</div><div class="sub">conv. ${k.conversionRate}%</div></div>
-     <div class="kpi"><div class="lbl">SLA fresh</div><div class="val" style="color:var(--ok)">${k.slaFresh}</div><div class="sub">≤ 10 min</div></div>
-     <div class="kpi"><div class="lbl">SLA riesgo</div><div class="val" style="color:var(--warn)">${k.slaRisk}</div><div class="sub">10–20 min</div></div>
-     <div class="kpi"><div class="lbl">SLA crítico</div><div class="val" style="color:var(--bad)">${k.slaCritical}</div><div class="sub">> 20 min</div></div>
+     <div class="kpi"><div class="lbl">Activos</div><div class="val">${k.active}</div><div class="sub">total rango</div></div>
      <div class="kpi"><div class="lbl">Resp. prom.</div><div class="val">${k.avgResponseMin}m</div><div class="sub">leads nuevos</div></div>`;
 
-  const ch=S.channels||[];
-  $('chBox').innerHTML=!ch.length?'<div class="kb-empty">Sin datos de canales.</div>':
-    `<div class="tr head" style="grid-template-columns:1.1fr 1fr .6fr .6fr .9fr .7fr .7fr">
-      <div>Canal</div><div>Top modelo</div><div>Leads</div><div>Ventas</div><div>Inversión</div><div>CPL</div><div>Conv.</div>
-     </div>
-     ${ch.map(c=>`<div class="tr" style="grid-template-columns:1.1fr 1fr .6fr .6fr .9fr .7fr .7fr;cursor:default">
-       <div><strong>${esc(c.channel)}</strong></div>
-       <div style="font-size:11.5px;color:var(--text-soft)">${esc(c.topModel)}</div>
-       <div>${c.leads}</div><div>${c.sales}</div>
-       <div>${fmtCLP(c.spend)}</div><div>${fmtCLP(c.cpl)}</div><div>${c.conversion}%</div>
-     </div>`).join('')}`;
-
-  const vendors=S.team||[];
-  if(!vendors.length){$('vGrid').innerHTML='<div class="kb-empty">Sin asignaciones.</div>';return;}
-  $('vGrid').innerHTML=vendors.map(v=>{
-    const top=(v.leads||[]).slice().sort((a,b)=>new Date(b.lastInteraction||0)-new Date(a.lastInteraction||0)).slice(0,5);
-    return `<div class="vcard">
-      <div class="vh">
-        <div class="vav">${ini(v.name)}</div>
-        <div><div class="vnm">${esc(v.name)}</div><div class="vrl">@${esc(v.username)}</div></div>
-        <div class="vtot">${v.total}<small>Leads</small></div>
-      </div>
-      <div class="vsla">
-        <div class="vsp fr"><span class="n">${v.sla.fresh}</span>Fresh</div>
-        <div class="vsp ri"><span class="n">${v.sla.risk}</span>Riesgo</div>
-        <div class="vsp cr"><span class="n">${v.sla.critical}</span>Crítico</div>
-      </div>
-      <div class="vleads">
-        ${top.length?top.map(l=>`<div class="vlead" data-id="${l.id}">${sdot(l.intentSignal||'NONE')}<div class="vln">${esc(l.name)}</div>${stpill(l.status)}</div>`).join(''):'<div class="v-empty">Sin leads en el rango.</div>'}
+  // SLA Matrix
+  const fresh=S.leads.filter(l=>l.status==='Nuevo'&&l.alertLevel==='fresh');
+  const risk =S.leads.filter(l=>l.status==='Nuevo'&&l.alertLevel==='risk');
+  const crit =S.leads.filter(l=>l.status==='Nuevo'&&l.alertLevel==='critical');
+  const slaCard=(cls,label,hint,items)=>`
+    <div class="sla-card ${cls}">
+      <div class="sla-head"><span class="sla-label">${label}</span><span class="sla-cnt">${items.length}</span></div>
+      <div class="sla-hint">${hint}</div>
+      <div class="sla-leads">
+        ${items.slice(0,10).map(l=>`<div class="sla-lead" data-id="${l.id}">
+          <div><div class="sl-name">${esc(l.name)}</div><div class="sl-info">@${esc(l.assignedTo||'—')} · ${esc(l.source||'—')}</div></div>
+          <span class="sl-time">${fmtMin(minAgo(l.lastInteraction))}</span>
+        </div>`).join('')||'<div style="padding:8px;text-align:center;color:var(--text-mute);font-size:11.5px">Sin leads</div>'}
       </div>
     </div>`;
-  }).join('');
-  $('vGrid').querySelectorAll('.vlead[data-id]').forEach(el=>el.addEventListener('click',()=>openModal(+el.dataset.id)));
+  $('slaMatrix').innerHTML=
+    slaCard('fresh','🟢 Verde','< 20 min · en tiempo',fresh)+
+    slaCard('risk', '🟡 Amarillo','20-30 min · reasignado auto',risk)+
+    slaCard('crit', '🔴 Rojo','> 30 min · atención urgente',crit);
+  $('slaMatrix').querySelectorAll('.sla-lead[data-id]').forEach(el=>el.addEventListener('click',()=>openModal(+el.dataset.id)));
+
+  // Team quick
+  const team=S.team||[];
+  if(!team.length){$('teamQuick').innerHTML='<div class="kb-empty" style="padding:16px">Sin datos.</div>';return;}
+  const gc='grid-template-columns:1.4fr repeat(7,auto)';
+  $('teamQuick').innerHTML=`
+    <div class="tr head" style="${gc}">
+      <div>Vendedor</div><div>Leads</div><div>Verde</div><div>Amarillo</div><div>Rojo</div><div>Sin leer</div><div>Cerrados</div><div>Conv.</div>
+    </div>
+    ${team.map(v=>`<div class="tr" style="${gc};cursor:default">
+      <div><strong>${esc(v.name)}</strong> <span style="color:var(--text-mute);font-size:11px">@${esc(v.username)}</span></div>
+      <div>${v.total}</div>
+      <div style="color:var(--ok);font-weight:600">${v.sla.fresh}</div>
+      <div style="color:var(--warn);font-weight:600">${v.sla.risk}</div>
+      <div style="color:var(--bad);font-weight:600">${v.sla.critical}</div>
+      <div style="color:var(--bad)">${v.unread||0}</div>
+      <div>${v.closed}</div>
+      <div>${v.convRate}%</div>
+    </div>`).join('')}`;
 }
 
-// ════ Leads ══════════════════════════════════════════════════════════════════
+// ════ Leads (orden por lastClientTs, unread dot, filtro vendedor) ════════════
 function renderLeads(){
-  const gc='grid-template-columns:8px 11px 1.4fr 1fr 1.1fr .9fr .9fr 1.3fr .8fr';
-  const head=`<div class="tr head" style="${gc}"><div></div><div></div><div>Nombre</div><div>Tel.</div><div>Interés</div><div>Canal</div><div>Asignado</div><div>Estado</div><div>Última</div></div>`;
+  const gc='grid-template-columns:8px 8px 11px 1.3fr .95fr 1.1fr .85fr .85fr 1.2fr .75fr';
+  const head=`<div class="tr head" style="${gc}">
+    <div></div><div></div><div></div>
+    <div>Nombre</div><div>Tel.</div><div>Interés</div><div>Canal</div><div>Asignado</div><div>Estado</div><div>Última</div>
+  </div>`;
   const rows=S.leads.length?S.leads.map(l=>`
     <div class="tr" style="${gc}" data-id="${l.id}">
-      ${adot(l.alertLevel)} ${sdot(l.intentSignal||'NONE')}
+      ${l.unread?'<div class="unread-dot"></div>':'<div></div>'}
+      ${aldot(l.alertLevel)}
+      ${sdot(l.intentSignal||'NONE')}
       <div><strong>${esc(l.name)}</strong></div>
       <div style="font-size:11.5px;color:var(--text-mute)">${esc(l.phone||'—')}</div>
       <div style="font-size:11.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(l.interest||'—')}</div>
       <div>${chipSrc(l.source)}</div>
       <div>${chipUsr(l.assignedTo)}</div>
       <div>${stpill(l.status)}</div>
-      <div style="font-size:11px;color:var(--text-mute)">${fmtDT(l.lastInteraction)}</div>
-    </div>`).join(''):'<div class="kb-empty">Sin leads en el rango.</div>';
+      <div style="font-size:11px;color:var(--text-mute)">${fmtDT(l.lastClientTs||l.lastInteraction)}</div>
+    </div>`).join(''):'<div class="kb-empty" style="padding:16px">Sin leads en el rango.</div>';
   $('lTable').innerHTML=head+rows;
   $('lTable').querySelectorAll('.tr[data-id]').forEach(el=>el.addEventListener('click',()=>openModal(+el.dataset.id)));
 }
 
-// ════ Kanban ════════════════════════════════════════════════════════════════
+// ════ Kanban ultra-compacto ══════════════════════════════════════════════════
 function renderKanban(){
-  const stages=S.config?.stages||['Nuevo','En Proceso','Lead Calificado - Contacto Agendado','Agendado','Seguimiento','Cerrado','Abandonado'];
+  const stages=S.config?.stages||[];
   const grp={};stages.forEach(s=>grp[s]=[]);
   S.leads.forEach(l=>{if(!grp[l.status])grp[l.status]=[];grp[l.status].push(l);});
   $('kanban').innerHTML=stages.map(st=>{
     const items=grp[st]||[];
     const isQ=st==='Lead Calificado - Contacto Agendado';
     const label=isQ?'⭐ Calificado':esc(st);
-    return `<div class="kbc ${isQ?'qual':''}">
+    return`<div class="kbc ${isQ?'qual':''}">
       <div class="kbc-h">${label}<span class="cnt">${items.length}</span></div>
       <div class="kbc-cards">
         ${items.length?items.map(l=>{
-          const sig=l.intentSignal||'NONE';
-          return `<div class="kcard ${sig==='BLUE'?'sb':sig==='YELLOW'?'sy':''}" data-id="${l.id}">
-            <div class="kt"><div class="kn">${esc(l.name)}</div>${sdot(sig)}</div>
-            <div class="ki">${esc(l.interest||'—')}</div>
-            <div class="kf">${chipSrc(l.source)}${chipUsr(l.assignedTo)}<span class="ktm">${fmtTM(l.lastInteraction)}</span></div>
+          const m=minAgo(l.lastInteraction);
+          const lvl=l.alertLevel||'none';
+          return`<div class="kcard ${lvl}" data-id="${l.id}">
+            ${l.unread?'<div class="unread-dot"></div>':''}
+            <div class="kn">${esc(l.name)}</div>
+            <div class="kt">${fmtMin(m)}</div>
           </div>`;
         }).join(''):'<div class="kb-empty">Vacío</div>'}
       </div>
@@ -521,54 +598,107 @@ function renderKanban(){
   $('kanban').querySelectorAll('.kcard[data-id]').forEach(el=>el.addEventListener('click',()=>openModal(+el.dataset.id)));
 }
 
-// ════ Equipo con grupos por fase ═════════════════════════════════════════════
+// ════ Calendario semanal ════════════════════════════════════════════════════
+function renderCalendar(){
+  const today=new Date();today.setHours(0,0,0,0);
+  const startOfWeek=new Date(today);
+  startOfWeek.setDate(today.getDate()-today.getDay()+1); // lunes
+  const days=['Lun','Mar','Mié','Jue','Vie','Sáb','Dom'];
+  const agendable=S.leads.filter(l=>['Agendado','Lead Calificado - Contacto Agendado'].includes(l.status));
+  $('calGrid').innerHTML=days.map((d,i)=>{
+    const day=new Date(startOfWeek);day.setDate(day.getDate()+i);
+    const isToday=day.getTime()===today.getTime();
+    const ddStr=day.toISOString().slice(0,10);
+    // Leads cuya lastInteraction cae en este día (aproximación)
+    const dayLeads=agendable.filter(l=>{
+      const li=new Date(l.lastInteraction||'');
+      return li.toISOString().slice(0,10)===ddStr;
+    });
+    return`<div class="cal-day ${isToday?'today':''}">
+      <div class="cal-day-head">${d} ${day.getDate()}</div>
+      <div class="cal-day-body">
+        ${dayLeads.map(l=>`<div class="cal-event ${l.status==='Agendado'?'agendado':'calificado'}" data-id="${l.id}" title="${esc(l.name)}">${esc(l.name)}</div>`).join('')||''}
+      </div>
+    </div>`;
+  }).join('');
+  $('calGrid').querySelectorAll('.cal-event[data-id]').forEach(el=>el.addEventListener('click',()=>openModal(+el.dataset.id)));
+}
+
+// ════ Analítica ══════════════════════════════════════════════════════════════
+function renderAnalytics(){
+  const ch=S.channels||[];
+  $('chBox').innerHTML=!ch.length?'<div class="kb-empty" style="padding:16px">Sin datos de canales.</div>':
+    `<div class="tr head" style="grid-template-columns:1.1fr 1fr .6fr .6fr .9fr .65fr .65fr .65fr">
+      <div>Canal</div><div>Top modelo</div><div>Leads</div><div>Ventas</div><div>Inversión</div><div>CPL</div><div>Conv.</div><div>ROI</div>
+    </div>
+    ${ch.map(c=>`<div class="tr" style="grid-template-columns:1.1fr 1fr .6fr .6fr .9fr .65fr .65fr .65fr;cursor:default">
+      <div><strong>${esc(c.channel)}</strong></div>
+      <div style="font-size:11.5px;color:var(--text-soft)">${esc(c.topModel)}</div>
+      <div>${c.leads}</div><div>${c.sales}</div>
+      <div>${fmtCLP(c.spend)}</div><div>${fmtCLP(c.cpl)}</div>
+      <div>${c.conversion}%</div><div style="color:${Number(c.roi)>0?'var(--ok)':'var(--bad)'}">${c.roi}%</div>
+    </div>`).join('')}`;
+}
+
+// ════ Equipo (acordeones con métricas de cierre y SLA) ══════════════════════
 const FASE_GROUPS=[
-  {label:'🆕 Nuevos',           sts:['Nuevo']},
-  {label:'💬 En contacto',      sts:['En Proceso','Contactado']},
-  {label:'⭐ Calificados IA',   sts:['Lead Calificado - Contacto Agendado','Calificado']},
-  {label:'📅 Agendados',        sts:['Agendado']},
-  {label:'🤝 Negociación',      sts:['Negociación']},
-  {label:'🔄 Seguimiento',      sts:['Seguimiento','Atendido']},
-  {label:'✅ Cerrados',         sts:['Cerrado']},
-  {label:'❌ Abandonados',      sts:['Abandonado','Perdido']}
+  {label:'🆕 Nuevos',sts:['Nuevo']},
+  {label:'💬 En contacto',sts:['En Proceso','Contactado']},
+  {label:'⭐ Calificados IA',sts:['Lead Calificado - Contacto Agendado','Calificado']},
+  {label:'📅 Agendados',sts:['Agendado']},
+  {label:'🤝 Negociación',sts:['Negociación']},
+  {label:'🔄 Seguimiento',sts:['Seguimiento','Atendido']},
+  {label:'✅ Cerrados',sts:['Cerrado']},
+  {label:'❌ Abandonados',sts:['Abandonado','Perdido']}
 ];
 function renderTeam(){
   const team=S.team||[];
-  if(!team.length){$('tGrid').innerHTML='<div class="kb-empty">Sin datos de equipo.</div>';return;}
+  if(!team.length){$('tGrid').innerHTML='<div class="kb-empty" style="padding:16px">Sin datos.</div>';return;}
   $('tGrid').innerHTML=team.map(v=>{
     const isOpen=S.acc.has(v.username);
     const groups=FASE_GROUPS.map(g=>{
       const gl=(v.leads||[]).filter(l=>g.sts.includes(l.status));
-      if(!gl.length)return '';
-      return `<div class="stg">
+      if(!gl.length)return'';
+      return`<div class="stg">
         <div class="stg-lbl">${g.label} (${gl.length})</div>
         <div class="stg-leads">
           ${gl.map(l=>`<div class="mlead" data-id="${l.id}">
-            ${sdot(l.intentSignal||'NONE')}
+            ${aldot(l.alertLevel)}
             <div class="mln">${esc(l.name)}</div>
-            <div class="mlsrc">${esc(l.interest||'—')}</div>
-            <div class="mltm">${fmtTM(l.lastInteraction)}</div>
+            <div class="mlsrc">${esc(l.interest||l.source||'—')}</div>
+            <div class="mltm">${fmtTM(l.lastClientTs||l.lastInteraction)}</div>
           </div>`).join('')}
         </div>
       </div>`;
     }).join('');
-    return `<div class="tcard ${isOpen?'open':''}" data-u="${esc(v.username)}">
+    return`<div class="tcard ${isOpen?'open':''}" data-u="${esc(v.username)}">
       <div class="thead" data-tog="${esc(v.username)}">
         <span class="chev">▶</span>
         <div><div class="tnm">${esc(v.name)}</div><div class="trl">@${esc(v.username)} · ${v.total} leads</div></div>
-        <div class="tst fr"><span class="n">${v.sla.fresh}</span><span>Fresh</span></div>
-        <div class="tst ri"><span class="n">${v.sla.risk}</span><span>Riesgo</span></div>
-        <div class="tst cr"><span class="n">${v.sla.critical}</span><span>Crítico</span></div>
+        <div class="tstat fr"><span class="n">${v.sla.fresh}</span><span>Verde</span></div>
+        <div class="tstat ri"><span class="n">${v.sla.risk}</span><span>Amarillo</span></div>
+        <div class="tstat cr"><span class="n">${v.sla.critical}</span><span>Rojo</span></div>
+        <div class="tstat"><span class="n">${v.closed}</span><span>Cerrados</span></div>
+        <div class="tstat"><span class="n">${v.convRate}%</span><span>Conv.</span></div>
       </div>
-      <div class="tbody">${groups||'<div class="kb-empty">Sin leads en el rango.</div>'}</div>
+      <div class="tbody">
+        <div class="team-metrics">
+          <div class="tm-box"><div class="lbl">Resp. prom.</div><div class="val">${v.avgResponseMin}m</div></div>
+          <div class="tm-box"><div class="lbl">Sin leer</div><div class="val" style="color:var(--bad)">${v.unread||0}</div></div>
+          <div class="tm-box"><div class="lbl">Calificados IA</div><div class="val" style="color:var(--sig-b)">${v.byStatus.calificado||0}</div></div>
+          <div class="tm-box"><div class="lbl">Agendados</div><div class="val">${v.byStatus.agendado||0}</div></div>
+          <div class="tm-box"><div class="lbl">En negoc.</div><div class="val" style="color:var(--warn)">${v.byStatus.negociacion||0}</div></div>
+          <div class="tm-box"><div class="lbl">Cerrados</div><div class="val" style="color:var(--ok)">${v.closed}</div></div>
+        </div>
+        ${groups||'<div class="kb-empty">Sin leads en el rango.</div>'}
+      </div>
     </div>`;
   }).join('');
   $('tGrid').querySelectorAll('.thead').forEach(h=>{
     h.addEventListener('click',()=>{
-      const u=h.dataset.tog, card=h.closest('.tcard');
+      const u=h.dataset.tog,card=h.closest('.tcard');
       S.acc.has(u)?S.acc.delete(u):S.acc.add(u);
-      card.classList.toggle('open',S.acc.has(u));
-      saveAcc();
+      card.classList.toggle('open',S.acc.has(u));saveAcc();
     });
   });
   $('tGrid').querySelectorAll('.mlead[data-id]').forEach(el=>el.addEventListener('click',e=>{e.stopPropagation();openModal(+el.dataset.id);}));
@@ -576,38 +706,37 @@ function renderTeam(){
 
 // ════ Modal ══════════════════════════════════════════════════════════════════
 const ALL_ST=['Nuevo','En Proceso','Contactado','Calificado','Lead Calificado - Contacto Agendado','Negociación','Agendado','Seguimiento','Cerrado','Abandonado'];
-
 function findLead(id){
-  let l=S.leads.find(x=>x.id===id);
-  if(l)return l;
+  let l=S.leads.find(x=>x.id===id);if(l)return l;
   for(const v of S.team||[]){const f=(v.leads||[]).find(x=>x.id===id);if(f)return f;}
   return null;
 }
 function openModal(id){S.mid=id;renderModal();$('mbg').classList.add('show');}
 function closeModal(){S.mid=null;$('mbg').classList.remove('show');$('mNote').value='';}
 function refreshModalSilent(){const l=findLead(S.mid);if(!l)return;renderModalChat(l);renderModalNotes(l);}
-
 function renderModal(){
   const l=findLead(S.mid);if(!l){closeModal();return;}
   $('mTitle').textContent=l.name+(l.phone?' · '+l.phone:'');
-  $('mMeta').innerHTML=`${chipSrc(l.source)}${chipUsr(l.assignedTo)}<span style="color:var(--text-mute)">📅 ${fmtDT(l.lastInteraction)}</span>${sbadge(l.intentSignal||'NONE')}`;
+  const slaInfo=l.alertLevel==='critical'?'<span style="color:var(--bad);font-weight:700">🔴 SLA Crítico</span>':
+                l.alertLevel==='risk'?'<span style="color:var(--warn);font-weight:700">🟡 SLA Riesgo</span>':
+                l.alertLevel==='fresh'?'<span style="color:var(--ok)">🟢 SLA OK</span>':'';
+  $('mMeta').innerHTML=`${chipSrc(l.source)}${chipUsr(l.assignedTo)}<span style="color:var(--text-mute)">📅 ${fmtDT(l.lastClientTs||l.lastInteraction)}</span>${sbadge(l.intentSignal||'NONE')}${slaInfo}${l.unread?'<span style="color:var(--bad);font-size:11px;font-weight:600">● Sin leer</span>':''}`;
   $('mSt').innerHTML=ALL_ST.map(s=>`<option value="${esc(s)}" ${s===l.status?'selected':''}>${esc(s)}</option>`).join('');
-  renderModalChat(l); renderModalNotes(l);
+  renderModalChat(l);renderModalNotes(l);
 }
 function renderModalChat(l){
   const h=Array.isArray(l.chatHistory)?l.chatHistory:[];
   if(!h.length){$('mChat').innerHTML='<div class="chat-empty">Sin historial de chat aún.</div>';return;}
   $('mChat').innerHTML=h.map(m=>{
     const cls=m.role==='user'?'user':m.role==='agent'?'agent':'bot';
-    return `<div class="bbl ${cls}">${esc(m.content)}${m.ts?`<span class="ts">${fmtTM(m.ts)}</span>`:''}</div>`;
+    return`<div class="bbl ${cls}">${esc(m.content)}${m.ts?`<span class="ts">${fmtTM(m.ts)}</span>`:''}</div>`;
   }).join('');
   $('mChat').scrollTop=$('mChat').scrollHeight;
 }
 function renderModalNotes(l){
   const n=Array.isArray(l.notes)?l.notes:[];
-  $('mNotes').innerHTML=n.length?n.slice().reverse().map(x=>`<div class="nitem">${esc(x.content)}<div class="nm">${esc(x.author||'—')} · ${fmtDT(x.ts)}</div></div>`).join(''):'<div class="no-notes">Sin notas aún.</div>';
+  $('mNotes').innerHTML=n.length?n.slice().reverse().map(x=>`<div class="nitem">${esc(x.content)}<div class="nm">${esc(x.author||'—')} · ${fmtDT(x.ts)}</div></div>`).join(''):'<div class="no-notes">Sin notas.</div>';
 }
-
 $('mClose').addEventListener('click',closeModal);
 $('mbg').addEventListener('click',e=>{if(e.target===$('mbg'))closeModal();});
 $('mSave').addEventListener('click',async()=>{
@@ -615,7 +744,7 @@ $('mSave').addEventListener('click',async()=>{
   const btn=$('mSave');btn.disabled=true;btn.textContent='Guardando...';
   try{
     const l=findLead(S.mid);
-    const st=$('mSt').value, note=$('mNote').value.trim();
+    const st=$('mSt').value,note=$('mNote').value.trim();
     const payload={};
     if(st&&st!==l?.status)payload.status=st;
     if(note)payload.note=note;
