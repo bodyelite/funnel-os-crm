@@ -15,7 +15,7 @@ const PORT = process.env.PORT || 3000;
 const DATA = process.env.RENDER ? '/var/data' : path.join(__dirname, 'data');
 if (!fsSync.existsSync(DATA)) fsSync.mkdirSync(DATA, { recursive: true });
 
-app.use(express.json());
+app.use(express.json({ limit: '2mb' }));
 
 const F = {
   users: path.join(DATA, 'users.json'),
@@ -30,15 +30,18 @@ const TENANTS = ['demo_automotora', 'demo_clinica'];
 const sessions = new Map();
 const chatSessions = new Map();
 
-// SLA reglas (minutos)
-const SLA_FRESH    = 10;
-const SLA_RISK     = 20;
+const SLA_FRESH = 10;
+const SLA_RISK = 20;
 const SLA_CRITICAL = 30;
 const SLA_REASSIGN = 30;
 const SLA_GERENCIA = 15;
 const ACTIVE_STATUSES = new Set(['Nuevo', 'En Proceso', 'Agendado', 'Seguimiento', 'Lead Calificado - Contacto Agendado']);
-const FINAL_STATUSES  = new Set(['Cerrado', 'Abandonado']);
+const FINAL_STATUSES = new Set(['Cerrado', 'Abandonado']);
 const QUALIFIED_STAGE = 'Lead Calificado - Contacto Agendado';
+const VALID_STATUSES = new Set([
+  'Nuevo', 'En Proceso', 'Contactado', 'Calificado', 'Agendado', 'Seguimiento',
+  'Negociación', 'Atendido', QUALIFIED_STAGE, 'Cerrado', 'Abandonado', 'Perdido'
+]);
 
 const read = async (f) => { try { return JSON.parse(await fs.readFile(f, 'utf8')); } catch { return {}; } };
 const write = (f, d) => fs.writeFile(f, JSON.stringify(d, null, 2));
@@ -47,7 +50,7 @@ const tWrite = async (f, t, d) => { const s = await read(f); s[t] = d; await wri
 const validTenant = (t) => TENANTS.includes(t) ? t : TENANTS[0];
 
 // ============================================================================
-// ===== MARCELA: NÚCLEO IA CON JSON STRUCTURED OUTPUT =========================
+// ===== MARCELA: JSON STRUCTURED OUTPUT ======================================
 // ============================================================================
 function inventarioToString(inv) {
   if (!Array.isArray(inv) || !inv.length) return '(sin inventario cargado)';
@@ -173,7 +176,7 @@ function aplicarSemaforoAlLead(lead, parsed) {
 }
 
 // ============================================================================
-// ===== Round-Robin ==========================================================
+// ===== Round-Robin + SLA ====================================================
 // ============================================================================
 async function getActiveSellers(tenant) {
   const users = await tRead(F.users, tenant);
@@ -193,7 +196,6 @@ async function rrNext(tenant, excludeUsername = null) {
   return chosen.username;
 }
 
-// ===== Helpers de alerta =====
 function computeAlertLevel(lead) {
   if (FINAL_STATUSES.has(lead.status)) return 'none';
   if (lead.status !== 'Nuevo') return 'none';
@@ -244,6 +246,30 @@ async function applySlaRules(tenant) {
 }
 
 // ============================================================================
+// ===== Filtro de Fechas =====================================================
+// ============================================================================
+function parseRange(start, end) {
+  let s = null, e = null;
+  if (start) {
+    const d = new Date(start);
+    if (!isNaN(d)) { d.setHours(0, 0, 0, 0); s = d.getTime(); }
+  }
+  if (end) {
+    const d = new Date(end);
+    if (!isNaN(d)) { d.setHours(23, 59, 59, 999); e = d.getTime(); }
+  }
+  return { s, e };
+}
+
+function inRange(lead, s, e) {
+  if (s === null && e === null) return true;
+  const ts = new Date(lead.lastInteraction || lead.createdAt || 0).getTime();
+  if (s !== null && ts < s) return false;
+  if (e !== null && ts > e) return false;
+  return true;
+}
+
+// ============================================================================
 // ===== SEED =================================================================
 // ============================================================================
 async function seed() {
@@ -266,45 +292,42 @@ async function seed() {
 
   const leads = await read(F.leads);
   if (!leads.demo_automotora) leads.demo_automotora = [
-    { id: 1001, name: 'María González', phone: '+56 9 8765 4321', source: 'Meta Ads', status: 'Calificado', lastInteraction: min(8), interest: 'SUV familiar', assignedTo: 'vendedor1', botActive: true, alertLevel: 'none', model: 'SUV 7 plazas 2.0T', intentSignal: 'NONE', chatHistory: [
+    { id: 1001, name: 'María González', phone: '+56 9 8765 4321', source: 'Meta Ads', status: 'Calificado', lastInteraction: min(8), interest: 'SUV familiar', assignedTo: 'vendedor1', botActive: true, alertLevel: 'none', model: 'SUV 7 plazas 2.0T', intentSignal: 'NONE', notes: [], chatHistory: [
       { role: 'user', content: 'Quiero info de SUV para familia de 5' },
       { role: 'bot', content: 'Tenemos modelos 7 plazas con tercera fila. ¿Uso urbano o ruta?' }
     ]},
-    { id: 1002, name: 'Carlos Rojas', phone: '+56 9 5544 3322', source: 'Google Ads', status: 'Contactado', lastInteraction: min(45), interest: 'Camioneta 4x4', assignedTo: 'vendedor1', botActive: true, alertLevel: 'red', model: 'Camioneta Diésel 4x4', intentSignal: 'NONE', chatHistory: [] },
-    { id: 1003, name: 'Javiera Muñoz', phone: '+56 9 7788 9900', source: 'Instagram', status: 'Negociación', lastInteraction: min(120), interest: 'Sedán económico', assignedTo: 'vendedor2', botActive: true, alertLevel: 'red', model: 'Sedán 1.6L', intentSignal: 'NONE', chatHistory: [] },
-    { id: 1004, name: 'Diego Fuentes', phone: '+56 9 2233 4455', source: 'Referido', status: 'Cerrado', lastInteraction: day(1), interest: 'Hatchback', assignedTo: 'vendedor2', botActive: false, alertLevel: 'none', model: 'Sedán 1.6L', chatHistory: [] },
-    { id: 1005, name: 'Antonia Pérez', phone: '+56 9 6677 8899', source: 'Meta Ads', status: 'Nuevo', lastInteraction: min(5), interest: 'SUV compacto', assignedTo: 'vendedor1', botActive: true, alertLevel: 'none', model: 'SUV 7 plazas 2.0T', intentSignal: 'NONE', chatHistory: [] },
-    { id: 1006, name: 'Sebastián Vargas', phone: '+56 9 1122 3344', source: 'Landing Page', status: 'Calificado', lastInteraction: min(95), interest: 'Camioneta diésel', assignedTo: 'vendedor2', botActive: true, alertLevel: 'red', model: 'Camioneta Diésel 4x4', intentSignal: 'NONE', chatHistory: [] },
-    { id: 1007, name: 'Camila Soto', phone: '+56 9 9988 7766', source: 'Google Ads', status: 'Contactado', lastInteraction: min(38), interest: 'Eléctrico', assignedTo: 'vendedor1', botActive: true, alertLevel: 'yellow', model: 'Eléctrico Compacto', intentSignal: 'NONE', chatHistory: [] },
-    { id: 1008, name: 'Tomás Herrera', phone: '+56 9 3322 1100', source: 'Chileautos', status: 'Nuevo', lastInteraction: min(220), interest: 'SUV usado', assignedTo: 'vendedor2', botActive: true, alertLevel: 'red', model: 'SUV 7 plazas 2.0T', intentSignal: 'NONE', chatHistory: [] },
-    { id: 1009, name: 'Pablo Riquelme', phone: '+56 9 4455 6677', source: 'Chileautos', status: 'Cerrado', lastInteraction: day(2), interest: 'Camioneta', assignedTo: 'vendedor1', botActive: false, alertLevel: 'none', model: 'Camioneta Diésel 4x4', chatHistory: [] },
-    { id: 1010, name: 'Valentina Roa', phone: '+56 9 7799 1122', source: 'Meta Ads', status: 'Cerrado', lastInteraction: day(3), interest: 'SUV familiar', assignedTo: 'vendedor2', botActive: false, alertLevel: 'none', model: 'SUV 7 plazas 2.0T', chatHistory: [] }
+    { id: 1002, name: 'Carlos Rojas', phone: '+56 9 5544 3322', source: 'Google Ads', status: 'Contactado', lastInteraction: min(45), interest: 'Camioneta 4x4', assignedTo: 'vendedor1', botActive: true, alertLevel: 'red', model: 'Camioneta Diésel 4x4', intentSignal: 'NONE', notes: [], chatHistory: [] },
+    { id: 1003, name: 'Javiera Muñoz', phone: '+56 9 7788 9900', source: 'Instagram', status: 'Negociación', lastInteraction: min(120), interest: 'Sedán económico', assignedTo: 'vendedor2', botActive: true, alertLevel: 'red', model: 'Sedán 1.6L', intentSignal: 'NONE', notes: [], chatHistory: [] },
+    { id: 1004, name: 'Diego Fuentes', phone: '+56 9 2233 4455', source: 'Referido', status: 'Cerrado', lastInteraction: day(1), interest: 'Hatchback', assignedTo: 'vendedor2', botActive: false, alertLevel: 'none', model: 'Sedán 1.6L', notes: [], chatHistory: [] },
+    { id: 1005, name: 'Antonia Pérez', phone: '+56 9 6677 8899', source: 'Meta Ads', status: 'Nuevo', lastInteraction: min(5), interest: 'SUV compacto', assignedTo: 'vendedor1', botActive: true, alertLevel: 'none', model: 'SUV 7 plazas 2.0T', intentSignal: 'NONE', notes: [], chatHistory: [] },
+    { id: 1006, name: 'Sebastián Vargas', phone: '+56 9 1122 3344', source: 'Landing Page', status: 'Calificado', lastInteraction: min(95), interest: 'Camioneta diésel', assignedTo: 'vendedor2', botActive: true, alertLevel: 'red', model: 'Camioneta Diésel 4x4', intentSignal: 'NONE', notes: [], chatHistory: [] },
+    { id: 1007, name: 'Camila Soto', phone: '+56 9 9988 7766', source: 'Google Ads', status: 'Contactado', lastInteraction: min(38), interest: 'Eléctrico', assignedTo: 'vendedor1', botActive: true, alertLevel: 'yellow', model: 'Eléctrico Compacto', intentSignal: 'NONE', notes: [], chatHistory: [] },
+    { id: 1008, name: 'Tomás Herrera', phone: '+56 9 3322 1100', source: 'Chileautos', status: 'Nuevo', lastInteraction: min(220), interest: 'SUV usado', assignedTo: 'vendedor2', botActive: true, alertLevel: 'red', model: 'SUV 7 plazas 2.0T', intentSignal: 'NONE', notes: [], chatHistory: [] },
+    { id: 1009, name: 'Pablo Riquelme', phone: '+56 9 4455 6677', source: 'Chileautos', status: 'Cerrado', lastInteraction: day(2), interest: 'Camioneta', assignedTo: 'vendedor1', botActive: false, alertLevel: 'none', model: 'Camioneta Diésel 4x4', notes: [], chatHistory: [] },
+    { id: 1010, name: 'Valentina Roa', phone: '+56 9 7799 1122', source: 'Meta Ads', status: 'Cerrado', lastInteraction: day(3), interest: 'SUV familiar', assignedTo: 'vendedor2', botActive: false, alertLevel: 'none', model: 'SUV 7 plazas 2.0T', notes: [], chatHistory: [] }
   ];
   if (!leads.demo_clinica) leads.demo_clinica = [
-    { id: 2001, name: 'Patricia Rivera', phone: '+56 9 3344 5566', source: 'Google Ads', status: 'Calificado', lastInteraction: min(12), interest: 'Dermatología', assignedTo: 'vendedor1', botActive: true, alertLevel: 'none', model: 'Hora Dermatología', intentSignal: 'NONE', chatHistory: [] },
-    { id: 2002, name: 'Roberto Cárcamo', phone: '+56 9 7766 5544', source: 'Meta Ads', status: 'Contactado', lastInteraction: min(50), interest: 'Chequeo preventivo', assignedTo: 'vendedor1', botActive: true, alertLevel: 'red', model: 'Medicina General', intentSignal: 'NONE', chatHistory: [] },
-    { id: 2003, name: 'Isidora Lagos', phone: '+56 9 4433 2211', source: 'Landing Page', status: 'Nuevo', lastInteraction: min(180), interest: 'Estética', assignedTo: 'vendedor1', botActive: true, alertLevel: 'red', model: 'Hora Dermatología', intentSignal: 'NONE', chatHistory: [] },
-    { id: 2004, name: 'Constanza Mella', phone: '+56 9 5566 7788', source: 'Instagram', status: 'Negociación', lastInteraction: min(85), interest: 'Plan integral', assignedTo: 'vendedor1', botActive: true, alertLevel: 'red', model: 'Hora Ginecología', intentSignal: 'NONE', chatHistory: [] }
+    { id: 2001, name: 'Patricia Rivera', phone: '+56 9 3344 5566', source: 'Google Ads', status: 'Calificado', lastInteraction: min(12), interest: 'Dermatología', assignedTo: 'vendedor1', botActive: true, alertLevel: 'none', model: 'Hora Dermatología', intentSignal: 'NONE', notes: [], chatHistory: [] },
+    { id: 2002, name: 'Roberto Cárcamo', phone: '+56 9 7766 5544', source: 'Meta Ads', status: 'Contactado', lastInteraction: min(50), interest: 'Chequeo preventivo', assignedTo: 'vendedor1', botActive: true, alertLevel: 'red', model: 'Medicina General', intentSignal: 'NONE', notes: [], chatHistory: [] },
+    { id: 2003, name: 'Isidora Lagos', phone: '+56 9 4433 2211', source: 'Landing Page', status: 'Nuevo', lastInteraction: min(180), interest: 'Estética', assignedTo: 'vendedor1', botActive: true, alertLevel: 'red', model: 'Hora Dermatología', intentSignal: 'NONE', notes: [], chatHistory: [] },
+    { id: 2004, name: 'Constanza Mella', phone: '+56 9 5566 7788', source: 'Instagram', status: 'Negociación', lastInteraction: min(85), interest: 'Plan integral', assignedTo: 'vendedor1', botActive: true, alertLevel: 'red', model: 'Hora Ginecología', intentSignal: 'NONE', notes: [], chatHistory: [] }
   ];
   await write(F.leads, leads);
 
   const cfg = await read(F.config);
   if (!cfg.demo_automotora) cfg.demo_automotora = {
     businessName: 'Automotora Andes', accentColor: '#1e40af',
-    stages: ['Nuevo', 'Contactado', 'Calificado', QUALIFIED_STAGE, 'Negociación', 'Cerrado', 'Perdido'],
+    stages: ['Nuevo', 'En Proceso', 'Contactado', 'Calificado', QUALIFIED_STAGE, 'Negociación', 'Agendado', 'Seguimiento', 'Cerrado', 'Abandonado'],
     prompt_base: 'Eres Marcela, asesora de Automotora Andes.'
   };
   if (!cfg.demo_clinica) cfg.demo_clinica = {
     businessName: 'Clínica Vital', accentColor: '#0d9488',
-    stages: ['Nuevo', 'Contactado', 'Agendado', QUALIFIED_STAGE, 'Atendido', 'Cerrado', 'Perdido'],
+    stages: ['Nuevo', 'En Proceso', 'Contactado', 'Agendado', QUALIFIED_STAGE, 'Atendido', 'Seguimiento', 'Cerrado', 'Abandonado'],
     prompt_base: 'Eres asistente de Clínica Vital.'
   };
-  // Asegura que la etapa nueva esté presente en configuraciones existentes
   for (const t of TENANTS) {
     if (cfg[t] && Array.isArray(cfg[t].stages) && !cfg[t].stages.includes(QUALIFIED_STAGE)) {
-      const idx = cfg[t].stages.indexOf('Calificado');
-      if (idx >= 0) cfg[t].stages.splice(idx + 1, 0, QUALIFIED_STAGE);
-      else cfg[t].stages.splice(Math.max(0, cfg[t].stages.length - 2), 0, QUALIFIED_STAGE);
+      cfg[t].stages.splice(Math.max(1, cfg[t].stages.length - 2), 0, QUALIFIED_STAGE);
     }
   }
   await write(F.config, cfg);
@@ -375,13 +398,16 @@ app.post('/api/auth/logout', (req, res) => {
 app.get('/api/me', auth(), (req, res) => res.json({ user: req.user, tenant: req.tenant }));
 
 // ============================================================================
-// ===== LEADS ================================================================
+// ===== LEADS (con filtro de fechas) =========================================
 // ============================================================================
 app.get('/api/leads', auth(), async (req, res) => {
   const all = await applySlaRules(req.tenant);
-  const leads = filterByRole(all, req.user);
+  const { s, e } = parseRange(req.query.start, req.query.end);
+  let leads = filterByRole(all, req.user);
+  if (s !== null || e !== null) leads = leads.filter(l => inRange(l, s, e));
   leads.forEach(l => {
     if (!Array.isArray(l.chatHistory)) l.chatHistory = [];
+    if (!Array.isArray(l.notes)) l.notes = [];
     if (!l.intentSignal) l.intentSignal = 'NONE';
   });
   res.json(leads);
@@ -395,6 +421,42 @@ app.get('/api/leads/:id', auth(), async (req, res) => {
   if (req.user.role === 'vendedor' && l.assignedTo !== req.user.username)
     return res.status(403).json({ error: 'Sin permisos' });
   res.json(l);
+});
+
+// PATCH unificado para gestión manual: status, notes, assignedTo, etc.
+app.patch('/api/leads/:id', auth(), async (req, res) => {
+  const leads = await tRead(F.leads, req.tenant);
+  const idx = leads.findIndex(x => x.id == req.params.id);
+  if (idx === -1) return res.status(404).json({ error: 'No encontrado' });
+  if (req.user.role === 'vendedor' && leads[idx].assignedTo !== req.user.username)
+    return res.status(403).json({ error: 'Sin permisos' });
+
+  const allowedFields = ['status', 'interest', 'name', 'phone', 'botActive'];
+  if (req.user.role !== 'vendedor') allowedFields.push('assignedTo');
+
+  const patch = {};
+  for (const k of allowedFields) {
+    if (req.body[k] !== undefined) patch[k] = req.body[k];
+  }
+
+  if (patch.status !== undefined && !VALID_STATUSES.has(patch.status)) {
+    return res.status(400).json({ error: 'Status inválido' });
+  }
+
+  if (req.body.note && typeof req.body.note === 'string' && req.body.note.trim()) {
+    leads[idx].notes = Array.isArray(leads[idx].notes) ? leads[idx].notes : [];
+    leads[idx].notes.push({
+      content: req.body.note.trim(),
+      author: req.user.name || req.user.username,
+      ts: Date.now()
+    });
+  }
+
+  Object.assign(leads[idx], patch);
+  leads[idx].lastInteraction = new Date().toISOString();
+  leads[idx].alertLevel = computeAlertLevel(leads[idx]);
+  await tWrite(F.leads, req.tenant, leads);
+  res.json(leads[idx]);
 });
 
 app.put('/api/leads/:id', auth(), async (req, res) => {
@@ -439,27 +501,32 @@ app.post('/api/leads/:id/message', auth('admin', 'vendedor'), async (req, res) =
 });
 
 // ============================================================================
-// ===== PIPELINE / DASHBOARD / ANALYTICS =====================================
+// ===== PIPELINE / DASHBOARD / ANALYTICS (con filtro de fechas) ==============
 // ============================================================================
 app.get('/api/pipeline', auth(), async (req, res) => {
   const cfg = await tRead(F.config, req.tenant, {});
   const all = await applySlaRules(req.tenant);
-  const leads = filterByRole(all, req.user);
-  res.json((cfg.stages || []).map(s => ({ stage: s, leads: leads.filter(l => l.status === s) })));
+  const { s, e } = parseRange(req.query.start, req.query.end);
+  let leads = filterByRole(all, req.user);
+  if (s !== null || e !== null) leads = leads.filter(l => inRange(l, s, e));
+  res.json((cfg.stages || []).map(st => ({ stage: st, leads: leads.filter(l => l.status === st) })));
 });
 
 app.get('/api/dashboard/kpis', auth('admin'), async (req, res) => {
-  const leads = await applySlaRules(req.tenant);
+  const all = await applySlaRules(req.tenant);
+  const { s, e } = parseRange(req.query.start, req.query.end);
+  const leads = (s !== null || e !== null) ? all.filter(l => inRange(l, s, e)) : all;
+
   const now = Date.now();
   const minOf = l => (now - new Date(l.lastInteraction).getTime()) / 60000;
   const nuevos = leads.filter(l => l.status === 'Nuevo');
-  const slaFresh    = nuevos.filter(l => minOf(l) <= SLA_FRESH).length;
-  const slaRisk     = nuevos.filter(l => (minOf(l) > SLA_FRESH && minOf(l) <= SLA_RISK) || (l.reassigned && minOf(l) <= SLA_RISK)).length;
+  const slaFresh = nuevos.filter(l => minOf(l) <= SLA_FRESH).length;
+  const slaRisk = nuevos.filter(l => (minOf(l) > SLA_FRESH && minOf(l) <= SLA_RISK) || (l.reassigned && minOf(l) <= SLA_RISK)).length;
   const slaCritical = nuevos.filter(l => minOf(l) > SLA_RISK).length;
   const closed = leads.filter(l => l.status === 'Cerrado').length;
   const active = leads.filter(l => !FINAL_STATUSES.has(l.status));
   const qualified = leads.filter(l => l.status === QUALIFIED_STAGE).length;
-  const avg = nuevos.length ? Math.round(nuevos.reduce((s, l) => s + minOf(l), 0) / nuevos.length) : 0;
+  const avg = nuevos.length ? Math.round(nuevos.reduce((a, l) => a + minOf(l), 0) / nuevos.length) : 0;
   res.json({
     total: leads.length,
     active: active.length,
@@ -469,20 +536,22 @@ app.get('/api/dashboard/kpis', auth('admin'), async (req, res) => {
     avgResponseMin: avg,
     conversionRate: leads.length ? ((closed / leads.length) * 100).toFixed(1) : '0.0',
     byStatus: {
-      nuevo:       leads.filter(l => l.status === 'Nuevo').length,
-      enProceso:   leads.filter(l => l.status === 'En Proceso').length,
-      agendado:    leads.filter(l => l.status === 'Agendado').length,
+      nuevo: leads.filter(l => l.status === 'Nuevo').length,
+      enProceso: leads.filter(l => l.status === 'En Proceso').length,
+      agendado: leads.filter(l => l.status === 'Agendado').length,
       seguimiento: leads.filter(l => l.status === 'Seguimiento').length,
-      calificado:  qualified,
-      cerrado:     leads.filter(l => l.status === 'Cerrado').length,
-      abandonado:  leads.filter(l => l.status === 'Abandonado').length
+      calificado: qualified,
+      cerrado: leads.filter(l => l.status === 'Cerrado').length,
+      abandonado: leads.filter(l => l.status === 'Abandonado').length
     }
   });
 });
 
 app.get('/api/dashboard/team', auth('admin'), async (req, res) => {
   const users = await tRead(F.users, req.tenant);
-  const leads = await tRead(F.leads, req.tenant);
+  const all = await tRead(F.leads, req.tenant);
+  const { s, e } = parseRange(req.query.start, req.query.end);
+  const leads = (s !== null || e !== null) ? all.filter(l => inRange(l, s, e)) : all;
   const now = Date.now();
   const minOf = l => (now - new Date(l.lastInteraction).getTime()) / 60000;
   const allVendors = [...users.filter(u => u.role === 'vendedor'), { username: 'gerente', name: 'Gerencia' }];
@@ -494,26 +563,28 @@ app.get('/api/dashboard/team', auth('admin'), async (req, res) => {
       name: v.name,
       total: own.length,
       sla: {
-        fresh:    nuevos.filter(l => minOf(l) <= SLA_FRESH).length,
-        risk:     nuevos.filter(l => (minOf(l) > SLA_FRESH && minOf(l) <= SLA_RISK) || (l.reassigned && minOf(l) <= SLA_RISK)).length,
+        fresh: nuevos.filter(l => minOf(l) <= SLA_FRESH).length,
+        risk: nuevos.filter(l => (minOf(l) > SLA_FRESH && minOf(l) <= SLA_RISK) || (l.reassigned && minOf(l) <= SLA_RISK)).length,
         critical: nuevos.filter(l => minOf(l) > SLA_RISK).length
       },
       byStatus: {
-        nuevo:       nuevos.length,
-        enProceso:   own.filter(l => l.status === 'En Proceso').length,
-        agendado:    own.filter(l => l.status === 'Agendado').length,
+        nuevo: nuevos.length,
+        enProceso: own.filter(l => l.status === 'En Proceso').length,
+        agendado: own.filter(l => l.status === 'Agendado').length,
         seguimiento: own.filter(l => l.status === 'Seguimiento').length,
-        calificado:  own.filter(l => l.status === QUALIFIED_STAGE).length,
-        cerrado:     own.filter(l => l.status === 'Cerrado').length,
-        abandonado:  own.filter(l => l.status === 'Abandonado').length
+        calificado: own.filter(l => l.status === QUALIFIED_STAGE).length,
+        cerrado: own.filter(l => l.status === 'Cerrado').length,
+        abandonado: own.filter(l => l.status === 'Abandonado').length
       },
-      leads: own
+      leads: own.map(l => ({ ...l, chatHistory: Array.isArray(l.chatHistory) ? l.chatHistory : [], notes: Array.isArray(l.notes) ? l.notes : [], intentSignal: l.intentSignal || 'NONE' }))
     };
   }).filter(v => v.total > 0));
 });
 
 app.get('/api/analytics/channels', auth('admin'), async (req, res) => {
-  const leads = await tRead(F.leads, req.tenant);
+  const all = await tRead(F.leads, req.tenant);
+  const { s, e } = parseRange(req.query.start, req.query.end);
+  const leads = (s !== null || e !== null) ? all.filter(l => inRange(l, s, e)) : all;
   const spend = await tRead(F.spend, req.tenant, {});
   const channels = {};
   for (const l of leads) {
@@ -530,12 +601,8 @@ app.get('/api/analytics/channels', auth('admin'), async (req, res) => {
     let topModel = '—', topCount = 0;
     for (const [m, n] of Object.entries(c.models)) if (n > topCount) { topModel = m; topCount = n; }
     return {
-      channel: c.channel,
-      spend: c.spend,
-      leads: c.leads,
-      sales: c.sales,
-      topModel,
-      topModelCount: topCount,
+      channel: c.channel, spend: c.spend, leads: c.leads, sales: c.sales,
+      topModel, topModelCount: topCount,
       cpl: c.leads ? Math.round(c.spend / c.leads) : 0,
       cac: c.sales ? Math.round(c.spend / c.sales) : 0,
       conversion: c.leads ? ((c.sales / c.leads) * 100).toFixed(1) : '0.0'
@@ -586,18 +653,14 @@ app.post('/api/chat', async (req, res) => {
   if (!sess) {
     leadId = Date.now();
     const assigned = await rrNext(tenant);
-    const newLead = {
+    leads.unshift({
       id: leadId, name: 'Visitante anónimo', phone: 'Pendiente',
       source: 'Chat Web (Simulador)', status: 'Nuevo',
       lastInteraction: new Date().toISOString(),
       interest: message.slice(0, 80), sessionId,
-      assignedTo: assigned,
-      botActive: true,
-      alertLevel: 'none',
-      intentSignal: 'NONE',
-      chatHistory: []
-    };
-    leads.unshift(newLead);
+      assignedTo: assigned, botActive: true, alertLevel: 'none',
+      intentSignal: 'NONE', notes: [], chatHistory: []
+    });
     sess = { tenant, leadId, step: 0 };
     chatSessions.set(sessionId, sess);
     captured = true;
@@ -614,23 +677,14 @@ app.post('/api/chat', async (req, res) => {
     const parsed = await getMarcelaResponse(tenant, leads[idx].chatHistory.slice(0, -1), message);
     leads[idx].chatHistory.push({ role: 'bot', content: parsed.reply, ts: Date.now() });
     leads[idx].lastInteraction = new Date().toISOString();
-
     aplicarSemaforoAlLead(leads[idx], parsed);
-    if (leads[idx].status === 'Nuevo' && sess.step >= 1 && !ACTIVE_STATUSES.has(QUALIFIED_STAGE) === false) {
-      // se mantiene 'Nuevo' a menos que Marcela lo califique vía semáforo
-    }
     if (sess.step >= 2 && leads[idx].status === 'Nuevo' && leads[idx].intentSignal === 'NONE') {
       leads[idx].status = 'Contactado';
     }
-
     await tWrite(F.leads, tenant, leads);
     return res.json({
-      reply: parsed.reply,
-      sessionId,
-      leadCaptured: captured,
-      leadId,
-      intentSignal: leads[idx].intentSignal,
-      status: leads[idx].status
+      reply: parsed.reply, sessionId, leadCaptured: captured, leadId,
+      intentSignal: leads[idx].intentSignal, status: leads[idx].status
     });
   }
 
@@ -639,7 +693,7 @@ app.post('/api/chat', async (req, res) => {
 });
 
 // ============================================================================
-// ===== WEBHOOK WHATSAPP CLOUD API ===========================================
+// ===== WEBHOOK WHATSAPP CLOUD API + ESCUDO BODY ELITE =======================
 // ============================================================================
 async function sendWhatsAppMessage(to, text) {
   const token = process.env.WA_TOKEN;
@@ -654,13 +708,11 @@ async function sendWhatsAppMessage(to, text) {
   } catch (e) { console.error('❌ Error enviando WA:', e); }
 }
 
-// ===== ESCUDO BODY ELITE =====
 const SHIELD_KEYWORDS = [
   'body elite', 'bodyelite', 'botox',
   'lipo', 'lipoescultura', 'liposuccion', 'liposucción',
   'estetica', 'estética',
-  'masaje', 'masajes',
-  'doctora',
+  'masaje', 'masajes', 'doctora',
   'tratamiento', 'tratamientos',
   'acido', 'ácido', 'hialuronico', 'hialurónico'
 ];
@@ -681,9 +733,7 @@ app.get('/webhook', (req, res) => {
   const token = req.query['hub.verify_token'];
   const challenge = req.query['hub.challenge'];
   if (mode && token) {
-    if (mode === 'subscribe' && token === verify_token) {
-      return res.status(200).send(challenge);
-    }
+    if (mode === 'subscribe' && token === verify_token) return res.status(200).send(challenge);
     return res.sendStatus(403);
   }
   res.sendStatus(400);
@@ -692,8 +742,7 @@ app.get('/webhook', (req, res) => {
 app.post('/webhook', async (req, res) => {
   const body = req.body;
   if (!body.object) return res.sendStatus(404);
-
-  res.sendStatus(200); // ACK rápido a Meta
+  res.sendStatus(200);
 
   try {
     const entry = body.entry?.[0];
@@ -705,14 +754,12 @@ app.post('/webhook', async (req, res) => {
     const from = msgObj.from;
     const msg_body = msgObj.text ? msgObj.text.body : (msgObj.button?.text || msgObj.interactive?.button_reply?.title || null);
     const contactName = value.contacts ? value.contacts[0].profile.name : 'WhatsApp Lead';
-
     if (!msg_body) return;
 
-    // ===== ESCUDO BODY ELITE: intercepta antes de OpenAI y antes de persistir =====
     if (isResidualTraffic(msg_body)) {
       console.log('🛡  Escudo Body Elite activado para ' + from + ' → ' + msg_body.slice(0, 80));
       await sendWhatsAppMessage(from, SHIELD_RESPONSE);
-      return; // sin OpenAI, sin persistencia
+      return;
     }
 
     console.log('💬 [WhatsApp] Recibido de ' + from + ': ' + msg_body);
@@ -727,17 +774,14 @@ app.post('/webhook', async (req, res) => {
 
     if (idx === -1) {
       const assigned = await rrNext(tenant) || 'gerente';
-      const newLead = {
+      leadsData[tenant].unshift({
         id: Date.now(), name: contactName, phone: '+' + from,
         source: 'WhatsApp', status: 'Nuevo',
         lastInteraction: new Date().toISOString(),
         interest: msg_body.slice(0, 80),
-        assignedTo: assigned,
-        botActive: true, alertLevel: 'none',
-        intentSignal: 'NONE',
-        chatHistory: []
-      };
-      leadsData[tenant].unshift(newLead);
+        assignedTo: assigned, botActive: true, alertLevel: 'none',
+        intentSignal: 'NONE', notes: [], chatHistory: []
+      });
       idx = 0;
     }
 
@@ -747,13 +791,9 @@ app.post('/webhook', async (req, res) => {
     if (leadsData[tenant][idx].botActive !== false) {
       const historyForIA = leadsData[tenant][idx].chatHistory.slice(0, -1);
       const parsed = await getMarcelaResponse(tenant, historyForIA, msg_body);
-
       leadsData[tenant][idx].chatHistory.push({ role: 'bot', content: parsed.reply, ts: Date.now() });
-
-      // Sincronización de Estados (BLUE/YELLOW → Lead Calificado - Contacto Agendado)
       aplicarSemaforoAlLead(leadsData[tenant][idx], parsed);
 
-      // Si aún era 'Nuevo' y no se calificó, marcamos 'Contactado'
       const userTurns = leadsData[tenant][idx].chatHistory.filter(m => m.role === 'user').length;
       if (userTurns >= 2 && leadsData[tenant][idx].status === 'Nuevo' && leadsData[tenant][idx].intentSignal === 'NONE') {
         leadsData[tenant][idx].status = 'Contactado';
@@ -764,7 +804,6 @@ app.post('/webhook', async (req, res) => {
 
     leadsData[tenant][idx].lastInteraction = new Date().toISOString();
     leadsData[tenant][idx].alertLevel = computeAlertLevel(leadsData[tenant][idx]);
-
     await write(F.leads, leadsData);
   } catch (e) {
     console.error('Error procesando webhook:', e);
@@ -786,5 +825,5 @@ setInterval(async () => {
 seed().then(() => app.listen(PORT, () => {
   console.log(`🚀 CRM en http://localhost:${PORT}`);
   console.log(`🔐 Login demo: gerente | vendedor1 | vendedor2 | recepcion (pass: demo)`);
-  console.log(`🤖 Marcela JSON activa | 📲 Webhook WA: /webhook | 🛡  Escudo Body Elite ON`);
+  console.log(`🤖 Marcela JSON | 📲 Webhook WA | 🛡  Escudo Body Elite | 📅 Filtro fechas | ✏️  PATCH manual`);
 }));
