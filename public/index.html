@@ -16,6 +16,7 @@
   --ok-s:rgba(52,211,153,.12);--warn-s:rgba(251,191,36,.12);--bad-s:rgba(248,113,113,.12);
   --sig-b:#60a5fa;--sig-y:#fbbf24;
   --sig-bs:rgba(96,165,250,.16);--sig-ys:rgba(251,191,36,.16);
+  --agent-bg:#14532d;--agent-text:#d1fae5;
   --r:10px;--tr:.13s ease;
 }
 *{box-sizing:border-box;margin:0;padding:0}
@@ -67,12 +68,11 @@ body{font-family:'Inter',-apple-system,sans-serif;background:var(--bg);color:var
 .block-title::before{content:'';width:3px;height:12px;background:var(--accent);border-radius:2px}
 .view{display:none}.view.active{display:block}
 
-/* ── SLA big cards clickeables ── */
+/* ── SLA cards ── */
 .sla-trio{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:10px}
-.sla-big{background:var(--panel);border:2px solid var(--border);border-radius:12px;padding:18px 20px;cursor:pointer;transition:all var(--tr);position:relative;overflow:hidden}
-.sla-big::after{content:'';position:absolute;inset:0;background:transparent;transition:background var(--tr)}
-.sla-big:hover::after{background:rgba(255,255,255,.03)}
-.sla-big.active-sla{border-color:currentColor;box-shadow:0 0 0 1px currentColor}
+.sla-big{background:var(--panel);border:2px solid var(--border);border-radius:12px;padding:18px 20px;cursor:pointer;transition:all var(--tr);user-select:none}
+.sla-big:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(0,0,0,.25)}
+.sla-big.active-sla{box-shadow:0 0 0 2px currentColor}
 .sla-big .sb-icon{font-size:22px;margin-bottom:8px}
 .sla-big .sb-label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;margin-bottom:4px}
 .sla-big .sb-cnt{font-size:36px;font-weight:800;letter-spacing:-.03em;line-height:1}
@@ -81,35 +81,37 @@ body{font-family:'Inter',-apple-system,sans-serif;background:var(--bg);color:var
 .sla-big.risk {color:var(--warn);border-color:rgba(251,191,36,.25);background:linear-gradient(135deg,var(--panel),var(--warn-s))}
 .sla-big.crit {color:var(--bad);border-color:rgba(248,113,113,.25);background:linear-gradient(135deg,var(--panel),var(--bad-s))}
 
-/* Panel expandible SLA */
-.sla-expand{background:var(--panel);border:1px solid var(--border);border-radius:var(--r);overflow:hidden;margin-bottom:6px;max-height:0;transition:max-height .3s ease}
-.sla-expand.open{max-height:500px}
-.sla-expand-inner{padding:12px}
-.sla-expand-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;padding:10px 14px 8px;border-bottom:1px solid var(--border)}
-.sla-lead-row{display:grid;grid-template-columns:1fr auto auto auto;gap:10px;align-items:center;padding:9px 12px;border-bottom:1px solid var(--border);cursor:pointer;transition:background var(--tr);font-size:12.5px}
+/* ── Panel expandible compartido ── */
+.sla-expand{background:var(--panel);border:1px solid var(--border);border-radius:var(--r);overflow:hidden;margin-bottom:6px;max-height:0;transition:max-height .35s ease}
+.sla-expand.open{max-height:520px}
+.sla-expand-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--text-soft);padding:11px 14px 9px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px}
+.sla-expand-title::before{content:'';width:3px;height:11px;background:var(--accent);border-radius:2px;flex-shrink:0}
+.expand-scroll{max-height:440px;overflow-y:auto}
+.sla-lead-row{display:grid;grid-template-columns:1fr 1fr 1fr 1fr auto;gap:10px;align-items:center;padding:10px 14px;border-bottom:1px solid var(--border);cursor:pointer;transition:background var(--tr);font-size:12.5px}
 .sla-lead-row:last-child{border-bottom:none}
 .sla-lead-row:hover{background:var(--panel-2)}
-.sla-lead-row .lr-name{font-weight:600}
-.sla-lead-row .lr-sub{font-size:11px;color:var(--text-mute)}
-.sla-lead-row .lr-time{font-weight:700;font-size:12px;white-space:nowrap}
+.lr-name{font-weight:600}.lr-sub{font-size:11px;color:var(--text-mute);margin-top:1px}
+.lr-time{font-weight:700;font-size:12px;white-space:nowrap;text-align:right}
+.expand-empty{padding:20px;text-align:center;color:var(--text-mute);font-size:12px}
 
-/* ── Funnel de ventas ── */
+/* ── Funnel cards ── */
 .funnel-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:10px}
-.funnel-card{background:var(--panel);border:1px solid var(--border);border-radius:var(--r);padding:14px;text-align:center;position:relative;transition:all var(--tr)}
-.funnel-card:hover{border-color:var(--border-md)}
+.funnel-card{background:var(--panel);border:2px solid var(--border);border-radius:var(--r);padding:14px;text-align:center;cursor:pointer;transition:all var(--tr);user-select:none;position:relative}
+.funnel-card:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(0,0,0,.25);border-color:var(--border-md)}
+.funnel-card.active-funnel{box-shadow:0 0 0 2px var(--accent);border-color:var(--accent)}
 .funnel-card .fc-icon{font-size:20px;margin-bottom:6px}
 .funnel-card .fc-val{font-size:28px;font-weight:800;letter-spacing:-.02em}
 .funnel-card .fc-lbl{font-size:10.5px;color:var(--text-mute);font-weight:600;text-transform:uppercase;letter-spacing:.05em;margin-top:4px}
 .funnel-card .fc-pct{font-size:11px;color:var(--text-mute);margin-top:3px}
-.funnel-arrow{display:flex;align-items:center;justify-content:center;color:var(--text-mute);font-size:16px;padding-top:14px}
+.funnel-card .fc-hint{font-size:10px;color:var(--text-mute);margin-top:5px;opacity:0;transition:opacity var(--tr)}
+.funnel-card:hover .fc-hint{opacity:1}
 
-/* ── Tabla genérica ── */
+/* ── Tablas ── */
 .tw{background:var(--panel);border:1px solid var(--border);border-radius:var(--r);overflow:hidden}
 .tr{display:grid;gap:10px;padding:10px 14px;align-items:center;border-bottom:1px solid var(--border);font-size:12.5px;transition:background var(--tr)}
 .tr:last-child{border-bottom:none}
 .tr.head{background:var(--panel-2);color:var(--text-mute);font-weight:700;font-size:10.5px;text-transform:uppercase;letter-spacing:.05em;cursor:default}
-.tr:not(.head){cursor:pointer}
-.tr:not(.head):hover{background:var(--panel-2)}
+.tr:not(.head){cursor:pointer}.tr:not(.head):hover{background:var(--panel-2)}
 
 /* ── Chips / pills ── */
 .chip{display:inline-block;padding:2px 7px;border-radius:5px;font-size:10.5px;font-weight:600;border:1px solid transparent;white-space:nowrap}
@@ -117,11 +119,7 @@ body{font-family:'Inter',-apple-system,sans-serif;background:var(--bg);color:var
 .chip-usr{background:var(--accent-s);color:var(--accent)}
 .sp{display:inline-block;padding:3px 8px;border-radius:6px;font-size:10.5px;font-weight:600;background:var(--panel-2);color:var(--text-soft);white-space:nowrap}
 .sp.q{background:linear-gradient(90deg,var(--sig-bs),var(--sig-ys));color:#fff}
-.sp.nw{background:var(--ok-s);color:var(--ok)}
-.sp.cl{background:var(--bad-s);color:var(--bad)}
-.sp.ng{background:var(--warn-s);color:var(--warn)}
-
-/* ── Semáforo dots ── */
+.sp.nw{background:var(--ok-s);color:var(--ok)}.sp.cl{background:var(--bad-s);color:var(--bad)}.sp.ng{background:var(--warn-s);color:var(--warn)}
 .sdot{width:11px;height:11px;border-radius:50%;background:var(--panel-3);border:2px solid var(--panel-2);flex-shrink:0;display:inline-block}
 .sdot.b{background:var(--sig-b);box-shadow:0 0 8px var(--sig-b);animation:pls 1.6s infinite}
 .sdot.y{background:var(--sig-y);box-shadow:0 0 8px var(--sig-y);animation:pls 1.6s infinite}
@@ -132,7 +130,7 @@ body{font-family:'Inter',-apple-system,sans-serif;background:var(--bg);color:var
 .ald.fresh{background:var(--ok)}.ald.risk{background:var(--warn)}.ald.critical{background:var(--bad);animation:pls .9s infinite}.ald.none{background:var(--panel-3)}
 .unread-dot{width:8px;height:8px;border-radius:50%;background:var(--bad);flex-shrink:0;display:inline-block}
 
-/* ── Tabla rendimiento por vendedor ── */
+/* ── Tabla rendimiento vendedor ── */
 .perf-table{background:var(--panel);border:1px solid var(--border);border-radius:var(--r);overflow:hidden}
 .perf-row{display:grid;gap:10px;padding:10px 14px;border-bottom:1px solid var(--border);font-size:12.5px;align-items:center}
 .perf-row:last-child{border-bottom:none}
@@ -142,7 +140,7 @@ body{font-family:'Inter',-apple-system,sans-serif;background:var(--bg);color:var
 .badge-bad{background:var(--bad-s);color:var(--bad);border-radius:6px;padding:2px 7px;font-size:11px;font-weight:700;text-align:center}
 .badge-accent{background:var(--accent-s);color:var(--accent);border-radius:6px;padding:2px 7px;font-size:11px;font-weight:700;text-align:center}
 
-/* ── Kanban compacto ── */
+/* ── Kanban ── */
 .kanban{display:grid;grid-auto-flow:column;grid-auto-columns:195px;gap:7px;overflow-x:auto;padding-bottom:10px}
 .kbc{background:var(--panel);border:1px solid var(--border);border-radius:var(--r);display:flex;flex-direction:column;max-height:calc(48vh - 40px)}
 .kbc-h{display:flex;justify-content:space-between;align-items:center;padding:8px 10px 6px;border-bottom:1px solid var(--border);font-size:10px;font-weight:700;color:var(--text-mute);text-transform:uppercase;letter-spacing:.05em}
@@ -170,14 +168,14 @@ body{font-family:'Inter',-apple-system,sans-serif;background:var(--bg);color:var
 .cal-event.calificado{border-left:2px solid var(--warn);background:var(--warn-s);color:var(--warn)}
 .cal-empty{font-size:10px;color:var(--text-mute);text-align:center;padding:8px 4px}
 
-/* ── Analytics funnel canal ── */
+/* ── Analytics ── */
 .ch-table{background:var(--panel);border:1px solid var(--border);border-radius:var(--r);overflow:hidden;overflow-x:auto}
 .ch-row{display:grid;gap:8px;padding:10px 12px;align-items:center;border-bottom:1px solid var(--border);font-size:12px;white-space:nowrap}
 .ch-row:last-child{border-bottom:none}
 .ch-row.head{background:var(--panel-2);font-size:10px;font-weight:700;color:var(--text-mute);text-transform:uppercase;letter-spacing:.05em;cursor:default}
 .num-ok{color:var(--ok);font-weight:700}.num-warn{color:var(--warn);font-weight:700}.num-bad{color:var(--bad);font-weight:700}
 
-/* ── Equipo acordeones ── */
+/* ── Equipo ── */
 .tgrid{display:flex;flex-direction:column;gap:8px}
 .tcard{background:var(--panel);border:1px solid var(--border);border-radius:var(--r);overflow:hidden}
 .thead{display:grid;grid-template-columns:14px 1fr repeat(6,auto);gap:10px;align-items:center;padding:12px 16px;cursor:pointer;transition:background var(--tr)}
@@ -194,8 +192,7 @@ body{font-family:'Inter',-apple-system,sans-serif;background:var(--bg);color:var
 .tm-box{background:var(--panel-2);border-radius:8px;padding:10px 12px}
 .tm-box .lbl{font-size:10.5px;color:var(--text-mute);margin-bottom:4px;font-weight:600}
 .tm-box .val{font-size:18px;font-weight:700}
-.stg{margin-top:10px}
-.stg-lbl{font-size:10px;font-weight:700;color:var(--text-mute);text-transform:uppercase;letter-spacing:.06em;margin-bottom:5px}
+.stg{margin-top:10px}.stg-lbl{font-size:10px;font-weight:700;color:var(--text-mute);text-transform:uppercase;letter-spacing:.06em;margin-bottom:5px}
 .stg-leads{display:flex;flex-direction:column;gap:4px}
 .mlead{display:grid;grid-template-columns:9px 1fr 1fr auto;gap:8px;align-items:center;background:var(--panel-2);border:1px solid var(--border);border-radius:7px;padding:8px 10px;font-size:12px;cursor:pointer;transition:border-color var(--tr)}
 .mlead:hover{border-color:var(--border-md)}
@@ -206,27 +203,53 @@ body{font-family:'Inter',-apple-system,sans-serif;background:var(--bg);color:var
 /* ── Modal ── */
 .mbg{position:fixed;inset:0;background:rgba(0,0,0,.72);backdrop-filter:blur(5px);display:none;align-items:center;justify-content:center;z-index:200;padding:20px}
 .mbg.show{display:flex}
-.modal{background:var(--panel);border:1px solid var(--border-md);border-radius:14px;width:100%;max-width:740px;max-height:90vh;display:flex;flex-direction:column;box-shadow:0 32px 80px rgba(0,0,0,.65)}
+.modal{background:var(--panel);border:1px solid var(--border-md);border-radius:14px;width:100%;max-width:760px;max-height:92vh;display:flex;flex-direction:column;box-shadow:0 32px 80px rgba(0,0,0,.65)}
 .mh{padding:15px 20px;border-bottom:1px solid var(--border);display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
 .mht{font-weight:700;font-size:15px}
 .mhm{font-size:11px;color:var(--text-mute);margin-top:3px;display:flex;flex-wrap:wrap;gap:8px;align-items:center}
 .mclose{background:transparent;border:none;color:var(--text-mute);font-size:22px;cursor:pointer;line-height:1;flex-shrink:0}
 .mbody{flex:1;overflow-y:auto;padding:16px 20px;display:grid;grid-template-columns:1fr 265px;gap:16px}
 .mbody h4{font-size:10.5px;color:var(--text-mute);text-transform:uppercase;letter-spacing:.05em;font-weight:700;margin-bottom:8px}
-.chatbox{background:var(--bg);border:1px solid var(--border);border-radius:9px;padding:10px;max-height:300px;overflow-y:auto;display:flex;flex-direction:column;gap:6px}
+
+/* ── Chat col ── */
+.col-chat{display:flex;flex-direction:column;gap:10px}
+.chatbox{background:var(--bg);border:1px solid var(--border);border-radius:9px;padding:10px;max-height:260px;overflow-y:auto;display:flex;flex-direction:column;gap:6px}
 .bbl{max-width:85%;padding:7px 10px;border-radius:9px;font-size:12px;line-height:1.45;word-wrap:break-word}
 .bbl.user{background:var(--panel-2);align-self:flex-start}
 .bbl.bot{background:var(--accent);color:#fff;align-self:flex-end;border-top-right-radius:2px}
-.bbl.agent{background:#14532d;color:#d1fae5;align-self:flex-end;border-top-right-radius:2px}
+.bbl.agent{background:var(--agent-bg);color:var(--agent-text);align-self:flex-end;border-top-right-radius:2px}
 .bbl .ts{font-size:9.5px;opacity:.65;margin-left:6px}
+.bbl .agent-tag{display:block;font-size:9.5px;opacity:.7;margin-bottom:2px}
 .chat-empty{text-align:center;padding:28px 10px;color:var(--text-mute);font-size:12px}
+
+/* ── Composer del agente ── */
+.agent-composer{display:flex;gap:6px;align-items:flex-end}
+.agent-composer textarea{
+  flex:1;padding:9px 11px;background:var(--panel-2);border:1px solid var(--border);
+  color:var(--text);border-radius:8px;font-family:inherit;font-size:12.5px;
+  resize:none;min-height:38px;max-height:90px;line-height:1.4;
+  transition:border-color var(--tr);
+}
+.agent-composer textarea:focus{outline:none;border-color:var(--accent)}
+.agent-composer textarea::placeholder{color:var(--text-mute)}
+.agent-composer button.send-btn{
+  background:var(--accent);color:#fff;border:none;
+  padding:9px 14px;border-radius:8px;font-weight:600;cursor:pointer;
+  font-size:12.5px;font-family:inherit;white-space:nowrap;
+  transition:background var(--tr);flex-shrink:0;
+}
+.agent-composer button.send-btn:hover{background:var(--accent-dk)}
+.agent-composer button.send-btn:disabled{opacity:.5;cursor:not-allowed}
+.agent-composer-label{font-size:10.5px;color:var(--text-mute);margin-bottom:4px;font-weight:600;text-transform:uppercase;letter-spacing:.05em}
+
+/* ── Columna acciones modal ── */
 .col-act{display:flex;flex-direction:column;gap:12px}
 .col-act select,.col-act textarea{width:100%;padding:8px 10px;background:var(--panel-2);border:1px solid var(--border);color:var(--text);border-radius:7px;font-family:inherit;font-size:12.5px;resize:vertical}
 .col-act textarea{min-height:65px}
 .col-act .primary{width:100%;background:var(--accent);color:#fff;border:none;padding:9px;border-radius:7px;font-weight:600;cursor:pointer;font-size:13px;font-family:inherit;transition:background var(--tr)}
 .col-act .primary:hover{background:var(--accent-dk)}
 .col-act .primary:disabled{opacity:.5;cursor:not-allowed}
-.nlist{display:flex;flex-direction:column;gap:5px;max-height:130px;overflow-y:auto}
+.nlist{display:flex;flex-direction:column;gap:5px;max-height:110px;overflow-y:auto}
 .nitem{background:var(--panel-2);border:1px solid var(--border);border-radius:7px;padding:7px 9px;font-size:11.5px;line-height:1.4}
 .nitem .nm{font-size:10px;color:var(--text-mute);margin-top:2px}
 .no-notes{color:var(--text-mute);font-size:11.5px;padding:6px 0}
@@ -277,15 +300,11 @@ body{font-family:'Inter',-apple-system,sans-serif;background:var(--bg);color:var
   </aside>
 
   <main class="main">
-    <!-- Toolbar global -->
     <div class="toolbar">
       <span class="lbl">Rango</span>
       <div class="quick">
-        <button data-q="all">Todo</button>
-        <button data-q="today">Hoy</button>
-        <button data-q="yesterday">Ayer</button>
-        <button data-q="7d">7d</button>
-        <button data-q="30d">30d</button>
+        <button data-q="all">Todo</button><button data-q="today">Hoy</button>
+        <button data-q="yesterday">Ayer</button><button data-q="7d">7d</button><button data-q="30d">30d</button>
       </div>
       <span class="lbl">Desde</span><input type="date" id="dS">
       <span class="lbl">Hasta</span><input type="date" id="dE">
@@ -295,53 +314,42 @@ body{font-family:'Inter',-apple-system,sans-serif;background:var(--bg);color:var
       <span class="ri" id="rInfo">Sin filtro</span>
     </div>
 
-    <!-- DASHBOARD OPERATIVO -->
     <section id="view-dashboard" class="view active">
       <div class="sec-title">Dashboard Operativo</div>
-
-      <!-- Bloque 1: SLA -->
       <div class="block-title">① Velocidad de Respuesta (SLA)</div>
-      <div class="sla-trio" id="slaTrio">
-        <div class="sla-big fresh" data-sla="fresh" onclick="toggleSlaPanel('fresh')">
-          <div class="sb-icon">🟢</div>
-          <div class="sb-label">En Tiempo</div>
-          <div class="sb-cnt" id="slaCntFresh">—</div>
-          <div class="sb-hint">Menos de 20 minutos sin contacto</div>
+      <div class="sla-trio">
+        <div class="sla-big fresh" onclick="toggleSlaPanel('fresh')">
+          <div class="sb-icon">🟢</div><div class="sb-label">En Tiempo</div>
+          <div class="sb-cnt" id="slaCntFresh">—</div><div class="sb-hint">Menos de 20 minutos</div>
         </div>
-        <div class="sla-big risk" data-sla="risk" onclick="toggleSlaPanel('risk')">
-          <div class="sb-icon">🟡</div>
-          <div class="sb-label">En Riesgo</div>
-          <div class="sb-cnt" id="slaCntRisk">—</div>
-          <div class="sb-hint">20-30 min · reasignado automáticamente</div>
+        <div class="sla-big risk" onclick="toggleSlaPanel('risk')">
+          <div class="sb-icon">🟡</div><div class="sb-label">En Riesgo</div>
+          <div class="sb-cnt" id="slaCntRisk">—</div><div class="sb-hint">20-30 min · reasignado</div>
         </div>
-        <div class="sla-big crit" data-sla="crit" onclick="toggleSlaPanel('crit')">
-          <div class="sb-icon">🔴</div>
-          <div class="sb-label">Crítico</div>
-          <div class="sb-cnt" id="slaCntCrit">—</div>
-          <div class="sb-hint">Más de 30 min · atención urgente</div>
+        <div class="sla-big crit" onclick="toggleSlaPanel('crit')">
+          <div class="sb-icon">🔴</div><div class="sb-label">Crítico</div>
+          <div class="sb-cnt" id="slaCntCrit">—</div><div class="sb-hint">Más de 30 min · urgente</div>
         </div>
       </div>
       <div class="sla-expand" id="slaExpand">
         <div class="sla-expand-title" id="slaExpandTitle">—</div>
-        <div id="slaExpandBody"></div>
+        <div class="expand-scroll" id="slaExpandBody"></div>
       </div>
-
-      <!-- Bloque 2: Funnel de ventas -->
       <div class="block-title">② Embudo de Ventas</div>
       <div class="funnel-grid" id="funnelGrid"></div>
-
-      <!-- Bloque 3: Rendimiento por vendedor -->
+      <div class="sla-expand" id="funnelExpand" style="margin-top:10px">
+        <div class="sla-expand-title" id="funnelExpandTitle">—</div>
+        <div class="expand-scroll" id="funnelExpandBody"></div>
+      </div>
       <div class="block-title">③ Rendimiento por Vendedor</div>
       <div class="perf-table" id="perfTable"></div>
     </section>
 
-    <!-- LEADS -->
     <section id="view-leads" class="view">
       <div class="sec-title">Leads</div>
       <div class="tw" id="lTable"></div>
     </section>
 
-    <!-- PIPELINE -->
     <section id="view-pipeline" class="view">
       <div class="sec-title">Pipeline Kanban</div>
       <div class="kanban" id="kanban"></div>
@@ -351,13 +359,11 @@ body{font-family:'Inter',-apple-system,sans-serif;background:var(--bg);color:var
       </div>
     </section>
 
-    <!-- ANALÍTICA -->
     <section id="view-analytics" class="view">
       <div class="sec-title">Analítica de Canales — Embudo Completo</div>
       <div class="ch-table" id="chBox"></div>
     </section>
 
-    <!-- EQUIPO -->
     <section id="view-team" class="view">
       <div class="sec-title">Gestión de Equipo</div>
       <div class="tgrid" id="tGrid"></div>
@@ -376,16 +382,28 @@ body{font-family:'Inter',-apple-system,sans-serif;background:var(--bg);color:var
       <button class="mclose" id="mClose">×</button>
     </div>
     <div class="mbody">
-      <div>
-        <h4>Historial de chat (IA Marcela)</h4>
-        <div class="chatbox" id="mChat"></div>
+      <!-- Columna izquierda: chat + composer agente -->
+      <div class="col-chat">
+        <div>
+          <h4>Historial de chat (IA Marcela)</h4>
+          <div class="chatbox" id="mChat"></div>
+        </div>
+        <!-- Compositor del agente/vendedor -->
+        <div>
+          <div class="agent-composer-label">Responder al cliente</div>
+          <div class="agent-composer">
+            <textarea id="agentMsgInput" placeholder="Escribe un mensaje al cliente..." rows="2"></textarea>
+            <button class="send-btn" id="agentSendBtn">Enviar ➤</button>
+          </div>
+        </div>
       </div>
+      <!-- Columna derecha: acciones -->
       <div class="col-act">
         <div><h4>Estado</h4><select id="mSt"></select></div>
         <div>
           <h4>Notas internas</h4>
           <div class="nlist" id="mNotes"></div>
-          <textarea id="mNote" placeholder="Nueva nota..." style="margin-top:7px"></textarea>
+          <textarea id="mNote" placeholder="Nueva nota interna..." style="margin-top:7px"></textarea>
         </div>
         <button class="primary" id="mSave">Guardar cambios</button>
       </div>
@@ -396,7 +414,7 @@ body{font-family:'Inter',-apple-system,sans-serif;background:var(--bg);color:var
 <div class="toast" id="toast"></div>
 
 <script>
-// ════ Estado global ══════════════════════════════════════════════════════════
+// ════ Estado ═════════════════════════════════════════════════════════════════
 const S = {
   token:  localStorage.getItem('ft') || null,
   user:   JSON.parse(localStorage.getItem('fu') || 'null'),
@@ -406,445 +424,333 @@ const S = {
   seller: '',
   acc:    new Set(JSON.parse(localStorage.getItem('fa') || '[]')),
   pollTimer: null, mid: null,
-  slaOpen: null   // panel SLA abierto
+  slaOpen: null, funnelOpen: null
 };
 
-const $ = id => document.getElementById(id);
-const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const fmtCLP  = n  => '$' + (Number(n) || 0).toLocaleString('es-CL');
-const fmtDT   = ts => { try { return new Date(ts).toLocaleString('es-CL', {day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}); } catch { return ''; } };
-const fmtTM   = ts => { try { return new Date(ts).toLocaleTimeString('es-CL', {hour:'2-digit',minute:'2-digit'}); } catch { return ''; } };
-const minAgo  = ts => Math.round((Date.now() - new Date(ts).getTime()) / 60000);
-const fmtMin  = m  => m < 60 ? m + 'm' : Math.floor(m/60) + 'h ' + (m%60) + 'm';
+const $     = id => document.getElementById(id);
+const esc   = s  => String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const fmtCLP  = n  => '$'+(Number(n)||0).toLocaleString('es-CL');
+const fmtDT   = ts => { try{return new Date(ts).toLocaleString('es-CL',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});}catch{return '';} };
+const fmtTM   = ts => { try{return new Date(ts).toLocaleTimeString('es-CL',{hour:'2-digit',minute:'2-digit'});}catch{return '';} };
+const minAgo  = ts => Math.round((Date.now()-new Date(ts).getTime())/60000);
+const fmtMin  = m  => m<60?m+'m':Math.floor(m/60)+'h '+(m%60)+'m';
 
-function toast(msg, err) {
-  const t = $('toast'); t.textContent = msg;
-  t.classList.toggle('err', !!err); t.classList.add('show');
-  setTimeout(() => t.classList.remove('show'), 2400);
+function toast(msg,err){const t=$('toast');t.textContent=msg;t.classList.toggle('err',!!err);t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2400);}
+function saveAcc(){localStorage.setItem('fa',JSON.stringify([...S.acc]));}
+function chipSrc(s){return`<span class="chip chip-src">${esc(s||'—')}</span>`;}
+function chipUsr(u){return`<span class="chip chip-usr">@${esc(u||'—')}</span>`;}
+function sdot(sig){const c=sig==='BLUE'?'b':sig==='YELLOW'?'y':'';return`<div class="sdot ${c}"></div>`;}
+function sbadge(sig){
+  if(sig==='BLUE')  return'<span class="sbadge b">🔵 Agenda firme</span>';
+  if(sig==='YELLOW')return'<span class="sbadge y">🟡 Tibio</span>';
+  return'<span class="sbadge n">—</span>';
 }
-function saveAcc() { localStorage.setItem('fa', JSON.stringify([...S.acc])); }
-function chipSrc(s) { return `<span class="chip chip-src">${esc(s || '—')}</span>`; }
-function chipUsr(u) { return `<span class="chip chip-usr">@${esc(u || '—')}</span>`; }
-function sdot(sig) { const c = sig==='BLUE'?'b':sig==='YELLOW'?'y':''; return `<div class="sdot ${c}"></div>`; }
-function sbadge(sig) {
-  if (sig==='BLUE')   return '<span class="sbadge b">🔵 Agenda firme</span>';
-  if (sig==='YELLOW') return '<span class="sbadge y">🟡 Tibio</span>';
-  return '<span class="sbadge n">—</span>';
+function stpill(st){
+  const q=st==='Lead Calificado - Contacto Agendado';
+  return`<span class="sp ${q?'q':st==='Nuevo'?'nw':st==='Cerrado'?'cl':st==='Negociación'?'ng':''}">${q?'⭐ Calificado':esc(st)}</span>`;
 }
-function stpill(st) {
-  const q = st === 'Lead Calificado - Contacto Agendado';
-  const nw = st==='Nuevo', cl = st==='Cerrado', ng = st==='Negociación';
-  return `<span class="sp ${q?'q':nw?'nw':cl?'cl':ng?'ng':''}">${q?'⭐ Calificado':esc(st)}</span>`;
-}
-function aldot(lvl) {
-  const c = {fresh:'fresh',risk:'risk',critical:'critical'}[lvl]||'none';
-  return `<div class="ald ${c}"></div>`;
-}
+function aldot(lvl){const c={fresh:'fresh',risk:'risk',critical:'critical'}[lvl]||'none';return`<div class="ald ${c}"></div>`;}
 
 // ════ API ════════════════════════════════════════════════════════════════════
-async function api(method, path, body) {
-  const h = {'Content-Type':'application/json'};
-  if (S.token) h['X-Auth-Token'] = S.token;
-  const r = await fetch(path, { method, headers: h, body: body ? JSON.stringify(body) : undefined });
-  if (r.status === 401) { logout(); throw new Error('Sesión expirada'); }
-  const d = await r.json().catch(() => ({}));
-  if (!r.ok) throw new Error(d.error || 'Error ' + r.status);
+async function api(method,path,body){
+  const h={'Content-Type':'application/json'};
+  if(S.token) h['X-Auth-Token']=S.token;
+  const r=await fetch(path,{method,headers:h,body:body?JSON.stringify(body):undefined});
+  if(r.status===401){logout();throw new Error('Sesión expirada');}
+  const d=await r.json().catch(()=>({}));
+  if(!r.ok) throw new Error(d.error||'Error '+r.status);
   return d;
 }
-function qstr() {
-  const p = [];
-  if (S.range.start) p.push('start=' + encodeURIComponent(S.range.start));
-  if (S.range.end)   p.push('end='   + encodeURIComponent(S.range.end));
-  if (S.seller)      p.push('seller=' + encodeURIComponent(S.seller));
-  return p.length ? '?' + p.join('&') : '';
+function qstr(){
+  const p=[];
+  if(S.range.start) p.push('start='+encodeURIComponent(S.range.start));
+  if(S.range.end)   p.push('end='+encodeURIComponent(S.range.end));
+  if(S.seller)      p.push('seller='+encodeURIComponent(S.seller));
+  return p.length?'?'+p.join('&'):'';
 }
 
 // ════ Auth ════════════════════════════════════════════════════════════════════
-$('liB').addEventListener('click', login);
-$('liP').addEventListener('keydown', e => { if (e.key==='Enter') login(); });
-async function login() {
-  $('liE').textContent = '';
-  try {
-    const d = await api('POST', '/api/auth/login', {
-      username: $('liU').value.trim(), password: $('liP').value, tenant: $('liT').value
-    });
-    S.token = d.token; S.user = d.user; S.tenant = d.tenant;
-    localStorage.setItem('ft', d.token);
-    localStorage.setItem('fu', JSON.stringify(d.user));
-    localStorage.setItem('ftn', d.tenant);
+$('liB').addEventListener('click',login);
+$('liP').addEventListener('keydown',e=>{if(e.key==='Enter')login();});
+async function login(){
+  $('liE').textContent='';
+  try{
+    const d=await api('POST','/api/auth/login',{username:$('liU').value.trim(),password:$('liP').value,tenant:$('liT').value});
+    S.token=d.token;S.user=d.user;S.tenant=d.tenant;
+    localStorage.setItem('ft',d.token);localStorage.setItem('fu',JSON.stringify(d.user));localStorage.setItem('ftn',d.tenant);
     enterApp();
-  } catch(e) { $('liE').textContent = e.message; }
+  }catch(e){$('liE').textContent=e.message;}
 }
-function logout() {
-  if (S.pollTimer) clearInterval(S.pollTimer);
-  S.token = null; S.user = null;
-  localStorage.removeItem('ft'); localStorage.removeItem('fu');
-  $('av').style.display = 'none'; $('lv').style.display = 'grid';
+function logout(){
+  if(S.pollTimer)clearInterval(S.pollTimer);
+  S.token=null;S.user=null;localStorage.removeItem('ft');localStorage.removeItem('fu');
+  $('av').style.display='none';$('lv').style.display='grid';
 }
-$('logoutBtn').addEventListener('click', () => { api('POST','/api/auth/logout').catch(()=>{}); logout(); });
+$('logoutBtn').addEventListener('click',()=>{api('POST','/api/auth/logout').catch(()=>{});logout();});
 
 // ════ Enter App ══════════════════════════════════════════════════════════════
-async function enterApp() {
-  $('lv').style.display = 'none'; $('av').style.display = 'grid';
-  $('uBadge').textContent = (S.user?.name||'') + ' · ' + (S.user?.role||'');
-  const isAdmin = S.user?.role === 'admin';
-  $('navTeam').style.display     = isAdmin ? '' : 'none';
-  $('navAnalytics').style.display = isAdmin ? '' : 'none';
-  $('lblSeller').style.display    = isAdmin ? '' : 'none';
-  $('sellerFilter').style.display = isAdmin ? '' : 'none';
-  try {
-    S.config = await api('GET', '/api/config');
-    $('bizName').textContent = S.config.businessName || 'FunnelOS CRM';
-    if (S.config.accentColor) document.documentElement.style.setProperty('--accent', S.config.accentColor);
-    if (isAdmin) {
-      const users = await api('GET', '/api/users');
-      const sel = $('sellerFilter');
-      sel.innerHTML = '<option value="">Todos</option>';
-      users.filter(u => u.role==='vendedor').forEach(u => {
-        const o = document.createElement('option');
-        o.value = u.username; o.textContent = u.name; sel.appendChild(o);
-      });
+async function enterApp(){
+  $('lv').style.display='none';$('av').style.display='grid';
+  $('uBadge').textContent=(S.user?.name||'')+' · '+(S.user?.role||'');
+  const isAdmin=S.user?.role==='admin';
+  $('navTeam').style.display     =isAdmin?'':'none';
+  $('navAnalytics').style.display=isAdmin?'':'none';
+  $('lblSeller').style.display   =isAdmin?'':'none';
+  $('sellerFilter').style.display=isAdmin?'':'none';
+  try{
+    S.config=await api('GET','/api/config');
+    $('bizName').textContent=S.config.businessName||'FunnelOS CRM';
+    if(S.config.accentColor) document.documentElement.style.setProperty('--accent',S.config.accentColor);
+    if(isAdmin){
+      const users=await api('GET','/api/users');
+      const sel=$('sellerFilter');sel.innerHTML='<option value="">Todos</option>';
+      users.filter(u=>u.role==='vendedor').forEach(u=>{const o=document.createElement('option');o.value=u.username;o.textContent=u.name;sel.appendChild(o);});
     }
-  } catch {}
+  }catch{}
   await refresh();
-  if (S.pollTimer) clearInterval(S.pollTimer);
-  S.pollTimer = setInterval(refresh, 8000);
+  if(S.pollTimer)clearInterval(S.pollTimer);
+  S.pollTimer=setInterval(refresh,8000);
 }
 
-// ════ Filtros fechas ═════════════════════════════════════════════════════════
-function setQ(q) {
-  S.range.quick = q;
-  const t = new Date(); t.setHours(0,0,0,0);
-  const fmt = d => d.toISOString().slice(0,10);
-  if (q==='all')       { S.range.start=null; S.range.end=null; }
-  else if (q==='today') { S.range.start=fmt(t); S.range.end=fmt(t); }
-  else if (q==='yesterday') { const y=new Date(t); y.setDate(y.getDate()-1); S.range.start=fmt(y); S.range.end=fmt(y); }
-  else if (q==='7d')   { const s=new Date(t); s.setDate(s.getDate()-6); S.range.start=fmt(s); S.range.end=fmt(t); }
-  else if (q==='30d')  { const s=new Date(t); s.setDate(s.getDate()-29); S.range.start=fmt(s); S.range.end=fmt(t); }
-  $('dS').value = S.range.start||''; $('dE').value = S.range.end||'';
-  syncQ(); updRI(); refresh();
+// ════ Filtros ════════════════════════════════════════════════════════════════
+function setQ(q){
+  S.range.quick=q;
+  const t=new Date();t.setHours(0,0,0,0);
+  const fmt=d=>d.toISOString().slice(0,10);
+  if(q==='all'){S.range.start=null;S.range.end=null;}
+  else if(q==='today')    {S.range.start=fmt(t);S.range.end=fmt(t);}
+  else if(q==='yesterday'){const y=new Date(t);y.setDate(y.getDate()-1);S.range.start=fmt(y);S.range.end=fmt(y);}
+  else if(q==='7d') {const s=new Date(t);s.setDate(s.getDate()-6);S.range.start=fmt(s);S.range.end=fmt(t);}
+  else if(q==='30d'){const s=new Date(t);s.setDate(s.getDate()-29);S.range.start=fmt(s);S.range.end=fmt(t);}
+  $('dS').value=S.range.start||'';$('dE').value=S.range.end||'';
+  syncQ();updRI();refresh();
 }
-function syncQ() { document.querySelectorAll('.quick button').forEach(b => b.classList.toggle('active', b.dataset.q===S.range.quick)); }
-function updRI() { $('rInfo').textContent = (S.range.start||S.range.end) ? 'Filtrando: '+(S.range.start||'—')+' → '+(S.range.end||'—') : 'Sin filtro'; }
-document.querySelectorAll('.quick button').forEach(b => b.addEventListener('click', () => setQ(b.dataset.q)));
-$('dS').addEventListener('change', () => { S.range.start=$('dS').value||null; S.range.quick='custom'; syncQ(); updRI(); refresh(); });
-$('dE').addEventListener('change', () => { S.range.end=$('dE').value||null;   S.range.quick='custom'; syncQ(); updRI(); refresh(); });
-$('dC').addEventListener('click', () => setQ('all'));
-$('sellerFilter').addEventListener('change', () => { S.seller=$('sellerFilter').value; refresh(); });
+function syncQ(){document.querySelectorAll('.quick button').forEach(b=>b.classList.toggle('active',b.dataset.q===S.range.quick));}
+function updRI(){$('rInfo').textContent=(S.range.start||S.range.end)?'Filtrando: '+(S.range.start||'—')+' → '+(S.range.end||'—'):'Sin filtro';}
+document.querySelectorAll('.quick button').forEach(b=>b.addEventListener('click',()=>setQ(b.dataset.q)));
+$('dS').addEventListener('change',()=>{S.range.start=$('dS').value||null;S.range.quick='custom';syncQ();updRI();refresh();});
+$('dE').addEventListener('change',()=>{S.range.end=$('dE').value||null;S.range.quick='custom';syncQ();updRI();refresh();});
+$('dC').addEventListener('click',()=>setQ('all'));
+$('sellerFilter').addEventListener('change',()=>{S.seller=$('sellerFilter').value;refresh();});
 
 // ════ Refresh ════════════════════════════════════════════════════════════════
-async function refresh() {
-  if (!S.token) return;
-  const q = qstr(), isAdmin = S.user?.role==='admin';
-  try {
-    const [leads, kpis, team, channels] = await Promise.all([
-      api('GET', '/api/leads' + q),
-      isAdmin ? api('GET', '/api/dashboard/kpis' + q) : Promise.resolve(null),
-      isAdmin ? api('GET', '/api/dashboard/team' + q) : Promise.resolve([]),
-      isAdmin ? api('GET', '/api/analytics/channels' + q) : Promise.resolve([])
+async function refresh(){
+  if(!S.token)return;
+  const q=qstr(),isAdmin=S.user?.role==='admin';
+  try{
+    const[leads,kpis,team,channels]=await Promise.all([
+      api('GET','/api/leads'+q),
+      isAdmin?api('GET','/api/dashboard/kpis'+q):Promise.resolve(null),
+      isAdmin?api('GET','/api/dashboard/team'+q):Promise.resolve([]),
+      isAdmin?api('GET','/api/analytics/channels'+q):Promise.resolve([])
     ]);
-    S.leads = leads; S.kpis = kpis; S.team = team||[]; S.channels = channels||[];
+    S.leads=leads;S.kpis=kpis;S.team=team||[];S.channels=channels||[];
     renderAll();
-  } catch(e) { console.error('refresh:', e.message); }
+  }catch(e){console.error('refresh:',e.message);}
+}
+function renderAll(){
+  const isAdmin=S.user?.role==='admin';
+  if(isAdmin)renderDash();
+  renderLeads();renderKanban();renderCalendar();
+  if(isAdmin){renderAnalytics();renderTeam();}
+  if(S.mid&&$('mbg').classList.contains('show'))refreshModalSilent();
+  if(S.slaOpen)    renderSlaPanel(S.slaOpen);
+  if(S.funnelOpen) renderFunnelPanel(S.funnelOpen);
 }
 
-function renderAll() {
-  const isAdmin = S.user?.role==='admin';
-  if (isAdmin) renderDash();
-  renderLeads(); renderKanban(); renderCalendar();
-  if (isAdmin) { renderAnalytics(); renderTeam(); }
-  if (S.mid && $('mbg').classList.contains('show')) refreshModalSilent();
+// ════ Dashboard ═══════════════════════════════════════════════════════════════
+function renderSlaCards(){
+  const nv=S.leads.filter(l=>l.status==='Nuevo');
+  $('slaCntFresh').textContent=nv.filter(l=>l.alertLevel==='fresh').length;
+  $('slaCntRisk').textContent =nv.filter(l=>l.alertLevel==='risk').length;
+  $('slaCntCrit').textContent =nv.filter(l=>l.alertLevel==='critical').length;
 }
-
-// ════ Dashboard Operativo ═════════════════════════════════════════════════════
-
-// — Bloque 1: SLA (tarjetas clickeables) —
-function renderSlaCards() {
-  const nuevos = S.leads.filter(l => l.status === 'Nuevo');
-  const fresh  = nuevos.filter(l => l.alertLevel === 'fresh');
-  const risk   = nuevos.filter(l => l.alertLevel === 'risk');
-  const crit   = nuevos.filter(l => l.alertLevel === 'critical');
-  $('slaCntFresh').textContent = fresh.length;
-  $('slaCntRisk').textContent  = risk.length;
-  $('slaCntCrit').textContent  = crit.length;
-  // Actualizar panel si está abierto
-  if (S.slaOpen) renderSlaPanel(S.slaOpen);
-}
-
-function toggleSlaPanel(type) {
-  // Actualiza clase activa en tarjetas
-  document.querySelectorAll('.sla-big').forEach(el => {
-    el.classList.toggle('active-sla', el.dataset.sla === type && S.slaOpen !== type);
-  });
-  if (S.slaOpen === type) {
-    S.slaOpen = null;
-    $('slaExpand').classList.remove('open');
-    return;
-  }
-  S.slaOpen = type;
-  $('slaExpand').classList.add('open');
+function toggleSlaPanel(type){
+  const cards=document.querySelectorAll('.sla-big');
+  if(S.slaOpen===type){S.slaOpen=null;$('slaExpand').classList.remove('open');cards.forEach(c=>c.classList.remove('active-sla'));return;}
+  S.slaOpen=type;$('slaExpand').classList.add('open');
+  cards.forEach(c=>c.classList.toggle('active-sla',(type==='fresh'&&c.classList.contains('fresh'))||(type==='risk'&&c.classList.contains('risk'))||(type==='crit'&&c.classList.contains('crit'))));
   renderSlaPanel(type);
 }
-
-function renderSlaPanel(type) {
-  const labels = { fresh:'🟢 En Tiempo — < 20 min', risk:'🟡 En Riesgo — 20-30 min', crit:'🔴 Crítico — > 30 min' };
-  const lvlMap = { fresh:'fresh', risk:'risk', crit:'critical' };
-  const items = S.leads.filter(l => l.status==='Nuevo' && l.alertLevel===lvlMap[type])
-                       .sort((a,b)=>minAgo(a.lastInteraction)-minAgo(b.lastInteraction));
-  $('slaExpandTitle').textContent = labels[type] + ' (' + items.length + ' leads)';
-  $('slaExpandBody').innerHTML = items.length ? items.map(l => `
-    <div class="sla-lead-row" data-id="${l.id}">
-      <div>
-        <div class="lr-name">${esc(l.name)}</div>
-        <div class="lr-sub">${esc(l.source||'—')} · @${esc(l.assignedTo||'—')}</div>
-      </div>
-      ${chipSrc(l.source)}
-      ${stpill(l.status)}
-      <span class="lr-time">${fmtMin(minAgo(l.lastInteraction))}</span>
-    </div>
-  `).join('') : '<div style="padding:16px;text-align:center;color:var(--text-mute);font-size:12px">Sin leads en este nivel de SLA.</div>';
-  $('slaExpandBody').querySelectorAll('.sla-lead-row[data-id]').forEach(el =>
-    el.addEventListener('click', () => openModal(+el.dataset.id))
-  );
+function renderSlaPanel(type){
+  const lvlMap={fresh:'fresh',risk:'risk',crit:'critical'};
+  const labels={fresh:'🟢 En Tiempo — < 20 min',risk:'🟡 En Riesgo — 20-30 min',crit:'🔴 Crítico — > 30 min'};
+  const items=S.leads.filter(l=>l.status==='Nuevo'&&l.alertLevel===lvlMap[type]).sort((a,b)=>minAgo(a.lastInteraction)-minAgo(b.lastInteraction));
+  $('slaExpandTitle').textContent=labels[type]+' ('+items.length+' leads)';
+  $('slaExpandBody').innerHTML=renderExpandRows(items,l=>fmtMin(minAgo(l.lastInteraction)));
+  bindExpandRows($('slaExpandBody'));
 }
 
-// — Bloque 2: Funnel —
-function renderFunnel() {
-  const leads = S.leads;
-  const total   = leads.length;
-  const nuevos  = leads.filter(l => l.status==='Nuevo').length;
-  const gestion = leads.filter(l => ['En Proceso','Contactado'].includes(l.status)).length;
-  const agenda  = leads.filter(l => ['Agendado','Calificado','Lead Calificado - Contacto Agendado'].includes(l.status)).length;
-  const cerrado = leads.filter(l => l.status==='Cerrado').length;
-  const perdido = leads.filter(l => ['Abandonado','Perdido'].includes(l.status)).length;
-  const pct = (n, d) => d ? ((n/d)*100).toFixed(0)+'%' : '—';
-  const cards = [
-    { icon:'🆕', lbl:'Nuevos',           val:nuevos,  pctOf:total,   col:'var(--text)' },
-    { icon:'💬', lbl:'En Contacto',       val:gestion, pctOf:nuevos,  col:'var(--accent)' },
-    { icon:'📅', lbl:'Agendados/Calif.',  val:agenda,  pctOf:gestion, col:'var(--warn)' },
-    { icon:'✅', lbl:'Cerrados',          val:cerrado, pctOf:agenda,  col:'var(--ok)' },
-    { icon:'❌', lbl:'Perdidos',          val:perdido, pctOf:total,   col:'var(--bad)' }
-  ];
-  $('funnelGrid').innerHTML = cards.map((c,i) => `
-    <div class="funnel-card" style="border-color:${c.col}22">
-      <div class="fc-icon">${c.icon}</div>
-      <div class="fc-val" style="color:${c.col}">${c.val}</div>
-      <div class="fc-lbl">${c.lbl}</div>
-      <div class="fc-pct">${pct(c.val,c.pctOf)} de ${i===0?'total':cards[i-1].lbl}</div>
-    </div>
-  `).join('');
+const FUNNEL_MAP={
+  nuevos: {sts:['Nuevo'],                                                              label:'🆕 Nuevos',                   color:'var(--text)'},
+  gestion:{sts:['En Proceso','Contactado'],                                            label:'💬 En Contacto',               color:'var(--accent)'},
+  agenda: {sts:['Agendado','Calificado','Lead Calificado - Contacto Agendado'],         label:'📅 Agendados / Calificados',   color:'var(--warn)'},
+  cerrado:{sts:['Cerrado'],                                                            label:'✅ Cerrados',                  color:'var(--ok)'},
+  perdido:{sts:['Abandonado','Perdido'],                                               label:'❌ Perdidos / Abandonados',    color:'var(--bad)'}
+};
+function renderFunnel(){
+  const leads=S.leads,total=leads.length||1;
+  const counts={};for(const[k,c]of Object.entries(FUNNEL_MAP))counts[k]=leads.filter(l=>c.sts.includes(l.status)).length;
+  const icons={nuevos:'🆕',gestion:'💬',agenda:'📅',cerrado:'✅',perdido:'❌'};
+  const labels={nuevos:'Nuevos',gestion:'En Contacto',agenda:'Agendados/Calif.',cerrado:'Cerrados',perdido:'Perdidos'};
+  const prev={nuevos:total,gestion:counts.nuevos,agenda:counts.gestion,cerrado:counts.agenda,perdido:total};
+  const pct=(n,d)=>d?((n/d)*100).toFixed(0)+'%':'—';
+  const active=S.funnelOpen;
+  $('funnelGrid').innerHTML=Object.keys(FUNNEL_MAP).map(k=>{
+    const n=counts[k],col=FUNNEL_MAP[k].color;
+    return`<div class="funnel-card ${active===k?'active-funnel':''}" onclick="toggleFunnelPanel('${k}')" style="border-color:${active===k?'var(--accent)':col+'22'}">
+      <div class="fc-icon">${icons[k]}</div>
+      <div class="fc-val" style="color:${col}">${n}</div>
+      <div class="fc-lbl">${labels[k]}</div>
+      <div class="fc-pct">${pct(n,prev[k])} de etapa anterior</div>
+      <div class="fc-hint">👆 Ver detalle</div>
+    </div>`;
+  }).join('');
 }
-
-// — Bloque 3: Rendimiento por vendedor —
-function renderPerfTable() {
-  const team = S.team||[];
-  if (!team.length) { $('perfTable').innerHTML='<div class="kb-empty" style="padding:16px">Sin datos de equipo.</div>'; return; }
-  const gc = 'grid-template-columns:1.4fr repeat(8,1fr)';
-  $('perfTable').innerHTML = `
-    <div class="perf-row head" style="${gc}">
-      <div>Vendedor</div>
-      <div>🟢 Verde</div><div>🟡 Riesgo</div><div>🔴 Crítico</div>
-      <div>Contactados</div><div>Agendados</div><div>Calificados</div>
-      <div>Cerrados</div><div>Conv.%</div>
-    </div>
-    ${team.map(v => `
-      <div class="perf-row" style="${gc}">
-        <div>
-          <strong>${esc(v.name)}</strong>
-          <span style="color:var(--text-mute);font-size:11px"> @${esc(v.username)}</span>
-        </div>
-        <div class="badge-ok">${v.sla.fresh}</div>
-        <div class="badge-warn">${v.sla.risk}</div>
-        <div class="badge-bad">${v.sla.critical}</div>
-        <div>${v.byStatus.contactado||0}</div>
-        <div>${v.byStatus.agendado||0}</div>
-        <div class="badge-accent">${v.byStatus.calificado||0}</div>
-        <div class="badge-ok">${v.closed}</div>
-        <div>${v.convRate}%</div>
-      </div>
-    `).join('')}
-  `;
+function toggleFunnelPanel(type){
+  if(S.slaOpen){S.slaOpen=null;$('slaExpand').classList.remove('open');document.querySelectorAll('.sla-big').forEach(c=>c.classList.remove('active-sla'));}
+  if(S.funnelOpen===type){S.funnelOpen=null;$('funnelExpand').classList.remove('open');renderFunnel();return;}
+  S.funnelOpen=type;$('funnelExpand').classList.add('open');renderFunnel();renderFunnelPanel(type);
+  setTimeout(()=>$('funnelExpand').scrollIntoView({behavior:'smooth',block:'nearest'}),100);
 }
-
-function renderDash() {
-  renderSlaCards();
-  renderFunnel();
-  renderPerfTable();
+function renderFunnelPanel(type){
+  const cfg=FUNNEL_MAP[type];if(!cfg)return;
+  const items=S.leads.filter(l=>cfg.sts.includes(l.status)).sort((a,b)=>new Date(b.lastClientTs||b.lastInteraction||0)-new Date(a.lastClientTs||a.lastInteraction||0));
+  $('funnelExpandTitle').textContent=cfg.label+' ('+items.length+' leads)';
+  $('funnelExpandBody').innerHTML=renderExpandRows(items,l=>fmtDT(l.lastClientTs||l.lastInteraction));
+  bindExpandRows($('funnelExpandBody'));
 }
+function renderExpandRows(items,timeFn){
+  if(!items.length) return'<div class="expand-empty">Sin leads en esta categoría.</div>';
+  const gc='grid-template-columns:1.4fr 1fr 1fr 1fr auto';
+  const head=`<div class="sla-lead-row" style="${gc};cursor:default;background:var(--panel-2)">
+    <div style="font-size:10px;font-weight:700;color:var(--text-mute);text-transform:uppercase;letter-spacing:.05em">Nombre</div>
+    <div style="font-size:10px;font-weight:700;color:var(--text-mute);text-transform:uppercase;letter-spacing:.05em">Canal</div>
+    <div style="font-size:10px;font-weight:700;color:var(--text-mute);text-transform:uppercase;letter-spacing:.05em">Vendedor</div>
+    <div style="font-size:10px;font-weight:700;color:var(--text-mute);text-transform:uppercase;letter-spacing:.05em">Estado</div>
+    <div style="font-size:10px;font-weight:700;color:var(--text-mute);text-transform:uppercase;letter-spacing:.05em">Última</div>
+  </div>`;
+  return head+items.map(l=>`<div class="sla-lead-row" data-id="${l.id}" style="${gc}">
+    <div><div class="lr-name">${esc(l.name)}</div><div class="lr-sub">${l.unread?'● Sin leer · ':''}${esc(l.phone||'')}</div></div>
+    <div>${chipSrc(l.source)}</div>
+    <div>${chipUsr(l.assignedTo)}</div>
+    <div>${stpill(l.status)}</div>
+    <div class="lr-time" style="color:var(--text-mute)">${timeFn(l)}</div>
+  </div>`).join('');
+}
+function bindExpandRows(container){
+  container.querySelectorAll('.sla-lead-row[data-id]').forEach(el=>el.addEventListener('click',()=>openModal(+el.dataset.id)));
+}
+function renderPerfTable(){
+  const team=S.team||[];
+  if(!team.length){$('perfTable').innerHTML='<div class="kb-empty" style="padding:16px">Sin datos de equipo.</div>';return;}
+  const gc='grid-template-columns:1.4fr repeat(8,1fr)';
+  $('perfTable').innerHTML=`<div class="perf-row head" style="${gc}">
+    <div>Vendedor</div><div>🟢 Verde</div><div>🟡 Riesgo</div><div>🔴 Crítico</div>
+    <div>Contactados</div><div>Agendados</div><div>Calificados</div><div>Cerrados</div><div>Conv.%</div>
+  </div>
+  ${team.map(v=>`<div class="perf-row" style="${gc}">
+    <div><strong>${esc(v.name)}</strong><span style="color:var(--text-mute);font-size:11px"> @${esc(v.username)}</span></div>
+    <div class="badge-ok">${v.sla.fresh}</div><div class="badge-warn">${v.sla.risk}</div><div class="badge-bad">${v.sla.critical}</div>
+    <div>${v.byStatus.contactado||0}</div><div>${v.byStatus.agendado||0}</div>
+    <div class="badge-accent">${v.byStatus.calificado||0}</div>
+    <div class="badge-ok">${v.closed}</div><div>${v.convRate}%</div>
+  </div>`).join('')}`;
+}
+function renderDash(){renderSlaCards();renderFunnel();renderPerfTable();}
 
 // ════ Leads ══════════════════════════════════════════════════════════════════
-function renderLeads() {
-  const gc = 'grid-template-columns:8px 8px 11px 1.3fr .9fr 1.1fr .85fr .85fr 1.2fr .75fr';
-  const head = `<div class="tr head" style="${gc}">
-    <div></div><div></div><div></div>
-    <div>Nombre</div><div>Tel.</div><div>Interés</div>
-    <div>Canal</div><div>Asignado</div><div>Estado</div><div>Última msg</div>
-  </div>`;
-  const rows = S.leads.length
-    ? S.leads.map(l => `
-      <div class="tr" style="${gc}" data-id="${l.id}">
-        ${l.unread ? '<div class="unread-dot"></div>' : '<div></div>'}
-        ${aldot(l.alertLevel)}
-        ${sdot(l.intentSignal||'NONE')}
-        <div><strong>${esc(l.name)}</strong></div>
-        <div style="font-size:11.5px;color:var(--text-mute)">${esc(l.phone||'—')}</div>
-        <div style="font-size:11.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(l.interest||'—')}</div>
-        <div>${chipSrc(l.source)}</div>
-        <div>${chipUsr(l.assignedTo)}</div>
-        <div>${stpill(l.status)}</div>
-        <div style="font-size:11px;color:var(--text-mute)">${fmtDT(l.lastClientTs||l.lastInteraction)}</div>
-      </div>
-    `).join('')
-    : '<div class="kb-empty" style="padding:16px">Sin leads en el rango.</div>';
-  $('lTable').innerHTML = head + rows;
-  $('lTable').querySelectorAll('.tr[data-id]').forEach(el =>
-    el.addEventListener('click', () => openModal(+el.dataset.id))
-  );
+function renderLeads(){
+  const gc='grid-template-columns:8px 8px 11px 1.3fr .9fr 1.1fr .85fr .85fr 1.2fr .75fr';
+  const head=`<div class="tr head" style="${gc}"><div></div><div></div><div></div><div>Nombre</div><div>Tel.</div><div>Interés</div><div>Canal</div><div>Asignado</div><div>Estado</div><div>Última msg</div></div>`;
+  const rows=S.leads.length?S.leads.map(l=>`<div class="tr" style="${gc}" data-id="${l.id}">
+    ${l.unread?'<div class="unread-dot"></div>':'<div></div>'}
+    ${aldot(l.alertLevel)}${sdot(l.intentSignal||'NONE')}
+    <div><strong>${esc(l.name)}</strong></div>
+    <div style="font-size:11.5px;color:var(--text-mute)">${esc(l.phone||'—')}</div>
+    <div style="font-size:11.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(l.interest||'—')}</div>
+    <div>${chipSrc(l.source)}</div><div>${chipUsr(l.assignedTo)}</div>
+    <div>${stpill(l.status)}</div>
+    <div style="font-size:11px;color:var(--text-mute)">${fmtDT(l.lastClientTs||l.lastInteraction)}</div>
+  </div>`).join(''):'<div class="kb-empty" style="padding:16px">Sin leads en el rango.</div>';
+  $('lTable').innerHTML=head+rows;
+  $('lTable').querySelectorAll('.tr[data-id]').forEach(el=>el.addEventListener('click',()=>openModal(+el.dataset.id)));
 }
 
-// ════ Kanban compacto ════════════════════════════════════════════════════════
-function renderKanban() {
-  const stages = S.config?.stages || [];
-  const grp = {}; stages.forEach(s => grp[s] = []);
-  S.leads.forEach(l => { if (!grp[l.status]) grp[l.status]=[]; grp[l.status].push(l); });
-  $('kanban').innerHTML = stages.map(st => {
-    const items = grp[st]||[];
-    const isQ = st==='Lead Calificado - Contacto Agendado';
-    const label = isQ ? '⭐ Calificado' : esc(st);
-    return `<div class="kbc ${isQ?'qual':''}">
-      <div class="kbc-h">${label}<span class="cnt">${items.length}</span></div>
+// ════ Kanban ════════════════════════════════════════════════════════════════
+function renderKanban(){
+  const stages=S.config?.stages||[];const grp={};stages.forEach(s=>grp[s]=[]);
+  S.leads.forEach(l=>{if(!grp[l.status])grp[l.status]=[];grp[l.status].push(l);});
+  $('kanban').innerHTML=stages.map(st=>{
+    const items=grp[st]||[];const isQ=st==='Lead Calificado - Contacto Agendado';
+    return`<div class="kbc ${isQ?'qual':''}">
+      <div class="kbc-h">${isQ?'⭐ Calificado':esc(st)}<span class="cnt">${items.length}</span></div>
       <div class="kbc-cards">
-        ${items.length ? items.map(l => {
-          const m = minAgo(l.lastInteraction);
-          return `<div class="kcard ${l.alertLevel||''}" data-id="${l.id}">
-            ${l.unread ? '<div class="unread-dot"></div>' : ''}
-            <div class="kn">${esc(l.name)}</div>
-            <div class="kt">${fmtMin(m)}</div>
-          </div>`;
-        }).join('') : '<div class="kb-empty">Vacío</div>'}
+        ${items.length?items.map(l=>`<div class="kcard ${l.alertLevel||''}" data-id="${l.id}">
+          ${l.unread?'<div class="unread-dot"></div>':''}
+          <div class="kn">${esc(l.name)}</div>
+          <div class="kt">${fmtMin(minAgo(l.lastInteraction))}</div>
+        </div>`).join(''):'<div class="kb-empty">Vacío</div>'}
       </div>
     </div>`;
   }).join('');
-  $('kanban').querySelectorAll('.kcard[data-id]').forEach(el =>
-    el.addEventListener('click', () => openModal(+el.dataset.id))
-  );
+  $('kanban').querySelectorAll('.kcard[data-id]').forEach(el=>el.addEventListener('click',()=>openModal(+el.dataset.id)));
 }
 
-// ════ Calendario semanal ═════════════════════════════════════════════════════
-function renderCalendar() {
-  const today = new Date(); today.setHours(0,0,0,0);
-  const dow   = today.getDay(); // 0=Dom
-  const monday = new Date(today);
-  monday.setDate(today.getDate() - (dow===0 ? 6 : dow-1));
-  const days = ['Lun','Mar','Mié','Jue','Vie','Sáb','Dom'];
-
-  // Leads agendables
-  const SCHED_ST = new Set(['Agendado','Lead Calificado - Contacto Agendado']);
-  const agendable = S.leads.filter(l => SCHED_ST.has(l.status));
-
-  $('calGrid').innerHTML = days.map((d, i) => {
-    const day = new Date(monday);
-    day.setDate(monday.getDate() + i);
-    const isToday = day.getTime() === today.getTime();
-    const dayStr  = day.toISOString().slice(0,10);
-
-    const dayLeads = agendable.filter(l => {
-      // Prioriza scheduleText si existe, si no usa lastInteraction
-      const ref = l.scheduleText
-        ? new Date(l.scheduleText)
-        : new Date(l.lastInteraction || '');
-      return ref.toISOString().slice(0,10) === dayStr;
-    });
-
-    return `<div class="cal-day ${isToday?'today':''}">
+// ════ Calendario ════════════════════════════════════════════════════════════
+function renderCalendar(){
+  const today=new Date();today.setHours(0,0,0,0);
+  const dow=today.getDay();const monday=new Date(today);monday.setDate(today.getDate()-(dow===0?6:dow-1));
+  const days=['Lun','Mar','Mié','Jue','Vie','Sáb','Dom'];
+  const SCHED_ST=new Set(['Agendado','Lead Calificado - Contacto Agendado']);
+  const agendable=S.leads.filter(l=>SCHED_ST.has(l.status));
+  $('calGrid').innerHTML=days.map((d,i)=>{
+    const day=new Date(monday);day.setDate(monday.getDate()+i);
+    const isToday=day.getTime()===today.getTime();
+    const dayStr=day.toISOString().slice(0,10);
+    const dayLeads=agendable.filter(l=>{const ref=l.scheduleText?new Date(l.scheduleText):new Date(l.lastInteraction||'');return ref.toISOString().slice(0,10)===dayStr;});
+    return`<div class="cal-day ${isToday?'today':''}">
       <div class="cal-day-head">${d} ${day.getDate()}</div>
       <div class="cal-day-body">
-        ${dayLeads.length
-          ? dayLeads.map(l => `
-            <div class="cal-event ${l.status==='Agendado'?'agendado':'calificado'}"
-                 data-id="${l.id}" title="${esc(l.name)} · ${esc(l.assignedTo||'—')}">
-              ${esc(l.name)}
-            </div>
-          `).join('')
-          : `<div class="cal-empty">—</div>`
-        }
+        ${dayLeads.length?dayLeads.map(l=>`<div class="cal-event ${l.status==='Agendado'?'agendado':'calificado'}" data-id="${l.id}" title="${esc(l.name)}">${esc(l.name)}</div>`).join(''):'<div class="cal-empty">—</div>'}
       </div>
     </div>`;
   }).join('');
-
-  $('calGrid').querySelectorAll('.cal-event[data-id]').forEach(el =>
-    el.addEventListener('click', () => openModal(+el.dataset.id))
-  );
+  $('calGrid').querySelectorAll('.cal-event[data-id]').forEach(el=>el.addEventListener('click',()=>openModal(+el.dataset.id)));
 }
 
-// ════ Analítica de Canales — Embudo Completo ═════════════════════════════════
-function renderAnalytics() {
-  const ch = S.channels||[];
-  if (!ch.length) {
-    $('chBox').innerHTML = '<div class="kb-empty" style="padding:16px">Sin datos de canales en el rango.</div>';
-    return;
-  }
-
-  // Recalcular columnas del funnel con los leads actuales
-  const chFunnel = {};
-  S.leads.forEach(l => {
-    const c = l.source || 'Otro';
-    if (!chFunnel[c]) chFunnel[c] = { nuevos:0, gestion:0, agenda:0, cerrado:0, perdido:0, models:{} };
-    if (l.status==='Nuevo') chFunnel[c].nuevos++;
-    else if (['En Proceso','Contactado'].includes(l.status)) chFunnel[c].gestion++;
-    else if (['Agendado','Calificado','Lead Calificado - Contacto Agendado'].includes(l.status)) chFunnel[c].agenda++;
-    else if (l.status==='Cerrado') chFunnel[c].cerrado++;
-    else if (['Abandonado','Perdido'].includes(l.status)) chFunnel[c].perdido++;
-    // Top auto
-    if (l.model||l.interest) {
-      const m = l.model||l.interest;
-      chFunnel[c].models[m] = (chFunnel[c].models[m]||0)+1;
-    }
+// ════ Analítica ═════════════════════════════════════════════════════════════
+function renderAnalytics(){
+  const ch=S.channels||[];
+  if(!ch.length){$('chBox').innerHTML='<div class="kb-empty" style="padding:16px">Sin datos.</div>';return;}
+  const chF={};
+  S.leads.forEach(l=>{const c=l.source||'Otro';if(!chF[c])chF[c]={nuevos:0,gestion:0,agenda:0,cerrado:0,perdido:0,models:{}};
+    if(l.status==='Nuevo')chF[c].nuevos++;
+    else if(['En Proceso','Contactado'].includes(l.status))chF[c].gestion++;
+    else if(['Agendado','Calificado','Lead Calificado - Contacto Agendado'].includes(l.status))chF[c].agenda++;
+    else if(l.status==='Cerrado')chF[c].cerrado++;
+    else if(['Abandonado','Perdido'].includes(l.status))chF[c].perdido++;
+    if(l.model||l.interest){const m=l.model||l.interest;chF[c].models[m]=(chF[c].models[m]||0)+1;}
   });
-
-  const gc = 'grid-template-columns:1.1fr .8fr .7fr .7fr .9fr .7fr .7fr .7fr .7fr 1.2fr';
-  $('chBox').innerHTML = `
-    <div class="ch-row head" style="${gc}">
-      <div>Canal</div>
-      <div>Inversión</div>
-      <div>Leads</div>
-      <div>Nuevos</div>
-      <div>Gestionados</div>
-      <div>Cerrados</div>
-      <div>CPL</div>
-      <div>CPA</div>
-      <div>CAC</div>
-      <div>Top Auto</div>
-    </div>
-    ${ch.map(c => {
-      const f = chFunnel[c.channel]||{};
-      const nuevos  = f.nuevos  || 0;
-      const gestion = f.gestion || 0;
-      const agenda  = f.agenda  || 0;
-      const cerrado = f.cerrado || 0;
-      const totalCh = nuevos+gestion+agenda+cerrado+(f.perdido||0);
-      const cpa = agenda ? Math.round(c.spend/agenda) : 0;
-      // Top auto del canal
-      let topAuto='—', topN=0;
-      for (const [m,n] of Object.entries(f.models||{})) if(n>topN){topAuto=m;topN=n;}
-      return `<div class="ch-row" style="${gc};cursor:default">
-        <div><strong>${esc(c.channel)}</strong></div>
-        <div>${fmtCLP(c.spend)}</div>
-        <div>${totalCh}</div>
-        <div class="${nuevos>0?'num-warn':''}">${nuevos}</div>
-        <div class="${gestion+agenda>0?'num-ok':''}">${gestion+agenda}</div>
-        <div class="${cerrado>0?'num-ok':''}">${cerrado}</div>
-        <div>${fmtCLP(c.cpl)}</div>
-        <div>${cpa?fmtCLP(cpa):'—'}</div>
-        <div>${c.cac?fmtCLP(c.cac):'—'}</div>
-        <div style="font-size:11.5px;color:var(--text-soft);overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(topAuto)}">${esc(topAuto)}</div>
-      </div>`;
-    }).join('')}
-  `;
+  const gc='grid-template-columns:1.1fr .8fr .7fr .7fr .9fr .7fr .7fr .7fr .7fr 1.2fr';
+  $('chBox').innerHTML=`<div class="ch-row head" style="${gc}"><div>Canal</div><div>Inversión</div><div>Leads</div><div>Nuevos</div><div>Gestionados</div><div>Cerrados</div><div>CPL</div><div>CPA</div><div>CAC</div><div>Top Auto</div></div>
+  ${ch.map(c=>{
+    const f=chF[c.channel]||{};const tot=(f.nuevos||0)+(f.gestion||0)+(f.agenda||0)+(f.cerrado||0)+(f.perdido||0);
+    const agenda=f.agenda||0;const cpa=agenda?Math.round(c.spend/agenda):0;
+    let topAuto='—',topN=0;for(const[m,n]of Object.entries(f.models||{}))if(n>topN){topAuto=m;topN=n;}
+    return`<div class="ch-row" style="${gc};cursor:default">
+      <div><strong>${esc(c.channel)}</strong></div><div>${fmtCLP(c.spend)}</div><div>${tot}</div>
+      <div class="${(f.nuevos||0)>0?'num-warn':''}">${f.nuevos||0}</div>
+      <div class="${(f.gestion||0)+(f.agenda||0)>0?'num-ok':''}">${(f.gestion||0)+(f.agenda||0)}</div>
+      <div class="${(f.cerrado||0)>0?'num-ok':''}">${f.cerrado||0}</div>
+      <div>${fmtCLP(c.cpl)}</div><div>${cpa?fmtCLP(cpa):'—'}</div><div>${c.cac?fmtCLP(c.cac):'—'}</div>
+      <div style="font-size:11.5px;color:var(--text-soft);overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(topAuto)}">${esc(topAuto)}</div>
+    </div>`;
+  }).join('')}`;
 }
 
-// ════ Equipo acordeones ═══════════════════════════════════════════════════════
-const FASE_GROUPS = [
+// ════ Equipo ════════════════════════════════════════════════════════════════
+const FASE_GROUPS=[
   {label:'🆕 Nuevos',sts:['Nuevo']},
   {label:'💬 En contacto',sts:['En Proceso','Contactado']},
   {label:'⭐ Calificados IA',sts:['Lead Calificado - Contacto Agendado','Calificado']},
@@ -854,33 +760,24 @@ const FASE_GROUPS = [
   {label:'✅ Cerrados',sts:['Cerrado']},
   {label:'❌ Abandonados',sts:['Abandonado','Perdido']}
 ];
-function renderTeam() {
-  const team = S.team||[];
-  if (!team.length) { $('tGrid').innerHTML='<div class="kb-empty" style="padding:16px">Sin datos.</div>'; return; }
-  $('tGrid').innerHTML = team.map(v => {
-    const isOpen = S.acc.has(v.username);
-    const groups = FASE_GROUPS.map(g => {
-      const gl = (v.leads||[]).filter(l=>g.sts.includes(l.status));
-      if (!gl.length) return '';
-      return `<div class="stg">
-        <div class="stg-lbl">${g.label} (${gl.length})</div>
-        <div class="stg-leads">
-          ${gl.map(l=>`<div class="mlead" data-id="${l.id}">
-            ${aldot(l.alertLevel)}
-            <div class="mln">${esc(l.name)}</div>
-            <div class="mlsrc">${esc(l.interest||l.source||'—')}</div>
-            <div class="mltm">${fmtTM(l.lastClientTs||l.lastInteraction)}</div>
-          </div>`).join('')}
-        </div>
+function renderTeam(){
+  const team=S.team||[];
+  if(!team.length){$('tGrid').innerHTML='<div class="kb-empty" style="padding:16px">Sin datos.</div>';return;}
+  $('tGrid').innerHTML=team.map(v=>{
+    const isOpen=S.acc.has(v.username);
+    const groups=FASE_GROUPS.map(g=>{
+      const gl=(v.leads||[]).filter(l=>g.sts.includes(l.status));if(!gl.length)return'';
+      return`<div class="stg"><div class="stg-lbl">${g.label} (${gl.length})</div>
+        <div class="stg-leads">${gl.map(l=>`<div class="mlead" data-id="${l.id}">${aldot(l.alertLevel)}<div class="mln">${esc(l.name)}</div><div class="mlsrc">${esc(l.interest||l.source||'—')}</div><div class="mltm">${fmtTM(l.lastClientTs||l.lastInteraction)}</div></div>`).join('')}</div>
       </div>`;
     }).join('');
-    return `<div class="tcard ${isOpen?'open':''}" data-u="${esc(v.username)}">
+    return`<div class="tcard ${isOpen?'open':''}" data-u="${esc(v.username)}">
       <div class="thead" data-tog="${esc(v.username)}">
         <span class="chev">▶</span>
         <div><div class="tnm">${esc(v.name)}</div><div class="trl">@${esc(v.username)} · ${v.total} leads</div></div>
         <div class="tstat fr"><span class="n">${v.sla.fresh}</span><span>Verde</span></div>
-        <div class="tstat ri"><span class="n">${v.sla.risk}</span><span>Amarillo</span></div>
-        <div class="tstat cr"><span class="n">${v.sla.critical}</span><span>Rojo</span></div>
+        <div class="tstat ri"><span class="n">${v.sla.risk}</span><span>Riesgo</span></div>
+        <div class="tstat cr"><span class="n">${v.sla.critical}</span><span>Crítico</span></div>
         <div class="tstat acc"><span class="n">${v.byStatus.calificado||0}</span><span>Calif.</span></div>
         <div class="tstat"><span class="n">${v.closed}</span><span>Cerrados</span></div>
         <div class="tstat"><span class="n">${v.convRate}%</span><span>Conv.</span></div>
@@ -894,106 +791,121 @@ function renderTeam() {
           <div class="tm-box"><div class="lbl">Cerrados</div><div class="val" style="color:var(--ok)">${v.closed}</div></div>
           <div class="tm-box"><div class="lbl">Conv. %</div><div class="val">${v.convRate}%</div></div>
         </div>
-        ${groups || '<div class="kb-empty">Sin leads en el rango.</div>'}
+        ${groups||'<div class="kb-empty">Sin leads en el rango.</div>'}
       </div>
     </div>`;
   }).join('');
-
-  $('tGrid').querySelectorAll('.thead').forEach(h => {
-    h.addEventListener('click', () => {
-      const u = h.dataset.tog, card = h.closest('.tcard');
-      S.acc.has(u) ? S.acc.delete(u) : S.acc.add(u);
-      card.classList.toggle('open', S.acc.has(u));
-      saveAcc();
+  $('tGrid').querySelectorAll('.thead').forEach(h=>{
+    h.addEventListener('click',()=>{
+      const u=h.dataset.tog,card=h.closest('.tcard');
+      S.acc.has(u)?S.acc.delete(u):S.acc.add(u);
+      card.classList.toggle('open',S.acc.has(u));saveAcc();
     });
   });
-  $('tGrid').querySelectorAll('.mlead[data-id]').forEach(el =>
-    el.addEventListener('click', e => { e.stopPropagation(); openModal(+el.dataset.id); })
-  );
+  $('tGrid').querySelectorAll('.mlead[data-id]').forEach(el=>el.addEventListener('click',e=>{e.stopPropagation();openModal(+el.dataset.id);}));
 }
 
 // ════ Modal ══════════════════════════════════════════════════════════════════
-const ALL_ST = ['Nuevo','En Proceso','Contactado','Calificado',
-  'Lead Calificado - Contacto Agendado','Negociación','Agendado','Seguimiento','Cerrado','Abandonado'];
+const ALL_ST=['Nuevo','En Proceso','Contactado','Calificado','Lead Calificado - Contacto Agendado','Negociación','Agendado','Seguimiento','Cerrado','Abandonado'];
 
-function findLead(id) {
-  let l = S.leads.find(x => x.id===id); if (l) return l;
-  for (const v of S.team||[]) { const f=(v.leads||[]).find(x=>x.id===id); if(f)return f; }
+function findLead(id){
+  let l=S.leads.find(x=>x.id===id);if(l)return l;
+  for(const v of S.team||[]){const f=(v.leads||[]).find(x=>x.id===id);if(f)return f;}
   return null;
 }
-function openModal(id)  { S.mid=id; renderModal(); $('mbg').classList.add('show'); }
-function closeModal()   { S.mid=null; $('mbg').classList.remove('show'); $('mNote').value=''; }
-function refreshModalSilent() { const l=findLead(S.mid); if(!l)return; renderModalChat(l); renderModalNotes(l); }
+function openModal(id){S.mid=id;renderModal();$('mbg').classList.add('show');}
+function closeModal(){S.mid=null;$('mbg').classList.remove('show');$('mNote').value='';$('agentMsgInput').value='';}
+function refreshModalSilent(){const l=findLead(S.mid);if(!l)return;renderModalChat(l);renderModalNotes(l);}
 
-function renderModal() {
-  const l = findLead(S.mid); if (!l) { closeModal(); return; }
-  $('mTitle').textContent = l.name + (l.phone?' · '+l.phone:'');
-  const slaInfo = l.alertLevel==='critical'
-    ? '<span style="color:var(--bad);font-weight:700">🔴 SLA Crítico</span>'
-    : l.alertLevel==='risk'
-    ? '<span style="color:var(--warn);font-weight:700">🟡 SLA Riesgo</span>'
-    : l.alertLevel==='fresh'
-    ? '<span style="color:var(--ok)">🟢 SLA OK</span>' : '';
-  $('mMeta').innerHTML = `
-    ${chipSrc(l.source)} ${chipUsr(l.assignedTo)}
+function renderModal(){
+  const l=findLead(S.mid);if(!l){closeModal();return;}
+  $('mTitle').textContent=l.name+(l.phone?' · '+l.phone:'');
+  const slaInfo=l.alertLevel==='critical'?'<span style="color:var(--bad);font-weight:700">🔴 SLA Crítico</span>':
+                l.alertLevel==='risk'?'<span style="color:var(--warn);font-weight:700">🟡 SLA Riesgo</span>':
+                l.alertLevel==='fresh'?'<span style="color:var(--ok)">🟢 SLA OK</span>':'';
+  $('mMeta').innerHTML=`${chipSrc(l.source)} ${chipUsr(l.assignedTo)}
     <span style="color:var(--text-mute)">📅 ${fmtDT(l.lastClientTs||l.lastInteraction)}</span>
     ${sbadge(l.intentSignal||'NONE')} ${slaInfo}
-    ${l.unread?'<span style="color:var(--bad);font-size:11px;font-weight:600">● Sin leer</span>':''}
-  `;
-  $('mSt').innerHTML = ALL_ST.map(s=>`<option value="${esc(s)}" ${s===l.status?'selected':''}>${esc(s)}</option>`).join('');
-  renderModalChat(l); renderModalNotes(l);
+    ${l.unread?'<span style="color:var(--bad);font-size:11px;font-weight:600">● Sin leer</span>':''}`;
+  $('mSt').innerHTML=ALL_ST.map(s=>`<option value="${esc(s)}" ${s===l.status?'selected':''}>${esc(s)}</option>`).join('');
+  $('agentMsgInput').value='';
+  renderModalChat(l);renderModalNotes(l);
 }
 
-function renderModalChat(l) {
-  const h = Array.isArray(l.chatHistory) ? l.chatHistory : [];
-  if (!h.length) { $('mChat').innerHTML='<div class="chat-empty">Sin historial de chat aún.</div>'; return; }
-  $('mChat').innerHTML = h.map(m => {
-    const cls = m.role==='user'?'user':m.role==='agent'?'agent':'bot';
-    return `<div class="bbl ${cls}">${esc(m.content)}${m.ts?`<span class="ts">${fmtTM(m.ts)}</span>`:''}</div>`;
+function renderModalChat(l){
+  const h=Array.isArray(l.chatHistory)?l.chatHistory:[];
+  if(!h.length){$('mChat').innerHTML='<div class="chat-empty">Sin historial de chat aún.</div>';return;}
+  $('mChat').innerHTML=h.map(m=>{
+    const cls=m.role==='user'?'user':m.role==='agent'?'agent':'bot';
+    const agentTag=m.role==='agent'?`<span class="agent-tag">👤 ${esc(m.agentName||m.agent||'Agente')}</span>`:'';
+    return`<div class="bbl ${cls}">${agentTag}${esc(m.content)}${m.ts?`<span class="ts">${fmtTM(m.ts)}</span>`:''}</div>`;
   }).join('');
-  $('mChat').scrollTop = $('mChat').scrollHeight;
+  $('mChat').scrollTop=$('mChat').scrollHeight;
+}
+function renderModalNotes(l){
+  const n=Array.isArray(l.notes)?l.notes:[];
+  $('mNotes').innerHTML=n.length?n.slice().reverse().map(x=>`<div class="nitem">${esc(x.content)}<div class="nm">${esc(x.author||'—')} · ${fmtDT(x.ts)}</div></div>`).join(''):'<div class="no-notes">Sin notas.</div>';
 }
 
-function renderModalNotes(l) {
-  const n = Array.isArray(l.notes) ? l.notes : [];
-  $('mNotes').innerHTML = n.length
-    ? n.slice().reverse().map(x=>`<div class="nitem">${esc(x.content)}<div class="nm">${esc(x.author||'—')} · ${fmtDT(x.ts)}</div></div>`).join('')
-    : '<div class="no-notes">Sin notas.</div>';
-}
-
-$('mClose').addEventListener('click', closeModal);
-$('mbg').addEventListener('click', e => { if(e.target===$('mbg')) closeModal(); });
-$('mSave').addEventListener('click', async () => {
-  if (!S.mid) return;
-  const btn=$('mSave'); btn.disabled=true; btn.textContent='Guardando...';
+// ─── Envío de mensaje del agente ─────────────────────────────────────────────
+$('agentSendBtn').addEventListener('click', async () => {
+  const content = $('agentMsgInput').value.trim();
+  if (!content || !S.mid) return;
+  const btn = $('agentSendBtn');
+  btn.disabled = true; btn.textContent = '...';
   try {
+    const updated = await api('POST', '/api/leads/' + S.mid + '/message', { content });
+    $('agentMsgInput').value = '';
+    // Actualiza el lead en el estado local
+    const idx = S.leads.findIndex(x => x.id === S.mid);
+    if (idx !== -1) S.leads[idx] = { ...S.leads[idx], ...updated };
+    // Refresca sólo el chat del modal sin cerrarlo
     const l = findLead(S.mid);
-    const st = $('mSt').value, note = $('mNote').value.trim();
-    const payload = {};
-    if (st && st!==l?.status) payload.status=st;
-    if (note) payload.note=note;
-    if (!Object.keys(payload).length) { toast('Sin cambios'); btn.disabled=false; btn.textContent='Guardar cambios'; return; }
-    await api('PATCH', '/api/leads/'+S.mid, payload);
-    $('mNote').value=''; toast('Lead actualizado ✓');
-    await refresh(); renderModal();
-  } catch(e) { toast(e.message, true); }
-  finally { btn.disabled=false; btn.textContent='Guardar cambios'; }
+    if (l) { l.chatHistory = updated.chatHistory || l.chatHistory; renderModalChat(l); }
+    toast('Mensaje enviado ✓');
+    // Refresca datos en background
+    refresh();
+  } catch(e) { toast('Error: ' + e.message, true); }
+  finally { btn.disabled = false; btn.textContent = 'Enviar ➤'; }
+});
+
+// Enter para enviar (Shift+Enter nueva línea)
+$('agentMsgInput').addEventListener('keydown', e => {
+  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); $('agentSendBtn').click(); }
+});
+
+// ─── Guardar estado + nota ────────────────────────────────────────────────────
+$('mClose').addEventListener('click',closeModal);
+$('mbg').addEventListener('click',e=>{if(e.target===$('mbg'))closeModal();});
+$('mSave').addEventListener('click',async()=>{
+  if(!S.mid)return;
+  const btn=$('mSave');btn.disabled=true;btn.textContent='Guardando...';
+  try{
+    const l=findLead(S.mid);const st=$('mSt').value;const note=$('mNote').value.trim();
+    const payload={};
+    if(st&&st!==l?.status)payload.status=st;
+    if(note)payload.note=note;
+    if(!Object.keys(payload).length){toast('Sin cambios');btn.disabled=false;btn.textContent='Guardar cambios';return;}
+    await api('PATCH','/api/leads/'+S.mid,payload);
+    $('mNote').value='';toast('Lead actualizado ✓');
+    await refresh();renderModal();
+  }catch(e){toast(e.message,true);}
+  finally{btn.disabled=false;btn.textContent='Guardar cambios';}
 });
 
 // ════ Navegación ════════════════════════════════════════════════════════════
-document.querySelectorAll('.sidebar nav button').forEach(btn => {
-  btn.addEventListener('click', () => {
+document.querySelectorAll('.sidebar nav button').forEach(btn=>{
+  btn.addEventListener('click',()=>{
     document.querySelectorAll('.sidebar nav button').forEach(b=>b.classList.remove('active'));
     document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
-    btn.classList.add('active');
-    $('view-'+btn.dataset.view).classList.add('active');
+    btn.classList.add('active');$('view-'+btn.dataset.view).classList.add('active');
   });
 });
 
 // ════ Boot ══════════════════════════════════════════════════════════════════
-syncQ(); updRI();
-if (S.token && S.user) enterApp();
-else { $('av').style.display='none'; $('lv').style.display='grid'; }
+syncQ();updRI();
+if(S.token&&S.user)enterApp();
+else{$('av').style.display='none';$('lv').style.display='grid';}
 </script>
 </body>
 </html>
