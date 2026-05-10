@@ -8,12 +8,15 @@
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
 :root {
-  --accent: #2563eb;
-  --accent-dark: #1d4ed8;
-  --bg: #0a0f1c;
+  /* ═══ Paleta Premium Automotriz · Azul Profundo (ORIGINAL) ═══ */
+  --bg: #0b1220;
   --panel: #111827;
   --panel-2: #1f2937;
   --panel-3: #273548;
+  --accent: #2563eb;
+  --accent-dark: #1d4ed8;
+  --accent-soft: rgba(37, 99, 235, 0.15);
+
   --border: rgba(255,255,255,0.08);
   --border-strong: rgba(255,255,255,0.16);
   --text: #e5e7eb;
@@ -32,7 +35,7 @@
 * { box-sizing: border-box; margin: 0; padding: 0; }
 html, body { height: 100%; }
 body {
-  font-family: 'Inter', sans-serif;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
   background: var(--bg);
   color: var(--text);
   font-size: 14px;
@@ -43,9 +46,10 @@ body {
 .login-wrap {
   min-height: 100vh;
   display: grid; place-items: center;
-  background: radial-gradient(circle at 30% 20%, rgba(37,99,235,0.25), transparent 50%),
-              radial-gradient(circle at 80% 80%, rgba(29,78,216,0.2), transparent 55%),
-              var(--bg);
+  background:
+    radial-gradient(circle at 25% 20%, rgba(37,99,235,0.28), transparent 50%),
+    radial-gradient(circle at 80% 80%, rgba(29,78,216,0.22), transparent 55%),
+    var(--bg);
 }
 .login-card {
   background: var(--panel);
@@ -54,9 +58,9 @@ body {
   padding: 32px;
   width: 100%;
   max-width: 360px;
-  box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+  box-shadow: 0 25px 60px rgba(0,0,0,0.55);
 }
-.login-card h1 { font-size: 20px; margin-bottom: 4px; }
+.login-card h1 { font-size: 20px; margin-bottom: 4px; letter-spacing: -0.01em; }
 .login-card .sub { color: var(--text-mute); font-size: 12.5px; margin-bottom: 20px; }
 .login-card label { display: block; font-size: 12px; color: var(--text-mute); margin: 12px 0 6px; }
 .login-card input, .login-card select {
@@ -68,7 +72,9 @@ body {
   width: 100%; margin-top: 18px; padding: 11px;
   background: var(--accent); border: none; color: #fff;
   border-radius: 8px; font-weight: 600; cursor: pointer;
+  transition: background 0.15s;
 }
+.login-card button:hover { background: var(--accent-dark); }
 .login-card .err { color: var(--bad); font-size: 12px; margin-top: 10px; min-height: 16px; }
 .login-card .hint { font-size: 11px; color: var(--text-mute); margin-top: 14px; line-height: 1.5; }
 
@@ -80,28 +86,32 @@ body {
   padding: 22px 14px;
   display: flex; flex-direction: column;
 }
-.sidebar h1 { font-size: 15px; margin-bottom: 4px; }
+.sidebar h1 {
+  font-size: 15px; margin-bottom: 4px; letter-spacing: -0.01em;
+  background: linear-gradient(90deg, #fff, #93c5fd);
+  -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
+}
 .sidebar .who { font-size: 11px; color: var(--text-mute); margin-bottom: 22px; }
 .sidebar nav button {
   width: 100%; text-align: left; background: transparent; border: none;
   color: var(--text-soft); padding: 9px 12px; border-radius: 8px;
   cursor: pointer; margin-bottom: 3px; font-size: 13px;
+  transition: background 0.12s, color 0.12s;
 }
 .sidebar nav button.active, .sidebar nav button:hover { background: var(--panel-2); color: #fff; }
+.sidebar nav button.active { box-shadow: inset 3px 0 0 var(--accent); }
 .sidebar .logout {
   margin-top: auto; background: transparent; border: 1px solid var(--border);
   color: var(--text-mute); padding: 8px; border-radius: 8px; cursor: pointer; font-size: 12px;
 }
+.sidebar .logout:hover { color: var(--text); border-color: var(--border-strong); }
 
 .main { padding: 22px 26px; overflow-y: auto; max-height: 100vh; }
 
 /* ─── Toolbar global con filtro de fechas ─── */
 .toolbar {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin-bottom: 18px;
-  flex-wrap: wrap;
+  display: flex; align-items: center; gap: 10px;
+  margin-bottom: 18px; flex-wrap: wrap;
   background: var(--panel);
   border: 1px solid var(--border);
   border-radius: 12px;
@@ -111,29 +121,35 @@ body {
 .toolbar input[type=date] {
   background: var(--panel-2); border: 1px solid var(--border);
   color: var(--text); padding: 7px 10px; border-radius: 7px;
-  font-family: inherit; font-size: 12.5px;
-  color-scheme: dark;
+  font-family: inherit; font-size: 12.5px; color-scheme: dark;
 }
-.toolbar .quick {
-  display: flex; gap: 4px;
-}
+.toolbar .quick { display: flex; gap: 4px; }
 .toolbar .quick button {
   background: var(--panel-2); color: var(--text-soft); border: 1px solid var(--border);
   padding: 7px 11px; border-radius: 7px; cursor: pointer; font-size: 12px;
+  transition: all 0.12s;
 }
+.toolbar .quick button:hover { border-color: var(--border-strong); }
 .toolbar .quick button.active { background: var(--accent); color: #fff; border-color: var(--accent); }
 .toolbar .clear {
   background: transparent; border: 1px solid var(--border);
   color: var(--text-mute); padding: 7px 11px; border-radius: 7px; cursor: pointer; font-size: 12px;
 }
-.toolbar .range-info {
-  margin-left: auto; font-size: 11.5px; color: var(--text-mute);
-}
+.toolbar .range-info { margin-left: auto; font-size: 11.5px; color: var(--text-mute); }
 
 .section-title {
-  font-size: 19px; margin-bottom: 16px; font-weight: 700;
+  font-size: 19px; margin-bottom: 16px; font-weight: 700; letter-spacing: -0.01em;
   display: flex; align-items: center; justify-content: space-between;
 }
+.subtitle {
+  font-size: 13px; color: var(--text-mute); font-weight: 600;
+  text-transform: uppercase; letter-spacing: 0.05em;
+  margin: 28px 0 12px; display: flex; align-items: center; gap: 10px;
+}
+.subtitle::before {
+  content: ''; width: 3px; height: 14px; background: var(--accent); border-radius: 2px;
+}
+
 .view { display: none; }
 .view.active { display: block; }
 
@@ -142,19 +158,31 @@ body {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
   gap: 12px;
-  margin-bottom: 20px;
+  margin-bottom: 8px;
 }
 .kpi {
   background: var(--panel);
   border: 1px solid var(--border);
   border-radius: 12px;
   padding: 16px;
+  position: relative;
+  overflow: hidden;
+  transition: border-color 0.15s, transform 0.15s;
 }
+.kpi:hover { border-color: var(--border-strong); transform: translateY(-1px); }
 .kpi .lbl { font-size: 11px; color: var(--text-mute); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px; font-weight: 600; }
-.kpi .val { font-size: 26px; font-weight: 700; }
+.kpi .val { font-size: 26px; font-weight: 700; letter-spacing: -0.02em; }
 .kpi .sub { font-size: 11.5px; color: var(--text-mute); margin-top: 4px; }
-.kpi.qualified { border-color: var(--signal-blue); background: linear-gradient(135deg, var(--panel) 0%, var(--signal-blue-soft) 200%); }
+.kpi.qualified {
+  border-color: rgba(59,130,246,0.4);
+  background: linear-gradient(135deg, var(--panel) 0%, rgba(59,130,246,0.08) 100%);
+}
 .kpi.qualified .val { color: var(--signal-blue); }
+.kpi.qualified::after {
+  content: ''; position: absolute; top: 0; right: 0; width: 80px; height: 80px;
+  background: radial-gradient(circle, rgba(59,130,246,0.18), transparent 70%);
+  pointer-events: none;
+}
 
 /* ─── Tabla de leads ─── */
 .leads-table {
@@ -166,10 +194,13 @@ body {
   grid-template-columns: 28px 1.3fr 1fr 1.2fr 0.9fr 1.5fr 0.9fr;
   gap: 12px; padding: 13px 16px; align-items: center;
   border-bottom: 1px solid var(--border); font-size: 13px;
-  cursor: pointer; transition: background 0.15s;
+  cursor: pointer; transition: background 0.12s;
 }
 .leads-row:hover { background: var(--panel-2); }
-.leads-row.head { background: var(--panel-2); color: var(--text-mute); font-weight: 600; font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; cursor: default; }
+.leads-row.head {
+  background: var(--panel-2); color: var(--text-mute); font-weight: 600;
+  font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; cursor: default;
+}
 .leads-row.head:hover { background: var(--panel-2); }
 .leads-row:last-child { border-bottom: none; }
 
@@ -177,7 +208,7 @@ body {
 .signal-dot { width: 13px; height: 13px; border-radius: 50%; background: #374151; border: 2px solid #1f2937; }
 .signal-dot.blue { background: var(--signal-blue); box-shadow: 0 0 9px var(--signal-blue); animation: pulseSig 1.6s infinite; }
 .signal-dot.yellow { background: var(--signal-yellow); box-shadow: 0 0 9px var(--signal-yellow); animation: pulseSig 1.6s infinite; }
-@keyframes pulseSig { 0%,100% { transform: scale(1); opacity:1;} 50% { transform: scale(1.18); opacity:0.85;} }
+@keyframes pulseSig { 0%,100% { transform: scale(1); opacity:1; } 50% { transform: scale(1.18); opacity:0.85; } }
 
 .signal-badge {
   display: inline-flex; align-items: center; gap: 5px;
@@ -189,10 +220,75 @@ body {
 
 .status-pill {
   font-size: 11.5px; padding: 4px 10px; border-radius: 999px;
-  background: var(--panel-2); color: var(--text-soft); white-space: nowrap;
-  display: inline-block;
+  background: var(--panel-2); color: var(--text-soft); white-space: nowrap; display: inline-block;
 }
-.status-pill.qualified { background: linear-gradient(90deg, var(--signal-blue-soft), var(--signal-yellow-soft)); color: #fff; font-weight: 600; }
+.status-pill.qualified {
+  background: linear-gradient(90deg, var(--signal-blue-soft), var(--signal-yellow-soft));
+  color: #fff; font-weight: 600;
+}
+
+/* ─── Distribución por vendedores (Dashboard) ─── */
+.vendor-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 12px;
+}
+.vendor-card {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 16px;
+  transition: border-color 0.15s, transform 0.15s;
+}
+.vendor-card:hover { border-color: var(--border-strong); transform: translateY(-1px); }
+.vendor-card .v-head {
+  display: flex; align-items: center; gap: 12px;
+  padding-bottom: 12px; margin-bottom: 12px;
+  border-bottom: 1px solid var(--border);
+}
+.vendor-card .v-avatar {
+  width: 38px; height: 38px; border-radius: 50%;
+  background: linear-gradient(135deg, var(--accent), var(--accent-dark));
+  display: grid; place-items: center; color: #fff;
+  font-weight: 700; font-size: 14px; flex-shrink: 0;
+}
+.vendor-card .v-name { font-weight: 600; font-size: 14px; }
+.vendor-card .v-role { font-size: 11px; color: var(--text-mute); }
+.vendor-card .v-total {
+  margin-left: auto; font-size: 22px; font-weight: 700;
+  color: var(--accent); line-height: 1;
+}
+.vendor-card .v-total small { display: block; font-size: 9.5px; color: var(--text-mute); font-weight: 500; text-transform: uppercase; letter-spacing: 0.04em; margin-top: 3px; text-align: right; }
+
+.vendor-card .v-sla {
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px;
+  margin-bottom: 12px;
+}
+.vendor-card .v-sla .pill {
+  text-align: center; padding: 6px 4px; border-radius: 7px;
+  background: var(--panel-2); font-size: 11px;
+}
+.vendor-card .v-sla .pill .n { display: block; font-size: 15px; font-weight: 700; }
+.vendor-card .v-sla .pill.fresh .n { color: var(--ok); }
+.vendor-card .v-sla .pill.risk .n { color: var(--warn); }
+.vendor-card .v-sla .pill.critical .n { color: var(--bad); }
+
+.vendor-card .v-leads {
+  display: flex; flex-direction: column; gap: 5px;
+  max-height: 180px; overflow-y: auto;
+}
+.vendor-card .v-lead {
+  display: grid; grid-template-columns: 12px 1fr auto; gap: 8px; align-items: center;
+  background: var(--panel-2); border-radius: 6px;
+  padding: 7px 10px; font-size: 12px; cursor: pointer;
+  transition: background 0.12s;
+  border: 1px solid transparent;
+}
+.vendor-card .v-lead:hover { background: var(--panel-3); border-color: var(--border-strong); }
+.vendor-card .v-lead .v-lead-name { font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.vendor-card .v-lead .v-lead-st { font-size: 10px; color: var(--text-mute); }
+
+.vendor-card .v-empty { text-align: center; color: var(--text-mute); font-size: 11.5px; padding: 14px 6px; }
 
 /* ─── Kanban ─── */
 .kanban {
@@ -225,7 +321,7 @@ body {
 .kanban-card {
   background: var(--panel-2); border: 1px solid var(--border);
   border-radius: 10px; padding: 11px; cursor: pointer;
-  transition: border-color 0.2s, transform 0.15s;
+  transition: border-color 0.15s, transform 0.12s;
 }
 .kanban-card:hover { border-color: var(--border-strong); transform: translateY(-1px); }
 .kanban-card .card-top {
@@ -250,7 +346,7 @@ body {
   grid-template-columns: 16px 1fr auto auto auto;
   gap: 14px; align-items: center;
   padding: 14px 18px; cursor: pointer;
-  transition: background 0.15s;
+  transition: background 0.12s;
 }
 .team-head:hover { background: var(--panel-2); }
 .team-head .chev { font-size: 10px; color: var(--text-mute); transition: transform 0.2s; }
@@ -269,16 +365,13 @@ body {
 .team-body { display: none; padding: 0 18px 18px; border-top: 1px solid var(--border); }
 .team-card.open .team-body { display: block; }
 
-.team-body .mini-leads {
-  display: grid; gap: 6px; margin-top: 14px;
-}
+.team-body .mini-leads { display: grid; gap: 6px; margin-top: 14px; }
 .team-body .mini-lead {
-  display: grid;
-  grid-template-columns: 14px 1fr 1.2fr 1fr;
+  display: grid; grid-template-columns: 14px 1fr 1.2fr 1fr;
   gap: 10px; align-items: center;
   background: var(--panel-2); border: 1px solid var(--border);
   border-radius: 8px; padding: 9px 12px; font-size: 12.5px;
-  cursor: pointer; transition: border-color 0.15s;
+  cursor: pointer; transition: border-color 0.12s;
 }
 .team-body .mini-lead:hover { border-color: var(--border-strong); }
 
@@ -351,10 +444,7 @@ body {
 .modal-body button.primary:hover { background: var(--accent-dark); }
 .modal-body button.primary:disabled { opacity: 0.5; cursor: not-allowed; }
 
-.notes-list {
-  display: flex; flex-direction: column; gap: 6px;
-  max-height: 140px; overflow-y: auto;
-}
+.notes-list { display: flex; flex-direction: column; gap: 6px; max-height: 140px; overflow-y: auto; }
 .note-item {
   background: var(--panel-2); border: 1px solid var(--border);
   border-radius: 7px; padding: 7px 10px;
@@ -438,9 +528,14 @@ body {
 
     <section id="view-dashboard" class="view active">
       <div class="section-title"><span>Dashboard</span></div>
+
       <div class="kpi-grid" id="kpiGrid"></div>
-      <div class="section-title" style="margin-top:24px;font-size:15px;"><span>Por canal</span></div>
+
+      <div class="subtitle">Rendimiento por canal</div>
       <div id="channelsBox" class="leads-table"></div>
+
+      <div class="subtitle">Distribución por vendedor — quién tiene a quién</div>
+      <div id="vendorGrid" class="vendor-grid"></div>
     </section>
 
     <section id="view-leads" class="view">
@@ -518,6 +613,7 @@ const $ = id => document.getElementById(id);
 const escapeHTML = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const fmtTime = ts => { try { return new Date(ts).toLocaleString('es-CL', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }); } catch { return ''; } };
 const fmtCLP = n => '$' + (Number(n) || 0).toLocaleString('es-CL');
+const initials = (name) => (name || '?').split(/\s+/).map(s => s[0]).filter(Boolean).slice(0,2).join('').toUpperCase();
 
 function toast(msg, isError) {
   const t = $('toast');
@@ -705,7 +801,6 @@ function renderAll() {
   renderLeads();
   renderKanban();
   if (STATE.user?.role === 'admin') renderTeam();
-  // Si el modal está abierto, refresca su contenido sin cerrarlo
   if (STATE.modalLeadId) refreshModalIfOpen();
 }
 
@@ -727,43 +822,95 @@ function statusPill(st) {
 }
 
 // ════════════════════════════════════════════════════════════════════════════
-// VIEW: DASHBOARD
+// VIEW: DASHBOARD (KPIs + Canales + Distribución por Vendedor)
 // ════════════════════════════════════════════════════════════════════════════
 function renderDashboard() {
+  // ─── KPIs ───
   const k = STATE.kpis;
-  if (!k) { $('kpiGrid').innerHTML = ''; $('channelsBox').innerHTML = ''; return; }
-  $('kpiGrid').innerHTML = `
-    <div class="kpi"><div class="lbl">Total leads</div><div class="val">${k.total}</div><div class="sub">en el rango</div></div>
-    <div class="kpi"><div class="lbl">Activos</div><div class="val">${k.active}</div><div class="sub">no cerrados</div></div>
-    <div class="kpi qualified"><div class="lbl">Calificados IA</div><div class="val">${k.qualified || 0}</div><div class="sub">Marcela detectó agenda</div></div>
-    <div class="kpi"><div class="lbl">Cerrados</div><div class="val">${k.closed}</div><div class="sub">conv ${k.conversionRate}%</div></div>
-    <div class="kpi"><div class="lbl">SLA fresh</div><div class="val" style="color:var(--ok)">${k.slaFresh}</div><div class="sub">≤ 10 min</div></div>
-    <div class="kpi"><div class="lbl">SLA en riesgo</div><div class="val" style="color:var(--warn)">${k.slaRisk}</div><div class="sub">10–20 min</div></div>
-    <div class="kpi"><div class="lbl">SLA críticos</div><div class="val" style="color:var(--bad)">${k.slaCritical}</div><div class="sub">&gt; 20 min</div></div>
-    <div class="kpi"><div class="lbl">Resp. promedio</div><div class="val">${k.avgResponseMin}m</div><div class="sub">de leads nuevos</div></div>
-  `;
+  if (!k) {
+    $('kpiGrid').innerHTML = '';
+  } else {
+    $('kpiGrid').innerHTML = `
+      <div class="kpi"><div class="lbl">Total leads</div><div class="val">${k.total}</div><div class="sub">en el rango</div></div>
+      <div class="kpi"><div class="lbl">Activos</div><div class="val">${k.active}</div><div class="sub">no cerrados</div></div>
+      <div class="kpi qualified"><div class="lbl">Calificados IA</div><div class="val">${k.qualified || 0}</div><div class="sub">Marcela detectó agenda</div></div>
+      <div class="kpi"><div class="lbl">Cerrados</div><div class="val">${k.closed}</div><div class="sub">conv ${k.conversionRate}%</div></div>
+      <div class="kpi"><div class="lbl">SLA fresh</div><div class="val" style="color:var(--ok)">${k.slaFresh}</div><div class="sub">≤ 10 min</div></div>
+      <div class="kpi"><div class="lbl">SLA en riesgo</div><div class="val" style="color:var(--warn)">${k.slaRisk}</div><div class="sub">10–20 min</div></div>
+      <div class="kpi"><div class="lbl">SLA críticos</div><div class="val" style="color:var(--bad)">${k.slaCritical}</div><div class="sub">&gt; 20 min</div></div>
+      <div class="kpi"><div class="lbl">Resp. promedio</div><div class="val">${k.avgResponseMin}m</div><div class="sub">de leads nuevos</div></div>
+    `;
+  }
 
+  // ─── Canales ───
   const ch = STATE.channels || [];
   if (!ch.length) {
     $('channelsBox').innerHTML = '<div class="empty-col">Sin datos de canales en el rango.</div>';
+  } else {
+    $('channelsBox').innerHTML = `
+      <div class="leads-row head" style="grid-template-columns: 1.4fr 1fr 0.7fr 0.7fr 1fr 0.8fr 0.8fr;">
+        <div>Canal</div><div>Top modelo</div><div>Leads</div><div>Ventas</div><div>Inversión</div><div>CPL</div><div>Conv.</div>
+      </div>
+      ${ch.map(c => `
+        <div class="leads-row" style="grid-template-columns: 1.4fr 1fr 0.7fr 0.7fr 1fr 0.8fr 0.8fr; cursor:default;">
+          <div><strong>${escapeHTML(c.channel)}</strong></div>
+          <div>${escapeHTML(c.topModel)}</div>
+          <div>${c.leads}</div>
+          <div>${c.sales}</div>
+          <div>${fmtCLP(c.spend)}</div>
+          <div>${fmtCLP(c.cpl)}</div>
+          <div>${c.conversion}%</div>
+        </div>
+      `).join('')}
+    `;
+  }
+
+  // ─── Distribución por vendedor ───
+  renderVendorDistribution();
+}
+
+function renderVendorDistribution() {
+  const vendors = STATE.team || [];
+  if (!vendors.length) {
+    $('vendorGrid').innerHTML = '<div class="empty-col">Sin asignaciones en el rango seleccionado.</div>';
     return;
   }
-  $('channelsBox').innerHTML = `
-    <div class="leads-row head" style="grid-template-columns: 1.4fr 1fr 0.7fr 0.7fr 1fr 0.8fr 0.8fr;">
-      <div>Canal</div><div>Top modelo</div><div>Leads</div><div>Ventas</div><div>Inversión</div><div>CPL</div><div>Conv.</div>
-    </div>
-    ${ch.map(c => `
-      <div class="leads-row" style="grid-template-columns: 1.4fr 1fr 0.7fr 0.7fr 1fr 0.8fr 0.8fr; cursor:default;">
-        <div><strong>${escapeHTML(c.channel)}</strong></div>
-        <div>${escapeHTML(c.topModel)}</div>
-        <div>${c.leads}</div>
-        <div>${c.sales}</div>
-        <div>${fmtCLP(c.spend)}</div>
-        <div>${fmtCLP(c.cpl)}</div>
-        <div>${c.conversion}%</div>
+  $('vendorGrid').innerHTML = vendors.map(v => {
+    const leads = (v.leads || []).slice()
+      .sort((a, b) => new Date(b.lastInteraction || 0) - new Date(a.lastInteraction || 0))
+      .slice(0, 6);
+    const leadsHTML = leads.length ? leads.map(l => `
+      <div class="v-lead" data-id="${l.id}">
+        ${signalDot(l.intentSignal || 'NONE')}
+        <div class="v-lead-name">${escapeHTML(l.name)}</div>
+        <div class="v-lead-st">${escapeHTML(l.status)}</div>
       </div>
-    `).join('')}
-  `;
+    `).join('') : '<div class="v-empty">Sin leads asignados.</div>';
+
+    return `
+      <div class="vendor-card">
+        <div class="v-head">
+          <div class="v-avatar">${initials(v.name)}</div>
+          <div>
+            <div class="v-name">${escapeHTML(v.name)}</div>
+            <div class="v-role">@${escapeHTML(v.username)}</div>
+          </div>
+          <div class="v-total">${v.total}<small>Leads</small></div>
+        </div>
+        <div class="v-sla">
+          <div class="pill fresh"><span class="n">${v.sla.fresh}</span>Fresh</div>
+          <div class="pill risk"><span class="n">${v.sla.risk}</span>Riesgo</div>
+          <div class="pill critical"><span class="n">${v.sla.critical}</span>Crítico</div>
+        </div>
+        <div class="v-leads">${leadsHTML}</div>
+      </div>
+    `;
+  }).join('');
+
+  // Click en mini-lead → modal
+  $('vendorGrid').querySelectorAll('.v-lead[data-id]').forEach(el => {
+    el.addEventListener('click', () => openModal(parseInt(el.dataset.id, 10)));
+  });
 }
 
 // ════════════════════════════════════════════════════════════════════════════
@@ -852,7 +999,7 @@ function renderKanban() {
 }
 
 // ════════════════════════════════════════════════════════════════════════════
-// VIEW: TEAM (con persistencia de acordeones)
+// VIEW: TEAM (acordeones persistentes)
 // ════════════════════════════════════════════════════════════════════════════
 function renderTeam() {
   const team = STATE.team || [];
@@ -890,7 +1037,6 @@ function renderTeam() {
     `;
   }).join('');
 
-  // ─── Listeners de toggle (persisten estado abierto) ─────────────────────
   $('teamGrid').querySelectorAll('.team-head').forEach(head => {
     head.addEventListener('click', () => {
       const username = head.dataset.toggle;
@@ -906,7 +1052,6 @@ function renderTeam() {
     });
   });
 
-  // ─── Click en mini-lead → abre modal ─────────────────────────────────────
   $('teamGrid').querySelectorAll('.mini-lead[data-id]').forEach(el => {
     el.addEventListener('click', (ev) => {
       ev.stopPropagation();
@@ -921,10 +1066,8 @@ function renderTeam() {
 const STATUSES = ['Nuevo', 'En Proceso', 'Contactado', 'Calificado', 'Lead Calificado - Contacto Agendado', 'Negociación', 'Agendado', 'Seguimiento', 'Cerrado', 'Abandonado'];
 
 function findLead(id) {
-  // 1) en STATE.leads
   let l = STATE.leads.find(x => x.id === id);
   if (l) return l;
-  // 2) en STATE.team[].leads
   for (const v of STATE.team || []) {
     const f = (v.leads || []).find(x => x.id === id);
     if (f) return f;
@@ -946,12 +1089,10 @@ function closeModal() {
 
 function refreshModalIfOpen() {
   if (!$('modalBackdrop').classList.contains('show')) return;
-  // Solo refresca el chat e historial; mantiene el textarea de la nota
   const lead = findLead(STATE.modalLeadId);
   if (!lead) return;
   renderModalChat(lead);
   renderModalNotes(lead);
-  // Mantenemos status seleccionado tal como está
 }
 
 function renderModal() {
@@ -961,7 +1102,6 @@ function renderModal() {
   $('mTitle').textContent = lead.name + ' · ' + (lead.phone || '');
   $('mMeta').textContent = `Origen: ${lead.source || '—'} · Asignado: ${lead.assignedTo || '—'} · Última: ${fmtTime(lead.lastInteraction)}`;
 
-  // Status select
   const select = $('mStatus');
   select.innerHTML = STATUSES.map(s => `<option value="${escapeHTML(s)}" ${s === lead.status ? 'selected' : ''}>${escapeHTML(s)}</option>`).join('');
 
@@ -1021,7 +1161,6 @@ $('mSave').addEventListener('click', async () => {
     toast('Lead actualizado');
     $('mNoteInput').value = '';
     await refreshAll();
-    // Mantener el modal abierto y refrescado
     renderModal();
   } catch (e) {
     toast('Error: ' + e.message, true);
