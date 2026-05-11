@@ -23,16 +23,20 @@ const F = {
   spend:     path.join(DATA, 'spend.json')
 };
 
-const TENANTS        = ['demo_automotora', 'demo_clinica'];
-const sessions       = new Map();
-const chatSessions   = new Map();
-const SLA_GREEN      = 20;
-const SLA_YELLOW     = 30;
-const FINAL_ST       = new Set(['Cerrado','Abandonado','Perdido']);
-const QUAL_STAGE     = 'Lead Calificado - Contacto Agendado';
-const VALID_ST       = new Set(['Nuevo','En Proceso','Contactado','Calificado','Agendado',
-                                 'Seguimiento','Negociación','Atendido',QUAL_STAGE,
-                                 'Cerrado','Abandonado','Perdido']);
+const TENANTS    = ['demo_automotora', 'demo_clinica'];
+const sessions   = new Map();
+const chatSessions = new Map();
+
+// SLA universal: tiempos basados en lastClientTs
+const SLA_GREEN  = 20;   // < 20 min → fresh
+const SLA_YELLOW = 30;   // 20-30 min → risk (+ reasigna si Nuevo)
+                          // > 30 min → critical
+
+const FINAL_ST   = new Set(['Cerrado','Abandonado','Perdido']);
+const QUAL_STAGE = 'Lead Calificado - Contacto Agendado';
+const VALID_ST   = new Set(['Nuevo','En Proceso','Contactado','Calificado','Agendado',
+                             'Seguimiento','Negociación','Atendido',QUAL_STAGE,
+                             'Cerrado','Abandonado','Perdido']);
 
 const read   = async f         => { try { return JSON.parse(await fs.readFile(f,'utf8')); } catch { return {}; } };
 const write  = (f,d)           => fs.writeFile(f, JSON.stringify(d,null,2));
@@ -85,7 +89,7 @@ async function marcela(tenant,history,msg){
       ]
     });
     let p=parseJ(completion.choices?.[0]?.message?.content||'');
-    if(!p) p={reply:'Disculpa, error técnico. ¿Repites?',intent_signal:'NONE',intent_reason:'fallback',schedule_detected:false,schedule_text:''};
+    if(!p) p={reply:'Disculpa, error técnico.',intent_signal:'NONE',intent_reason:'fallback',schedule_detected:false,schedule_text:''};
     if(p.schedule_detected&&fueraH(p.schedule_text)){
       p.reply+='\n\n(Nuestro horario es 09:00-20:00. Te propongo mañana a las 09:00, ¿te acomoda?)';
       p.intent_signal='YELLOW';
@@ -119,33 +123,48 @@ async function rrNext(tenant,exclude=null){
   return list[idx].username;
 }
 
-// ─── SLA ─────────────────────────────────────────────────────────────────────
+// ─── SLA Universal: basado en lastClientTs, aplica a Nuevo Y a unread ────────
 function calcAlert(lead){
+  // Si está cerrado/perdido → sin alerta
   if(FINAL_ST.has(lead.status)) return 'none';
-  if(lead.status!=='Nuevo') return 'none';
-  const m=(Date.now()-new Date(lead.lastInteraction).getTime())/60000;
-  if(m>SLA_YELLOW) return 'critical';
-  if(m>SLA_GREEN)  return 'risk';
+  // Solo calcula si es Nuevo O si el cliente escribió y no fue respondido
+  const applies = lead.status === 'Nuevo' || lead.unread === true;
+  if(!applies) return 'none';
+  const ref = lead.lastClientTs || lead.lastInteraction;
+  if(!ref) return 'none';
+  const m = (Date.now() - new Date(ref).getTime()) / 60000;
+  if(m > SLA_YELLOW) return 'critical';
+  if(m > SLA_GREEN)  return 'risk';
   return 'fresh';
 }
+
 async function applySlaRules(tenant){
-  const leads=await tRead(F.leads,tenant);
-  let changed=false;
+  const leads = await tRead(F.leads, tenant);
+  let changed = false;
   for(const lead of leads){
     if(FINAL_ST.has(lead.status)) continue;
-    const prev=lead.alertLevel||'none';
-    const mins=(Date.now()-new Date(lead.lastInteraction).getTime())/60000;
-    if(lead.status==='Nuevo'&&mins>SLA_GREEN&&mins<=SLA_YELLOW&&!lead.reassigned){
-      const next=await rrNext(tenant,lead.assignedTo);
-      if(next&&next!==lead.assignedTo){
-        lead.assignedTo=next; lead.reassigned=true; lead.reassignedAt=new Date().toISOString(); changed=true;
+    const prev = lead.alertLevel || 'none';
+
+    // Reasignación automática: EXCLUSIVAMENTE para leads Nuevos
+    if(lead.status === 'Nuevo'){
+      const ref = lead.lastClientTs || lead.lastInteraction;
+      const mins = ref ? (Date.now() - new Date(ref).getTime()) / 60000 : 0;
+      if(mins > SLA_GREEN && mins <= SLA_YELLOW && !lead.reassigned){
+        const next = await rrNext(tenant, lead.assignedTo);
+        if(next && next !== lead.assignedTo){
+          lead.assignedTo  = next;
+          lead.reassigned  = true;
+          lead.reassignedAt = new Date().toISOString();
+          changed = true;
+        }
       }
     }
-    const lvl=calcAlert(lead);
-    if(lvl!==prev){lead.alertLevel=lvl;changed=true;}
-    if(lead.botActive===undefined){lead.botActive=true;changed=true;}
+
+    const lvl = calcAlert(lead);
+    if(lvl !== prev){ lead.alertLevel = lvl; changed = true; }
+    if(lead.botActive === undefined){ lead.botActive = true; changed = true; }
   }
-  if(changed) await tWrite(F.leads,tenant,leads);
+  if(changed) await tWrite(F.leads, tenant, leads);
   return leads;
 }
 
@@ -162,8 +181,9 @@ function inRange(lead,s,e){
   return(s===null||ts>=s)&&(e===null||ts<=e);
 }
 
-// ─── SEED ─────────────────────────────────────────────────────────────────────
+// ─── SEED con leads unread en funnel para disparar SLA de seguimiento ─────────
 async function seed(){
+  // Usuarios
   const users=await read(F.users);
   if(!users.demo_automotora) users.demo_automotora=[
     {username:'gerente',  password:'demo',name:'Andrés Salas',  role:'admin'},
@@ -178,6 +198,7 @@ async function seed(){
   ];
   await write(F.users,users);
 
+  // Config
   const cfg=await read(F.config);
   if(!cfg.demo_automotora) cfg.demo_automotora={
     businessName:'Automotora Andes',accentColor:'#3b82f6',
@@ -193,14 +214,16 @@ async function seed(){
   }
   await write(F.config,cfg);
 
+  // Bot
   const bot=await read(F.bot);
   if(!bot.demo_automotora) bot.demo_automotora={greeting:'¡Hola! Soy Marcela de Automotora Andes. ¿Qué vehículo buscas hoy?'};
   if(!bot.demo_clinica)    bot.demo_clinica   ={greeting:'Hola, asistente de Clínica Vital. ¿En qué te podemos ayudar?'};
   await write(F.bot,bot);
 
+  // Inventario
   const inv=await read(F.inventory);
   if(!inv.demo_automotora) inv.demo_automotora=[
-    {id:'AND-LR-001',brand:'Land Rover',model:'Discovery Sport 2.0D HSE Auto',year:2023,stock:1,price:43690000,fuel:'Diésel',color:'Blanco',highlights:'7 plazas,4WD,garantía extendida'},
+    {id:'AND-LR-001',brand:'Land Rover',model:'Discovery Sport 2.0D HSE',year:2023,stock:1,price:43690000,fuel:'Diésel',color:'Blanco',highlights:'7 plazas,4WD,garantía extendida'},
     {id:'AND-LR-002',brand:'Land Rover',model:'Defender 110 P300 SE',year:2024,stock:1,price:49990000,fuel:'Bencina',color:'Verde Aintree',highlights:'300HP,tecnología top'},
     {id:'AND-TY-001',brand:'Toyota',model:'RAV4 2.5 Hybrid AWD',year:2024,stock:3,price:29990000,fuel:'Híbrido',color:'Blanco Perla',highlights:'222HP,tracción total'},
     {id:'AND-TY-002',brand:'Toyota',model:'Fortuner 2.8 GD-6 SR 4x4',year:2024,stock:2,price:34990000,fuel:'Diésel',color:'Gris Oscuro',highlights:'7 plazas,4x4'},
@@ -228,6 +251,7 @@ async function seed(){
   ];
   await write(F.inventory,inv);
 
+  // Spend
   const spend=await read(F.spend);
   if(!spend.demo_automotora) spend.demo_automotora={
     'Meta Ads':1200000,'Google Ads':900000,'Chileautos':600000,
@@ -238,54 +262,208 @@ async function seed(){
   };
   await write(F.spend,spend);
 
-  // Leads demo frescos solo si no existen
+  // Leads: solo crea si no existen
   const leadsDB=await read(F.leads);
   if(!leadsDB.demo_automotora||leadsDB.demo_automotora.length===0){
     const now=Date.now();
     const mAgo=m=>new Date(now-m*60000).toISOString();
     const hAgo=h=>new Date(now-h*3600000).toISOString();
-    const chat=(vehicle,status)=>{
-      const base=[
-        {role:'user',content:`Hola, me interesa el ${vehicle}. ¿Está disponible?`,ts:now-7200000},
-        {role:'bot',content:`¡Hola! Sí, tenemos el ${vehicle}. ¿Te gustaría saber sobre financiamiento o coordinar visita?`,ts:now-7190000}
-      ];
-      if(['Contactado','Negociación',QUAL_STAGE,'Cerrado'].includes(status)){
-        base.push({role:'user',content:'Sí, me interesa el financiamiento. ¿Cuál es la cuota?',ts:now-5400000});
-        base.push({role:'bot',content:'¿Te gustaría que te llame un ejecutivo para darte el mejor precio o coordinar una prueba de manejo? Trabajamos de 09:00 a 20:00 hrs. Dime qué día y a qué hora te acomoda más.',ts:now-5390000});
-      }
-      if([QUAL_STAGE,'Cerrado'].includes(status)){
-        base.push({role:'user',content:'Sí, me llaman hoy a las 15:00.',ts:now-3600000});
-        base.push({role:'bot',content:'¡Perfecto! Te llaman hoy a las 15:00 hrs. ¡Hasta pronto!',ts:now-3590000});
-      }
-      return base;
-    };
-    leadsDB.demo_automotora=[
-      {id:10001,name:'Valentina Morales',phone:'+56 9 8123 4567',source:'Meta Ads',status:'Nuevo',lastInteraction:mAgo(8),lastClientTs:mAgo(8),interest:'Toyota RAV4 Hybrid',model:'AND-TY-001',assignedTo:'vendedor1',botActive:true,alertLevel:'fresh',intentSignal:'NONE',unread:true,reassigned:false,notes:[],chatHistory:[{role:'user',content:'Hola, vi el RAV4 en el anuncio. ¿Tiene tracción total?',ts:now-480000}]},
-      {id:10002,name:'Ignacio Bustamante',phone:'+56 9 7654 3210',source:'Google Ads',status:'Nuevo',lastInteraction:mAgo(14),lastClientTs:mAgo(14),interest:'Peugeot 3008',model:'AND-PG-001',assignedTo:'vendedor2',botActive:true,alertLevel:'fresh',intentSignal:'NONE',unread:true,reassigned:false,notes:[],chatHistory:[{role:'user',content:'¿El Peugeot 3008 tiene descuento por pago al contado?',ts:now-840000}]},
-      {id:10003,name:'Francisca Donoso',phone:'+56 9 9988 1122',source:'Chileautos',status:'Nuevo',lastInteraction:mAgo(24),lastClientTs:mAgo(24),interest:'Toyota Hilux 4x4 SRX',model:'AND-TY-005',assignedTo:'vendedor1',botActive:true,alertLevel:'risk',intentSignal:'NONE',unread:true,reassigned:true,reassignedAt:mAgo(4),notes:[],chatHistory:[{role:'user',content:'Quiero cotizar la Hilux SRX 4x4 para empresa.',ts:now-1440000}]},
-      {id:10004,name:'Matías Fuentes',phone:'+56 9 6677 8855',source:'WhatsApp',status:'Nuevo',lastInteraction:mAgo(38),lastClientTs:mAgo(38),interest:'Land Rover Discovery Sport',model:'AND-LR-001',assignedTo:'vendedor2',botActive:true,alertLevel:'critical',intentSignal:'NONE',unread:true,reassigned:false,notes:[],chatHistory:[{role:'user',content:'Buenas, tengo interés en el Land Rover Discovery Sport. ¿Tienen stock?',ts:now-2280000}]},
-      {id:10005,name:'Daniela Arce',phone:'+56 9 5544 9900',source:'Meta Ads',status:'Nuevo',lastInteraction:mAgo(55),lastClientTs:mAgo(55),interest:'Kia EV6 Eléctrico',model:'AND-KI-004',assignedTo:'vendedor1',botActive:true,alertLevel:'critical',intentSignal:'NONE',unread:true,reassigned:false,notes:[],chatHistory:[{role:'user',content:'Hola, ¿el EV6 aplica para la franquicia de autos eléctricos?',ts:now-3300000}]},
-      {id:10006,name:'Roberto Cerda',phone:'+56 9 3344 5566',source:'Google Ads',status:'Contactado',lastInteraction:hAgo(2),lastClientTs:hAgo(2.5),interest:'Toyota Corolla GR Sport',model:'AND-TY-003',assignedTo:'vendedor2',botActive:false,alertLevel:'none',intentSignal:'NONE',unread:false,reassigned:false,notes:[{content:'Llamado realizado. Muy interesado.',author:'Camila Aravena',ts:now-7000000}],chatHistory:chat('Toyota Corolla 2.0 CVT GR Sport','Contactado')},
-      {id:10007,name:'Pamela Rojas',phone:'+56 9 2233 7788',source:'Chileautos',status:'Contactado',lastInteraction:hAgo(3),lastClientTs:hAgo(3.5),interest:'Peugeot 208 Automático',model:'AND-PG-004',assignedTo:'vendedor1',botActive:false,alertLevel:'none',intentSignal:'NONE',unread:false,reassigned:false,notes:[{content:'Primera visita agendada para mañana.',author:'Rodrigo Vidal',ts:now-10000000}],chatHistory:chat('Peugeot 208 PureTech 100 Like AT','Contactado')},
-      {id:10008,name:'Héctor Muñoz',phone:'+56 9 8899 0011',source:'Meta Ads',status:'Contactado',lastInteraction:hAgo(4),lastClientTs:hAgo(4.2),interest:'Volkswagen Vento Highline',model:'AND-VW-001',assignedTo:'vendedor2',botActive:false,alertLevel:'none',intentSignal:'NONE',unread:false,reassigned:false,notes:[],chatHistory:chat('Volkswagen Vento 1.6 Highline AT','Contactado')},
-      {id:10009,name:'Catalina Espinoza',phone:'+56 9 7711 4422',source:'WhatsApp',status:'Contactado',lastInteraction:hAgo(5),lastClientTs:hAgo(5.3),interest:'Toyota Yaris 1.5 XLS',model:'AND-TY-004',assignedTo:'vendedor1',botActive:false,alertLevel:'none',intentSignal:'NONE',unread:false,reassigned:false,notes:[],chatHistory:chat('Toyota Yaris 1.5 XLS CVT','Contactado')},
-      {id:10010,name:'Juan Ignacio Pérez',phone:'+56 9 9900 1122',source:'Meta Ads',status:QUAL_STAGE,lastInteraction:hAgo(1),lastClientTs:hAgo(1.5),interest:'Toyota Hilux GR Sport',model:'AND-TY-006',assignedTo:'vendedor1',botActive:false,alertLevel:'none',intentSignal:'BLUE',unread:false,reassigned:false,scheduleText:'hoy a las 15:00 hrs',notes:[{content:'Confirmó visita hoy 15:00.',author:'Rodrigo Vidal',ts:now-3500000}],chatHistory:chat('Toyota Hilux 2.8 TDI GR Sport 4x4',QUAL_STAGE)},
-      {id:10011,name:'María José Contreras',phone:'+56 9 8877 3344',source:'Google Ads',status:QUAL_STAGE,lastInteraction:hAgo(1.5),lastClientTs:hAgo(2),interest:'Kia Sportage Hybrid AWD',model:'AND-KI-001',assignedTo:'vendedor2',botActive:false,alertLevel:'none',intentSignal:'BLUE',unread:false,reassigned:false,scheduleText:'mañana a las 11:00 hrs',notes:[{content:'Llega mañana a las 11.',author:'Camila Aravena',ts:now-5000000}],chatHistory:chat('Kia Sportage 1.6 T-GDi HEV AWD',QUAL_STAGE)},
-      {id:10012,name:'Felipe Soto',phone:'+56 9 6655 4433',source:'Chileautos',status:QUAL_STAGE,lastInteraction:hAgo(2),lastClientTs:hAgo(2.5),interest:'Land Rover Defender 110',model:'AND-LR-002',assignedTo:'vendedor1',botActive:false,alertLevel:'none',intentSignal:'YELLOW',unread:false,reassigned:false,scheduleText:'quizás esta semana',notes:[{content:'No confirmó fecha. Seguimiento mañana.',author:'Rodrigo Vidal',ts:now-7200000}],chatHistory:chat('Land Rover Defender 110 P300 SE',QUAL_STAGE)},
-      {id:10013,name:'Andrea Vásquez',phone:'+56 9 5566 7788',source:'WhatsApp',status:QUAL_STAGE,lastInteraction:hAgo(3),lastClientTs:hAgo(3.3),interest:'Kia EV6 AWD GT-Line',model:'AND-KI-004',assignedTo:'vendedor2',botActive:false,alertLevel:'none',intentSignal:'BLUE',unread:false,reassigned:false,scheduleText:'viernes a las 10:00 hrs',notes:[{content:'Test drive confirmado viernes 10am.',author:'Camila Aravena',ts:now-10800000}],chatHistory:chat('Kia EV6 77.4 kWh AWD GT-Line',QUAL_STAGE)},
-      {id:10014,name:'Sebastián Lagos',phone:'+56 9 4455 6677',source:'Meta Ads',status:'Cerrado',lastInteraction:hAgo(6),lastClientTs:hAgo(8),interest:'Toyota RAV4 Hybrid',model:'AND-TY-001',assignedTo:'vendedor1',botActive:false,alertLevel:'none',intentSignal:'BLUE',unread:false,reassigned:false,notes:[{content:'Venta cerrada. Contado. Entrega el jueves.',author:'Rodrigo Vidal',ts:now-20000000}],chatHistory:chat('Toyota RAV4 2.5 Hybrid AWD','Cerrado')},
-      {id:10015,name:'Claudia Herrera',phone:'+56 9 3322 5544',source:'Google Ads',status:'Cerrado',lastInteraction:hAgo(8),lastClientTs:hAgo(10),interest:'Peugeot 308 Allure',model:'AND-PG-005',assignedTo:'vendedor2',botActive:false,alertLevel:'none',intentSignal:'BLUE',unread:false,reassigned:false,notes:[{content:'Financiamiento aprobado BCI. Firma mañana.',author:'Camila Aravena',ts:now-28000000}],chatHistory:chat('Peugeot 308 PureTech 130 Allure AT','Cerrado')},
-      {id:10016,name:'Gustavo Moreno',phone:'+56 9 1122 9988',source:'Chileautos',status:'Cerrado',lastInteraction:hAgo(10),lastClientTs:hAgo(12),interest:'Toyota Hilux 4x4 SRX',model:'AND-TY-005',assignedTo:'vendedor1',botActive:false,alertLevel:'none',intentSignal:'BLUE',unread:false,reassigned:false,notes:[{content:'Venta a nombre de empresa. Factura lista.',author:'Rodrigo Vidal',ts:now-35000000}],chatHistory:chat('Toyota Hilux 2.8 TDI SRX AT 4x4','Cerrado')},
-      {id:10017,name:'Carla Núñez',phone:'+56 9 9911 2233',source:'Meta Ads',status:'Negociación',lastInteraction:hAgo(4),lastClientTs:hAgo(4.5),interest:'Toyota Fortuner 4x4 SR',model:'AND-TY-002',assignedTo:'vendedor2',botActive:false,alertLevel:'none',intentSignal:'YELLOW',unread:false,reassigned:false,notes:[{content:'Pide descuento $500k. Consultando gerente.',author:'Camila Aravena',ts:now-14000000}],chatHistory:chat('Toyota Fortuner 2.8 GD-6 SR 4x4','Negociación')},
-      {id:10018,name:'Tomás Araya',phone:'+56 9 8800 9911',source:'Google Ads',status:'Negociación',lastInteraction:hAgo(6),lastClientTs:hAgo(7),interest:'Peugeot 5008 7 Plazas',model:'AND-PG-002',assignedTo:'vendedor1',botActive:false,alertLevel:'none',intentSignal:'YELLOW',unread:false,reassigned:false,notes:[{content:'Quiere dar su Honda en parte de pago. Tasación en curso.',author:'Rodrigo Vidal',ts:now-20000000}],chatHistory:chat('Peugeot 5008 BlueHDi 130 EAT8','Negociación')},
-      {id:10019,name:'Rodrigo Venegas',phone:'+56 9 7766 0011',source:'Meta Ads',status:'Abandonado',lastInteraction:hAgo(9),lastClientTs:hAgo(11),interest:'Kia K5 GT-Line',model:'AND-KI-002',assignedTo:'vendedor2',botActive:false,alertLevel:'none',intentSignal:'NONE',unread:false,reassigned:false,notes:[{content:'Compró en otra automotora. Perdimos por precio.',author:'Camila Aravena',ts:now-30000000}],chatHistory:[{role:'user',content:'Hola, busco el K5 GT-Line.',ts:now-39600000},{role:'bot',content:'¡Hola! Sí lo tenemos. ¿Te puedo cotizar?',ts:now-39590000},{role:'user',content:'Ya no gracias, lo encontré más barato.',ts:now-32400000}]},
-      {id:10020,name:'Isabel Castillo',phone:'+56 9 6677 3311',source:'Chileautos',status:'Abandonado',lastInteraction:hAgo(11),lastClientTs:hAgo(13),interest:'Volkswagen Polo AT',model:'AND-VW-002',assignedTo:'vendedor1',botActive:false,alertLevel:'none',intentSignal:'NONE',unread:false,reassigned:false,notes:[{content:'No le aprobaron el crédito.',author:'Rodrigo Vidal',ts:now-38000000}],chatHistory:[{role:'user',content:'Quiero el Polo Automático.',ts:now-46800000},{role:'bot',content:'¡Hola! Lo tenemos en blanco y gris. ¿Te financiamos?',ts:now-46790000},{role:'agent',content:'Hola, lamentablemente el banco no aprobó el crédito esta vez.',ts:now-39600000,agent:'vendedor1'}]}
+
+    // Helper de chat base
+    const chatBase=(vehicle)=>[
+      {role:'user',content:`Hola, me interesa el ${vehicle}. ¿Está disponible?`,ts:now-7200000},
+      {role:'bot',content:`¡Hola! Sí, tenemos el ${vehicle}. ¿Te gustaría saber sobre financiamiento o coordinar visita?`,ts:now-7190000}
     ];
-    leadsDB.demo_automotora.forEach(l=>{l.alertLevel=calcAlert(l);});
+    const chatContactado=(vehicle)=>[
+      ...chatBase(vehicle),
+      {role:'user',content:'Sí, me interesa el financiamiento. ¿Cuál es la cuota?',ts:now-5400000},
+      {role:'bot',content:'¿Te gustaría que te llame un ejecutivo para darte el mejor precio o coordinar una prueba de manejo? Trabajamos de 09:00 a 20:00 hrs.',ts:now-5390000}
+    ];
+    const chatCalificado=(vehicle)=>[
+      ...chatContactado(vehicle),
+      {role:'user',content:'Sí, llámenme hoy a las 15:00.',ts:now-3600000},
+      {role:'bot',content:'¡Perfecto! Te llamamos hoy a las 15:00 hrs.',ts:now-3590000}
+    ];
+
+    leadsDB.demo_automotora=[
+      // ── NUEVOS — SLA verde (2) ──────────────────────────────────────────
+      {id:10001,name:'Valentina Morales',phone:'+56 9 8123 4567',source:'Meta Ads',
+       status:'Nuevo',lastInteraction:mAgo(8),lastClientTs:mAgo(8),
+       interest:'Toyota RAV4 Hybrid',model:'AND-TY-001',assignedTo:'vendedor1',
+       botActive:true,alertLevel:'fresh',intentSignal:'NONE',unread:true,reassigned:false,notes:[],
+       chatHistory:[{role:'user',content:'Hola, vi el RAV4 en el anuncio. ¿Tiene tracción total?',ts:now-480000}]},
+
+      {id:10002,name:'Ignacio Bustamante',phone:'+56 9 7654 3210',source:'Google Ads',
+       status:'Nuevo',lastInteraction:mAgo(14),lastClientTs:mAgo(14),
+       interest:'Peugeot 3008',model:'AND-PG-001',assignedTo:'vendedor2',
+       botActive:true,alertLevel:'fresh',intentSignal:'NONE',unread:true,reassigned:false,notes:[],
+       chatHistory:[{role:'user',content:'¿El Peugeot 3008 tiene descuento por pago al contado?',ts:now-840000}]},
+
+      // ── NUEVOS — SLA amarillo (1) ───────────────────────────────────────
+      {id:10003,name:'Francisca Donoso',phone:'+56 9 9988 1122',source:'Chileautos',
+       status:'Nuevo',lastInteraction:mAgo(24),lastClientTs:mAgo(24),
+       interest:'Toyota Hilux 4x4 SRX',model:'AND-TY-005',assignedTo:'vendedor1',
+       botActive:true,alertLevel:'risk',intentSignal:'NONE',unread:true,reassigned:true,reassignedAt:mAgo(4),notes:[],
+       chatHistory:[{role:'user',content:'Quiero cotizar la Hilux SRX 4x4 para empresa.',ts:now-1440000}]},
+
+      // ── NUEVOS — SLA rojo (2) ───────────────────────────────────────────
+      {id:10004,name:'Matías Fuentes',phone:'+56 9 6677 8855',source:'WhatsApp',
+       status:'Nuevo',lastInteraction:mAgo(38),lastClientTs:mAgo(38),
+       interest:'Land Rover Discovery Sport',model:'AND-LR-001',assignedTo:'vendedor2',
+       botActive:true,alertLevel:'critical',intentSignal:'NONE',unread:true,reassigned:false,notes:[],
+       chatHistory:[{role:'user',content:'Buenas, tengo interés en el Land Rover Discovery Sport. ¿Tienen stock?',ts:now-2280000}]},
+
+      {id:10005,name:'Daniela Arce',phone:'+56 9 5544 9900',source:'Meta Ads',
+       status:'Nuevo',lastInteraction:mAgo(55),lastClientTs:mAgo(55),
+       interest:'Kia EV6 Eléctrico',model:'AND-KI-004',assignedTo:'vendedor1',
+       botActive:true,alertLevel:'critical',intentSignal:'NONE',unread:true,reassigned:false,notes:[],
+       chatHistory:[{role:'user',content:'Hola, ¿el EV6 aplica para la franquicia de autos eléctricos?',ts:now-3300000}]},
+
+      // ── CONTACTADO — unread:false → SLA none ───────────────────────────
+      {id:10006,name:'Roberto Cerda',phone:'+56 9 3344 5566',source:'Google Ads',
+       status:'Contactado',lastInteraction:hAgo(2),lastClientTs:hAgo(2.5),
+       interest:'Toyota Corolla GR Sport',model:'AND-TY-003',assignedTo:'vendedor2',
+       botActive:false,alertLevel:'none',intentSignal:'NONE',unread:false,reassigned:false,
+       notes:[{content:'Llamado realizado. Muy interesado.',author:'Camila Aravena',ts:now-7000000}],
+       chatHistory:chatContactado('Toyota Corolla 2.0 CVT GR Sport')},
+
+      // ── CONTACTADO — unread:true, 25min → SLA risk (seguimiento amarillo)
+      {id:10007,name:'Pamela Rojas',phone:'+56 9 2233 7788',source:'Chileautos',
+       status:'Contactado',lastInteraction:hAgo(1),lastClientTs:mAgo(25),
+       interest:'Peugeot 208 Automático',model:'AND-PG-004',assignedTo:'vendedor1',
+       botActive:false,alertLevel:'risk',intentSignal:'NONE',unread:true,reassigned:false,
+       notes:[{content:'Mandó whatsapp preguntando por el seguro.',author:'Rodrigo Vidal',ts:now-1200000}],
+       chatHistory:[
+         ...chatContactado('Peugeot 208 PureTech 100 Like AT'),
+         {role:'user',content:'Oye, ¿el seguro está incluido en la cuota?',ts:now-1500000}
+       ]},
+
+      // ── CONTACTADO — unread:true, 45min → SLA critical (seguimiento rojo)
+      {id:10008,name:'Héctor Muñoz',phone:'+56 9 8899 0011',source:'Meta Ads',
+       status:'Contactado',lastInteraction:hAgo(3),lastClientTs:mAgo(45),
+       interest:'Volkswagen Vento Highline',model:'AND-VW-001',assignedTo:'vendedor2',
+       botActive:false,alertLevel:'critical',intentSignal:'NONE',unread:true,reassigned:false,
+       notes:[],
+       chatHistory:[
+         ...chatContactado('Volkswagen Vento 1.6 Highline AT'),
+         {role:'user',content:'¿Pueden traer el auto al domicilio para probarlo?',ts:now-2700000}
+       ]},
+
+      // ── CONTACTADO — unread:false → SLA none ───────────────────────────
+      {id:10009,name:'Catalina Espinoza',phone:'+56 9 7711 4422',source:'WhatsApp',
+       status:'Contactado',lastInteraction:hAgo(5),lastClientTs:hAgo(5.3),
+       interest:'Toyota Yaris 1.5 XLS',model:'AND-TY-004',assignedTo:'vendedor1',
+       botActive:false,alertLevel:'none',intentSignal:'NONE',unread:false,reassigned:false,notes:[],
+       chatHistory:chatContactado('Toyota Yaris 1.5 XLS CVT')},
+
+      // ── CALIFICADO ──────────────────────────────────────────────────────
+      {id:10010,name:'Juan Ignacio Pérez',phone:'+56 9 9900 1122',source:'Meta Ads',
+       status:QUAL_STAGE,lastInteraction:hAgo(1),lastClientTs:hAgo(1.5),
+       interest:'Toyota Hilux GR Sport',model:'AND-TY-006',assignedTo:'vendedor1',
+       botActive:false,alertLevel:'none',intentSignal:'BLUE',unread:false,reassigned:false,
+       scheduleText:'hoy a las 15:00 hrs',
+       notes:[{content:'Confirmó visita hoy 15:00.',author:'Rodrigo Vidal',ts:now-3500000}],
+       chatHistory:chatCalificado('Toyota Hilux 2.8 TDI GR Sport 4x4')},
+
+      // ── CALIFICADO — unread:true, 35min → critical seguimiento ──────────
+      {id:10011,name:'María José Contreras',phone:'+56 9 8877 3344',source:'Google Ads',
+       status:QUAL_STAGE,lastInteraction:hAgo(2),lastClientTs:mAgo(35),
+       interest:'Kia Sportage Hybrid AWD',model:'AND-KI-001',assignedTo:'vendedor2',
+       botActive:false,alertLevel:'critical',intentSignal:'BLUE',unread:true,reassigned:false,
+       scheduleText:'mañana a las 11:00 hrs',
+       notes:[{content:'Preguntó si pueden financiar el seguro.',author:'Camila Aravena',ts:now-2000000}],
+       chatHistory:[
+         ...chatCalificado('Kia Sportage 1.6 T-GDi HEV AWD'),
+         {role:'user',content:'¿Pueden incluir el seguro en el financiamiento?',ts:now-2100000}
+       ]},
+
+      {id:10012,name:'Felipe Soto',phone:'+56 9 6655 4433',source:'Chileautos',
+       status:QUAL_STAGE,lastInteraction:hAgo(2),lastClientTs:hAgo(2.5),
+       interest:'Land Rover Defender 110',model:'AND-LR-002',assignedTo:'vendedor1',
+       botActive:false,alertLevel:'none',intentSignal:'YELLOW',unread:false,reassigned:false,
+       scheduleText:'quizás esta semana',
+       notes:[{content:'No confirmó fecha. Seguimiento mañana.',author:'Rodrigo Vidal',ts:now-7200000}],
+       chatHistory:chatCalificado('Land Rover Defender 110 P300 SE')},
+
+      {id:10013,name:'Andrea Vásquez',phone:'+56 9 5566 7788',source:'WhatsApp',
+       status:QUAL_STAGE,lastInteraction:hAgo(3),lastClientTs:hAgo(3.3),
+       interest:'Kia EV6 AWD GT-Line',model:'AND-KI-004',assignedTo:'vendedor2',
+       botActive:false,alertLevel:'none',intentSignal:'BLUE',unread:false,reassigned:false,
+       scheduleText:'viernes a las 10:00 hrs',
+       notes:[{content:'Test drive confirmado viernes 10am.',author:'Camila Aravena',ts:now-10800000}],
+       chatHistory:chatCalificado('Kia EV6 77.4 kWh AWD GT-Line')},
+
+      // ── CERRADO ─────────────────────────────────────────────────────────
+      {id:10014,name:'Sebastián Lagos',phone:'+56 9 4455 6677',source:'Meta Ads',
+       status:'Cerrado',lastInteraction:hAgo(6),lastClientTs:hAgo(8),
+       interest:'Toyota RAV4 Hybrid',model:'AND-TY-001',assignedTo:'vendedor1',
+       botActive:false,alertLevel:'none',intentSignal:'BLUE',unread:false,reassigned:false,
+       notes:[{content:'Venta cerrada. Contado. Entrega el jueves.',author:'Rodrigo Vidal',ts:now-20000000}],
+       chatHistory:chatCalificado('Toyota RAV4 2.5 Hybrid AWD')},
+
+      {id:10015,name:'Claudia Herrera',phone:'+56 9 3322 5544',source:'Google Ads',
+       status:'Cerrado',lastInteraction:hAgo(8),lastClientTs:hAgo(10),
+       interest:'Peugeot 308 Allure',model:'AND-PG-005',assignedTo:'vendedor2',
+       botActive:false,alertLevel:'none',intentSignal:'BLUE',unread:false,reassigned:false,
+       notes:[{content:'Financiamiento aprobado BCI. Firma mañana.',author:'Camila Aravena',ts:now-28000000}],
+       chatHistory:chatCalificado('Peugeot 308 PureTech 130 Allure AT')},
+
+      {id:10016,name:'Gustavo Moreno',phone:'+56 9 1122 9988',source:'Chileautos',
+       status:'Cerrado',lastInteraction:hAgo(10),lastClientTs:hAgo(12),
+       interest:'Toyota Hilux 4x4 SRX',model:'AND-TY-005',assignedTo:'vendedor1',
+       botActive:false,alertLevel:'none',intentSignal:'BLUE',unread:false,reassigned:false,
+       notes:[{content:'Venta a nombre de empresa. Factura lista.',author:'Rodrigo Vidal',ts:now-35000000}],
+       chatHistory:chatCalificado('Toyota Hilux 2.8 TDI SRX AT 4x4')},
+
+      // ── NEGOCIACIÓN — unread:true, 22min → risk seguimiento ─────────────
+      {id:10017,name:'Carla Núñez',phone:'+56 9 9911 2233',source:'Meta Ads',
+       status:'Negociación',lastInteraction:hAgo(4),lastClientTs:mAgo(22),
+       interest:'Toyota Fortuner 4x4 SR',model:'AND-TY-002',assignedTo:'vendedor2',
+       botActive:false,alertLevel:'risk',intentSignal:'YELLOW',unread:true,reassigned:false,
+       notes:[{content:'Pide descuento $500k. Consultando gerente.',author:'Camila Aravena',ts:now-14000000}],
+       chatHistory:[
+         ...chatContactado('Toyota Fortuner 2.8 GD-6 SR 4x4'),
+         {role:'user',content:'¿Me pueden dar $500.000 de descuento? Ya decidí comprar.',ts:now-1320000}
+       ]},
+
+      // ── NEGOCIACIÓN — unread:false → SLA none ───────────────────────────
+      {id:10018,name:'Tomás Araya',phone:'+56 9 8800 9911',source:'Google Ads',
+       status:'Negociación',lastInteraction:hAgo(6),lastClientTs:hAgo(7),
+       interest:'Peugeot 5008 7 Plazas',model:'AND-PG-002',assignedTo:'vendedor1',
+       botActive:false,alertLevel:'none',intentSignal:'YELLOW',unread:false,reassigned:false,
+       notes:[{content:'Quiere dar su Honda en parte de pago. Tasación en curso.',author:'Rodrigo Vidal',ts:now-20000000}],
+       chatHistory:chatContactado('Peugeot 5008 BlueHDi 130 EAT8')},
+
+      // ── ABANDONADO ──────────────────────────────────────────────────────
+      {id:10019,name:'Rodrigo Venegas',phone:'+56 9 7766 0011',source:'Meta Ads',
+       status:'Abandonado',lastInteraction:hAgo(9),lastClientTs:hAgo(11),
+       interest:'Kia K5 GT-Line',model:'AND-KI-002',assignedTo:'vendedor2',
+       botActive:false,alertLevel:'none',intentSignal:'NONE',unread:false,reassigned:false,
+       notes:[{content:'Compró en otra automotora.',author:'Camila Aravena',ts:now-30000000}],
+       chatHistory:[
+         {role:'user',content:'Hola, busco el K5 GT-Line.',ts:now-39600000},
+         {role:'bot',content:'¡Hola! Sí lo tenemos.',ts:now-39590000},
+         {role:'user',content:'Ya no gracias, lo encontré más barato.',ts:now-32400000}
+       ]},
+
+      {id:10020,name:'Isabel Castillo',phone:'+56 9 6677 3311',source:'Chileautos',
+       status:'Abandonado',lastInteraction:hAgo(11),lastClientTs:hAgo(13),
+       interest:'Volkswagen Polo AT',model:'AND-VW-002',assignedTo:'vendedor1',
+       botActive:false,alertLevel:'none',intentSignal:'NONE',unread:false,reassigned:false,
+       notes:[{content:'No le aprobaron el crédito.',author:'Rodrigo Vidal',ts:now-38000000}],
+       chatHistory:[
+         {role:'user',content:'Quiero el Polo Automático.',ts:now-46800000},
+         {role:'bot',content:'¡Hola! Lo tenemos en blanco y gris.',ts:now-46790000},
+         {role:'agent',content:'Hola, lamentablemente el banco no aprobó el crédito esta vez.',ts:now-39600000,agent:'vendedor1'}
+       ]}
+    ];
+
+    // Recalcula alertLevel con la nueva lógica universal
+    leadsDB.demo_automotora.forEach(l=>{ l.alertLevel=calcAlert(l); });
   }
   if(!leadsDB.demo_clinica) leadsDB.demo_clinica=[];
   await write(F.leads,leadsDB);
-  console.log('✅  Seed OK —',leadsDB.demo_automotora.length,'leads,',inv.demo_automotora.length,'vehículos');
+  console.log('✅  Seed OK — leads:',leadsDB.demo_automotora.length,' | unread con SLA seguimiento: ✓');
 }
 
 // ─── Auth ─────────────────────────────────────────────────────────────────────
@@ -300,8 +478,7 @@ const byRole=(leads,user)=>user.role==='vendedor'?leads.filter(l=>l.assignedTo==
 
 app.post('/api/auth/login',async(req,res)=>{
   const{username,password,tenant}=req.body||{};
-  const t=validT(tenant);
-  const users=await tRead(F.users,t);
+  const t=validT(tenant);const users=await tRead(F.users,t);
   const u=users.find(x=>x.username===username&&x.password===password);
   if(!u) return res.status(401).json({error:'Credenciales incorrectas'});
   const token=crypto.randomBytes(24).toString('hex');
@@ -403,19 +580,24 @@ app.get('/api/dashboard/kpis',auth('admin'),async(req,res)=>{
   const all=await applySlaRules(req.tenant);
   const{s,e}=parseDateRange(req.query.start,req.query.end);
   const leads=(s!==null||e!==null)?all.filter(l=>inRange(l,s,e)):all;
-  const now=Date.now();
-  const minOf=l=>(now-new Date(l.lastInteraction).getTime())/60000;
   const nuevos=leads.filter(l=>l.status==='Nuevo');
   const closed=leads.filter(l=>l.status==='Cerrado').length;
   const qualified=leads.filter(l=>l.status===QUAL_STAGE).length;
-  const unread=leads.filter(l=>l.unread).length;
+  const unreadTotal=leads.filter(l=>l.unread).length;
+  const now=Date.now();
+  const minOf=l=>(now-new Date(l.lastClientTs||l.lastInteraction).getTime())/60000;
   const avg=nuevos.length?Math.round(nuevos.reduce((a,l)=>a+minOf(l),0)/nuevos.length):0;
   res.json({
     total:leads.length,active:leads.filter(l=>!FINAL_ST.has(l.status)).length,
-    closed,qualified,unread,
-    slaFresh:   nuevos.filter(l=>minOf(l)<SLA_GREEN).length,
-    slaRisk:    nuevos.filter(l=>minOf(l)>=SLA_GREEN&&minOf(l)<SLA_YELLOW).length,
-    slaCritical:nuevos.filter(l=>minOf(l)>=SLA_YELLOW).length,
+    closed,qualified,unread:unreadTotal,
+    // SLA Primera Respuesta: solo Nuevos
+    slaFresh:   nuevos.filter(l=>l.alertLevel==='fresh').length,
+    slaRisk:    nuevos.filter(l=>l.alertLevel==='risk').length,
+    slaCritical:nuevos.filter(l=>l.alertLevel==='critical').length,
+    // SLA Seguimiento: no-Nuevos con unread
+    followFresh:   leads.filter(l=>l.status!=='Nuevo'&&l.unread&&l.alertLevel==='fresh').length,
+    followRisk:    leads.filter(l=>l.status!=='Nuevo'&&l.unread&&l.alertLevel==='risk').length,
+    followCritical:leads.filter(l=>l.status!=='Nuevo'&&l.unread&&l.alertLevel==='critical').length,
     avgResponseMin:avg,
     conversionRate:leads.length?((closed/leads.length)*100).toFixed(1):'0.0'
   });
@@ -428,7 +610,7 @@ app.get('/api/dashboard/team',auth('admin'),async(req,res)=>{
   const{s,e}=parseDateRange(req.query.start,req.query.end);
   const leads=(s!==null||e!==null)?all.filter(l=>inRange(l,s,e)):all;
   const now=Date.now();
-  const minOf=l=>(now-new Date(l.lastInteraction).getTime())/60000;
+  const minOf=l=>(now-new Date(l.lastClientTs||l.lastInteraction).getTime())/60000;
   res.json(users.filter(u=>u.role==='vendedor').map(v=>{
     const own=leads.filter(l=>l.assignedTo===v.username);
     const nv=own.filter(l=>l.status==='Nuevo');
@@ -436,11 +618,25 @@ app.get('/api/dashboard/team',auth('admin'),async(req,res)=>{
     const avgResp=nv.length?Math.round(nv.reduce((a,l)=>a+minOf(l),0)/nv.length):0;
     return{
       username:v.username,name:v.name,total:own.length,
-      sla:{fresh:nv.filter(l=>minOf(l)<SLA_GREEN).length,risk:nv.filter(l=>minOf(l)>=SLA_GREEN&&minOf(l)<SLA_YELLOW).length,critical:nv.filter(l=>minOf(l)>=SLA_YELLOW).length},
+      // SLA TOTAL: suma todos los leads del vendedor con ese alertLevel (Nuevos + seguimiento)
+      sla:{
+        fresh:   own.filter(l=>l.alertLevel==='fresh').length,
+        risk:    own.filter(l=>l.alertLevel==='risk').length,
+        critical:own.filter(l=>l.alertLevel==='critical').length
+      },
       closed,unread:own.filter(l=>l.unread).length,
       convRate:own.length?((closed/own.length)*100).toFixed(1):'0.0',
       avgResponseMin:avgResp,
-      byStatus:{nuevo:nv.length,contactado:own.filter(l=>l.status==='Contactado').length,calificado:own.filter(l=>l.status===QUAL_STAGE).length,agendado:own.filter(l=>l.status==='Agendado').length,negociacion:own.filter(l=>l.status==='Negociación').length,seguimiento:own.filter(l=>l.status==='Seguimiento').length,cerrado:closed,abandonado:own.filter(l=>['Abandonado','Perdido'].includes(l.status)).length},
+      byStatus:{
+        nuevo:      nv.length,
+        contactado: own.filter(l=>l.status==='Contactado').length,
+        calificado: own.filter(l=>l.status===QUAL_STAGE).length,
+        agendado:   own.filter(l=>l.status==='Agendado').length,
+        negociacion:own.filter(l=>l.status==='Negociación').length,
+        seguimiento:own.filter(l=>l.status==='Seguimiento').length,
+        cerrado:    closed,
+        abandonado: own.filter(l=>['Abandonado','Perdido'].includes(l.status)).length
+      },
       leads:own.map(l=>({...l,chatHistory:Array.isArray(l.chatHistory)?l.chatHistory:[],notes:Array.isArray(l.notes)?l.notes:[],intentSignal:l.intentSignal||'NONE'}))
     };
   }).filter(v=>v.total>0));
@@ -497,7 +693,9 @@ app.post('/api/chat',async(req,res)=>{
   let sess=chatSessions.get(sessionId),captured=false,leadId;
   if(!sess){
     leadId=Date.now();const assigned=await rrNext(tenant);const n=new Date().toISOString();
-    leads.unshift({id:leadId,name:'Visitante anónimo',phone:'Pendiente',source:'Chat Web',status:'Nuevo',lastInteraction:n,lastClientTs:n,interest:message.slice(0,80),sessionId,assignedTo:assigned,botActive:true,alertLevel:'none',intentSignal:'NONE',unread:true,notes:[],chatHistory:[]});
+    leads.unshift({id:leadId,name:'Visitante anónimo',phone:'Pendiente',source:'Chat Web',status:'Nuevo',
+      lastInteraction:n,lastClientTs:n,interest:message.slice(0,80),sessionId,
+      assignedTo:assigned,botActive:true,alertLevel:'none',intentSignal:'NONE',unread:true,notes:[],chatHistory:[]});
     sess={tenant,leadId,step:0};chatSessions.set(sessionId,sess);captured=true;
   }else{leadId=sess.leadId;sess.step++;}
   const idx=leads.findIndex(l=>l.id===leadId);
@@ -510,6 +708,7 @@ app.post('/api/chat',async(req,res)=>{
     leads[idx].lastInteraction=new Date().toISOString();leads[idx].unread=false;
     applySignal(leads[idx],p);
     if(sess.step>=2&&leads[idx].status==='Nuevo'&&leads[idx].intentSignal==='NONE') leads[idx].status='Contactado';
+    leads[idx].alertLevel=calcAlert(leads[idx]);
     await tWrite(F.leads,tenant,leads);
     return res.json({reply:p.reply,sessionId,leadCaptured:captured,leadId,intentSignal:leads[idx].intentSignal,status:leads[idx].status});
   }
@@ -559,22 +758,20 @@ app.post('/webhook',async(req,res)=>{
       if(ut>=2&&ld[tenant][idx].status==='Nuevo'&&ld[tenant][idx].intentSignal==='NONE') ld[tenant][idx].status='Contactado';
       await sendWA(from,p.reply);
     }
-    ld[tenant][idx].lastInteraction=new Date().toISOString();ld[tenant][idx].alertLevel=calcAlert(ld[tenant][idx]);
+    ld[tenant][idx].lastInteraction=new Date().toISOString();
+    ld[tenant][idx].alertLevel=calcAlert(ld[tenant][idx]);
     await write(F.leads,ld);
   }catch(e){console.error('Webhook:',e);}
 });
 
-// ─── Static ───────────────────────────────────────────────────────────────────
+// ─── Static + SLA Job + Listen ───────────────────────────────────────────────
 app.use(express.static(path.join(__dirname,'public')));
 app.get('*',(req,res)=>res.sendFile(path.join(__dirname,'public','index.html')));
+setInterval(async()=>{for(const t of TENANTS){try{await applySlaRules(t);}catch(e){console.error('SLA',t,e.message);}}},60000);
 
-setInterval(async()=>{
-  for(const t of TENANTS){try{await applySlaRules(t);}catch(e){console.error('SLA',t,e.message);}}
-},60000);
-
-// ─── LISTEN PRIMERO, seed después — fix para Render ──────────────────────────
+// listen primero, seed después (fix Render timeout)
 app.listen(PORT,()=>{
   console.log(`🚀 FunnelOS en http://localhost:${PORT}`);
-  console.log(`🔐 gerente/demo · vendedor1/demo · vendedor2/demo`);
+  console.log(`📊 SLA universal: Nuevo + unread. Reasignación: solo Nuevos.`);
   seed().catch(console.error);
 });
