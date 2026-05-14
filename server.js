@@ -51,7 +51,7 @@ async function marcela(tenant,history,msg,notes){
   try{
     const cfg=(await read(F.config))[tenant]||{};
     const inv=await tRead(F.inventory,tenant,[]);
-    const completion=await openai.chat.completions.create({model:'gpt-4o-mini',temperature:0.5,response_format:{type:'json_object'},messages:[{role:'system',content:marcelaSys(cfg.businessName||'la empresa',invStr(inv),notes||[])},{...history.slice(-14).map(h=>({role:h.role==='user'?'user':'assistant',content:h.content}))},{role:'user',content:msg}].flat()});
+    const completion=await openai.chat.completions.create({model:'gpt-4o-mini',temperature:0.5,response_format:{type:'json_object'},messages:[{role:'system',content:marcelaSys(cfg.businessName||'la empresa',invStr(inv),notes||[])},...history.slice(-14).map(h=>({role:h.role==='user'?'user':'assistant',content:h.content})),{role:'user',content:msg}].flat()});
     let p=parseJ(completion.choices?.[0]?.message?.content||'');
     if(!p)p={reply:'¡Perdona! Algo falló 😅 ¿Me repites?',intent_signal:'NONE',intent_reason:'fallback',schedule_detected:false,schedule_text:''};
     if(p.schedule_detected&&fueraH(p.schedule_text)){p.reply+='\n\n(Nuestro horario es 09:00-20:00 ⏰ ¿Te acomoda mañana a las 09:00?)';p.intent_signal='YELLOW';}
