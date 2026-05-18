@@ -19,66 +19,88 @@ const SLA_GREEN=20;
 const SLA_YELLOW=50;
 const SLA_REASSIGN=30;
 const FINAL_ST=new Set(['Cerrado','Abandonado','Perdido']);
-const VALID_ST=new Set(['Nuevo','En Proceso','Contactado','Calificado','Agendado','Seguimiento','Negociación','Atendido','Cerrado','Abandonado','Perdido']);
+const VALID_ST=new Set(['Nuevo','En Proceso','Contactado','Calificado','Agendado','Reservado','Seguimiento','Negociación','Atendido','Cerrado','Abandonado','Perdido']);
 const read=async f=>{try{return JSON.parse(await fs.readFile(f,'utf8'));}catch{return{};}};
 const write=(f,d)=>fs.writeFile(f,JSON.stringify(d,null,2));
 const tRead=async(f,t,fb=[])=>{const s=await read(f);return s[t]!==undefined?s[t]:fb;};
 const tWrite=async(f,t,d)=>{const s=await read(f);s[t]=d;await write(f,s);};
 const validT=t=>TENANTS.includes(t)?t:TENANTS[0];
 
+// ── Vendedores RMG — pool fijo para ruleta ─────────────────
+const RMG_VENDORS = [
+  {username:'daniela',name:'Daniela Narváez',role:'vendedor',phone:'56900000001',status:'Activo'},
+  {username:'carlos', name:'Carlos Fracachan',role:'vendedor',phone:'56900000002',status:'Activo'},
+];
+
+// ── CSV dinámico desde Google Sheets ───────────────────────
+const URL_CSV = process.env.CSV_INVENTORY_URL || '';
+let csvCache = { ts: 0, data: '' };
+
+async function fetchCsvInventario() {
+  if (!URL_CSV) return '';
+  const now = Date.now();
+  if (csvCache.data && (now - csvCache.ts) < 10 * 60 * 1000) return csvCache.data; // TTL 10 min
+  try {
+    const r = await fetch(URL_CSV, { signal: AbortSignal.timeout(6000) });
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    const raw = await r.text();
+    // Columnas CSV: marca, modelo, version, anno, kilometraje, ventaiva
+    const lines = raw.split('\n').map(l => l.trim()).filter(Boolean);
+    const header = lines[0].toLowerCase().split(',').map(h => h.trim());
+    const iOf = k => header.indexOf(k);
+    const rows = lines.slice(1).map(line => {
+      const c = line.split(',').map(x => x.trim());
+      const marca = c[iOf('marca')] || '';
+      const modelo = c[iOf('modelo')] || '';
+      const version = c[iOf('version')] || '';
+      const anno = c[iOf('anno')] || '';
+      const km = c[iOf('kilometraje')] || '0';
+      const precio = c[iOf('ventaiva')] || '0';
+      if (!marca && !modelo) return null;
+      const precioNum = parseInt(precio.replace(/\D/g, ''), 10) || 0;
+      const precioFmt = precioNum ? '$' + precioNum.toLocaleString('es-CL') : '(consultar)';
+      const kmFmt = parseInt(km.replace(/\D/g, ''), 10) ? km + ' km' : 'Nuevo';
+      return `- ${marca} ${modelo} ${version} ${anno} | ${kmFmt} | ${precioFmt}`.trim();
+    }).filter(Boolean);
+    csvCache = { ts: now, data: rows.join('\n') };
+    console.log('[CSV] inventario actualizado: ' + rows.length + ' autos');
+    return csvCache.data;
+  } catch(e) {
+    console.warn('[CSV] Error al obtener inventario:', e.message);
+    return csvCache.data || '';
+  }
+}
+
 function invStr(inv){if(!Array.isArray(inv)||!inv.length)return'(sin inventario)';return inv.map(i=>`- [${i.id}] ${i.brand||''} ${i.model}${i.year?' '+i.year:''} | Stock:${i.stock} | $${(i.price||0).toLocaleString('es-CL')}${i.fuel?'|'+i.fuel:''}${i.highlights?'|'+i.highlights:''}`).join('\n');}
 
-const INV_HARDCODED = `
-- Toyota Yaris 1.5 XLS CVT 2024 | Stock:7 | $11.490.000 | Bencina | Compacto, 5 años garantía, ideal primer auto
-- Toyota Corolla 2.0 CVT GR Sport 2024 | Stock:6 | $15.990.000 | Bencina | Sport, Android Auto, equipamiento top
-- Toyota RAV4 2.5 Hybrid AWD 2024 | Stock:3 | $29.990.000 | Híbrido | 222HP, tracción total, bajo consumo
-- Toyota Hilux 2.8 TDI SRX AT 4x4 2024 | Stock:3 | $32.990.000 | Diésel | Cabina doble, garantía 5 años
-- Toyota Hilux GR Sport 4x4 2024 | Stock:1 | $36.990.000 | Diésel | 204HP, equipamiento top, edición especial
-- Toyota Fortuner 2.8 GD-6 SR 4x4 2024 | Stock:2 | $34.990.000 | Diésel | 7 plazas, 4x4, familia grande
-- Peugeot 208 PureTech 100 Like AT 2024 | Stock:8 | $11.990.000 | Bencina | Ciudad, económico, cuota baja
-- Peugeot 308 PureTech 130 Allure AT 2024 | Stock:3 | $16.990.000 | Bencina | i-Cockpit, CarPlay, diseño premium
-- Peugeot 3008 PureTech 130 EAT8 2024 | Stock:4 | $18.990.000 | Bencina | SUV compacto, pantalla 10 pulgadas
-- Peugeot 408 PureTech 130 EAT8 2024 | Stock:5 | $16.490.000 | Bencina | Fastback, diseño único
-- Peugeot 5008 BlueHDi 130 EAT8 2023 | Stock:2 | $22.490.000 | Diésel | 7 plazas, 5.5L/100km, familiar
-- Kia Stonic 1.4 MPI LX AT 2024 | Stock:6 | $12.990.000 | Bencina | Crossover compacto, precio justo
-- Kia Sportage 1.6 T-GDi HEV AWD 2024 | Stock:3 | $21.990.000 | Híbrido | 180HP, AWD, tecnología
-- Kia K5 2.5 MPI GT-Line AT 2023 | Stock:2 | $17.990.000 | Bencina | Sedán premium, diseño aerodinámico
-- Kia EV6 77.4 kWh AWD GT-Line 2024 | Stock:1 | $39.990.000 | Eléctrico | 530km autonomía, carga ultrarrápida
-- Volkswagen Polo 1.6 MSI Trendline AT 2024 | Stock:5 | $12.490.000 | Bencina | 5 estrellas NCAP, conectividad
-- Volkswagen Vento 1.6 MSI Highline AT 2024 | Stock:4 | $14.990.000 | Bencina | Sedán ejecutivo, cuero, garantía
-- Peugeot E-208 50 kWh Allure 2024 | Stock:2 | $19.990.000 | Eléctrico | 362km, libre restricción vehicular
-- Land Rover Discovery Sport 2.0D HSE 2023 | Stock:1 | $43.690.000 | Diésel | 7 plazas, 4WD, garantía extendida
-- Land Rover Defender 110 P300 SE 2024 | Stock:1 | $49.990.000 | Bencina | 300HP, tecnología de punta, ícono
-`.trim();
+// ── Prompt camaleónico: nombre del asesor asignado ─────────
+function marcelaSys(biz, invS, notes, assignedName) {
+  const nombreIA = assignedName || 'Marcela';
+  biz = biz || 'RMG Autos';
+  const notesBlock = notes && notes.length
+    ? `\nNOTAS INTERNAS (úsalas para personalizar):\n${notes.slice(-5).map(n => `- ${n.author}: ${n.content}`).join('\n')}`
+    : '';
+  const inv = (invS && invS !== '(sin inventario)') ? invS : '(inventario no disponible temporalmente)';
+  return `Eres ${nombreIA}, asesor/a de ventas de ${biz} 🚗
+Tu nombre es ${nombreIA}. Preséntate siempre con ese nombre. Eres cálido/a, empático/a y profesional. Hablas en español chileno con frases cortas y emojis naturales.
 
-// INV_HARDCODED definido una sola vez (la versión completa con highlights queda arriba)
+FLUJO CONSULTIVO OBLIGATORIO — sigue este orden SIN saltarte pasos:
+PASO 1 — VERIFICAR STOCK: Si el cliente menciona un auto, búscalo en el INVENTARIO. Si existe, confirma disponibilidad y da precio. Si no, dile que lo consultas.
+PASO 2 — MÉTODO DE PAGO: Pregunta amablemente: ¿Piensa pagar al crédito o al contado?
+PASO 3 — RETOMA: Pregunta si tiene auto para entregar en parte de pago.
+  - Si el auto de retoma es anterior a 2012: NO lo descartes. Di que "el ejecutivo en sucursal lo tasa al momento de la visita".
+PASO 4 — VISITA: Solo DESPUÉS de los pasos anteriores, si el cliente propone fecha, confírmala con entusiasmo.
 
-function marcelaSys(biz,invS,notes){
-  invS = INV_HARDCODED;
-  biz = 'RMG Autos';
-  const notesBlock=notes&&notes.length?`\nNOTAS INTERNAS DEL EQUIPO (úsalas para personalizar):\n${notes.slice(-5).map(n=>`- ${n.author}: ${n.content}`).join('\n')}`:'';
-  const inv=(invS&&invS!=='(sin inventario)')?invS:INV_HARDCODED;
-  return`Eres Marcela, asesora consultiva de ${biz} 🚗 Eres cálida, empática y profesional. Hablas en español chileno con frases cortas y emojis naturales.
-
-ROL CONSULTIVO — LEE ESTO ANTES DE RESPONDER:
-Tu objetivo NO es cerrar de inmediato ni pedir test drive en el primer mensaje.
-Tu rol es entender la situación real del cliente antes de proponer algo.
-En cada conversación debes indagar amablemente al menos UNO de estos puntos:
-  a) ¿Busca financiamiento o paga al contado?
-  b) ¿Tiene auto para dejar en parte de pago (retoma)?
-  c) ¿Necesita seguro incluido en la cuota?
-Solo después de tener esa información, propón el vehículo más adecuado con precio y cuota estimada.
-
-INVENTARIO DISPONIBLE (precios en CLP, con puntos):
+INVENTARIO DISPONIBLE:
 ${inv}${notesBlock}
 
-REGLAS:
-1. Vendemos autos NUEVOS y USADOS. Nunca digas que solo vendemos nuevos.
-2. Confirma stock antes de ofrecer. Nunca inventes datos ni precios.
-3. Precios en CLP con puntos (ej: $11.490.000). Cuotas estimadas si preguntan.
-4. Máximo 3 oraciones por respuesta. Siempre termina con UNA pregunta.
+REGLAS ESTRICTAS:
+1. NUNCA pidas test drive ni visita en el primer mensaje. Primero indaga.
+2. NUNCA inventes precios ni modelos fuera del inventario.
+3. Precios en CLP con puntos (ej: $11.490.000).
+4. Máximo 3 oraciones por respuesta. Termina siempre con UNA sola pregunta.
 5. Fuera de horario 09:00-20:00: propón "mañana a las 09:00".
-6. Si el cliente ya dio datos de compra (crédito, retoma, seguro), propón hablar con un ejecutivo.
+6. Si el cliente da datos de crédito/retoma, di que le conectarás con un ejecutivo.
 
 RESPONDE SOLO JSON (sin markdown):
 {"reply":"<texto>","intent_signal":"NONE"|"BLUE"|"YELLOW","intent_reason":"<nota>","schedule_detected":true|false,"schedule_text":"<hora si aplica>"}`;
@@ -87,16 +109,33 @@ RESPONDE SOLO JSON (sin markdown):
 function parseJ(raw){if(!raw)return null;const a=raw.indexOf('{'),b=raw.lastIndexOf('}');if(a===-1||b===-1)return null;try{return JSON.parse(raw.slice(a,b+1));}catch{return null;}}
 function fueraH(txt){const m=(txt||'').match(/(\d{1,2})\s*(?::|\.)?\s*(\d{2})?\s*(am|pm|hrs?|h)?/i);if(!m)return false;let h=parseInt(m[1],10);const mer=(m[3]||'').toLowerCase();if(mer==='pm'&&h<12)h+=12;if(mer==='am'&&h===12)h=0;return h<9||h>=20;}
 
-async function marcela(tenant,history,msg,notes){
-  try{
-    const cfg=(await read(F.config))[tenant]||{};
-    const inv=await tRead(F.inventory,tenant,[]);
-    const completion=await openai.chat.completions.create({model:'gpt-4o-mini',temperature:0.5,response_format:{type:'json_object'},messages:[{role:'system',content:marcelaSys(cfg.businessName||'la empresa',invStr(inv),notes||[])},...history.slice(-14).map(h=>({role:h.role==='user'?'user':'assistant',content:h.content})),{role:'user',content:msg}].flat()});
-    let p=parseJ(completion.choices?.[0]?.message?.content||'');
-    if(!p)p={reply:'¡Perdona! Algo falló 😅 ¿Me repites?',intent_signal:'NONE',intent_reason:'fallback',schedule_detected:false,schedule_text:''};
-    if(p.schedule_detected&&fueraH(p.schedule_text)){p.reply+='\n\n(Nuestro horario es 09:00-20:00 ⏰ ¿Te acomoda mañana a las 09:00?)';p.intent_signal='YELLOW';}
+async function marcela(tenant, history, msg, notes, assignedName) {
+  try {
+    const cfg = (await read(F.config))[tenant] || {};
+    // Inventario: CSV dinámico primero, fallback a JSON del disco
+    let invS = await fetchCsvInventario();
+    if (!invS) {
+      const invArr = await tRead(F.inventory, tenant, []);
+      invS = invStr(invArr);
+    }
+    const completion = await openai.chat.completions.create({
+      model: 'gpt-4o-mini',
+      temperature: 0.5,
+      response_format: { type: 'json_object' },
+      messages: [
+        { role: 'system', content: marcelaSys(cfg.businessName || 'RMG Autos', invS, notes || [], assignedName) },
+        ...history.slice(-14).map(h => ({ role: h.role === 'user' ? 'user' : 'assistant', content: h.content })),
+        { role: 'user', content: msg }
+      ].flat()
+    });
+    let p = parseJ(completion.choices?.[0]?.message?.content || '');
+    if (!p) p = { reply: '¡Perdona! Algo falló 😅 ¿Me repites?', intent_signal: 'NONE', intent_reason: 'fallback', schedule_detected: false, schedule_text: '' };
+    if (p.schedule_detected && fueraH(p.schedule_text)) { p.reply += '\n\n(Nuestro horario es 09:00-20:00 ⏰ ¿Te acomoda mañana a las 09:00?)'; p.intent_signal = 'YELLOW'; }
     return p;
-  }catch(e){console.error('Marcela:',e.message);return{reply:'Tuve un problemita técnico 😅 ¿Puedes repetir?',intent_signal:'NONE',intent_reason:'error',schedule_detected:false,schedule_text:''};}
+  } catch(e) {
+    console.error('Marcela:', e.message);
+    return { reply: 'Tuve un problemita técnico 😅 ¿Puedes repetir?', intent_signal: 'NONE', intent_reason: 'error', schedule_detected: false, schedule_text: '' };
+  }
 }
 
 function esKeywordCalif(texto){
@@ -127,11 +166,25 @@ const SHIELD=['body elite','bodyelite','botox','lipo','lipoescultura','liposucci
 const SHIELD_R='¡Hola! Este número es de Automotora Andes 🚗 Para Body Elite ve a su Instagram. ¡Gracias!';
 function isShield(t){if(!t)return false;const n=t.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');return SHIELD.some(k=>n.includes(k.normalize('NFD').replace(/[\u0300-\u036f]/g,'')));}
 
-async function getSellers(tenant){const u=await tRead(F.users,tenant);return u.filter(x=>x.role==='vendedor'&&(!x.status||x.status==='Activo'));}
+async function getSellers(tenant) {
+  // Ruleta fija: solo los 2 vendedores de RMG Autos
+  const allUsers = await tRead(F.users, tenant);
+  const rmgNames = ['daniela','carlos'];
+  const fromDB = allUsers.filter(u => rmgNames.includes(u.username) && u.role === 'vendedor' && (!u.status || u.status === 'Activo'));
+  // Si ya existen en DB, los usa; si no, usa el pool hardcodeado
+  return fromDB.length >= 2 ? fromDB : RMG_VENDORS;
+}
 async function rrNext(tenant,exclude=null){const sl=await getSellers(tenant);if(!sl.length)return null;const pool=exclude?sl.filter(s=>s.username!==exclude):sl;const list=pool.length?pool:sl;const rr=await read(F.rr);const idx=(rr[tenant]||0)%list.length;rr[tenant]=(idx+1)%list.length;await write(F.rr,rr);return list[idx];}
 
 function calcAlert(lead){
   if(FINAL_ST.has(lead.status))return'none';
+  // SLA especial: Reservado vence a las 72 horas
+  if(lead.status==='Reservado'){
+    const ref=lead.reservadoAt||lead.lastInteraction;
+    if(!ref)return'none';
+    const hrs=(Date.now()-new Date(ref).getTime())/3600000;
+    return hrs>72?'critical':hrs>48?'risk':'fresh';
+  }
   const applies=lead.status==='Nuevo'||lead.unread===true;
   if(!applies)return'none';
   const ref=lead.lastClientTs||lead.lastInteraction;
@@ -149,6 +202,19 @@ async function applySlaRules(tenant){
   for(const lead of leads){
     if(FINAL_ST.has(lead.status))continue;
     const prev=lead.alertLevel||'none';
+    // SLA Reservado: alerta WA única si supera 72h
+    if(lead.status==='Reservado'&&!lead.reservadoAlertSent){
+      const ref=lead.reservadoAt||lead.lastInteraction;
+      const hrs=ref?(Date.now()-new Date(ref).getTime())/3600000:0;
+      if(hrs>72){
+        lead.reservadoAlertSent=true;changed=true;
+        const admin=allUsers.find(u=>u.role==='admin');
+        const assignedUser=allUsers.find(u=>u.username===lead.assignedTo)||RMG_VENDORS.find(v=>v.username===lead.assignedTo);
+        const msg='🔴 RESERVA VENCIDA (+72h): '+lead.name+'. La reserva lleva más de 3 días. Acción inmediata requerida.';
+        if(admin?.phone)sendWA(admin.phone,msg).catch(()=>{});
+        if(assignedUser?.phone)sendWA(assignedUser.phone,msg).catch(()=>{});
+      }
+    }
     if(lead.status==='Nuevo'){
       const ref=lead.lastClientTs||lead.lastInteraction;
       const mins=ref?(Date.now()-new Date(ref).getTime())/60000:0;
@@ -180,11 +246,25 @@ function inRange(lead,s,e){if(s===null&&e===null)return true;const ts=new Date(l
 
 async function seed(){
   const users=await read(F.users);
-  if(!users.demo_automotora)users.demo_automotora=[{username:'gerente',password:'demo',name:'Andrés Salas',role:'admin',phone:'56912000001',status:'Activo'},{username:'vendedor1',password:'demo',name:'Rodrigo Vidal',role:'vendedor',phone:'56912000002',status:'Activo'},{username:'vendedor2',password:'demo',name:'Camila Aravena',role:'vendedor',phone:'56912000003',status:'Activo'},{username:'recepcion',password:'demo',name:'Daniela Ortiz',role:'secretaria',phone:'56912000004',status:'Activo'}];
+  if(!users.demo_automotora){users.demo_automotora=[
+    {username:'gerente',password:'demo',name:'Andrés Salas',role:'admin',phone:'56912000001',status:'Activo'},
+    {username:'daniela',password:'demo',name:'Daniela Narváez',role:'vendedor',phone:'56900000001',status:'Activo'},
+    {username:'carlos', password:'demo',name:'Carlos Fracachan',role:'vendedor',phone:'56900000002',status:'Activo'},
+    {username:'recepcion',password:'demo',name:'Daniela Ortiz',role:'secretaria',phone:'56912000004',status:'Activo'}
+  ];}else{
+    // Asegurar que Daniela y Carlos existan aunque la DB ya esté inicializada
+    for(const v of RMG_VENDORS){if(!users.demo_automotora.find(u=>u.username===v.username))users.demo_automotora.push(v);}
+  }
   if(!users.demo_clinica)users.demo_clinica=[{username:'gerente',password:'demo',name:'Dr. Hernán Vidal',role:'admin',phone:'56912000010',status:'Activo'},{username:'vendedor1',password:'demo',name:'Karina Bravo',role:'vendedor',phone:'56912000011',status:'Activo'},{username:'recepcion',password:'demo',name:'Marcela Tapia',role:'secretaria',phone:'56912000012',status:'Activo'}];
   await write(F.users,users);
   const cfg=await read(F.config);
-  if(!cfg.demo_automotora)cfg.demo_automotora={businessName:'Automotora Andes',accentColor:'#3b82f6',stages:['Nuevo','En Proceso','Contactado','Calificado','Negociación','Agendado','Seguimiento','Cerrado','Abandonado']};
+  if(!cfg.demo_automotora)cfg.demo_automotora={businessName:'RMG Autos',accentColor:'#3b82f6',stages:['Nuevo','En Proceso','Contactado','Calificado','Negociación','Agendado','Reservado','Cerrado','Abandonado']};
+  else if(cfg.demo_automotora.stages&&!cfg.demo_automotora.stages.includes('Reservado')){
+    // Inyecta 'Reservado' antes de 'Cerrado' si no existe
+    const ci=cfg.demo_automotora.stages.indexOf('Cerrado');
+    if(ci!==-1)cfg.demo_automotora.stages.splice(ci,0,'Reservado');
+    else cfg.demo_automotora.stages.push('Reservado');
+  }
   if(!cfg.demo_clinica)cfg.demo_clinica={businessName:'Clínica Vital',accentColor:'#0d9488',stages:['Nuevo','En Proceso','Contactado','Agendado','Calificado','Atendido','Seguimiento','Cerrado','Abandonado']};
   await write(F.config,cfg);
   const bot=await read(F.bot);
@@ -273,6 +353,8 @@ app.patch('/api/leads/:id',auth(),async(req,res)=>{
   const patch={};for(const k of ALLOWED)if(req.body[k]!==undefined)patch[k]=req.body[k];
   if(patch.status!==undefined&&!VALID_ST.has(patch.status))return res.status(400).json({error:'Status inválido'});
   if(req.body.note&&String(req.body.note).trim()){leads[idx].notes=Array.isArray(leads[idx].notes)?leads[idx].notes:[];leads[idx].notes.push({content:String(req.body.note).trim(),author:req.user.name||req.user.username,ts:Date.now()});}
+  // Si se cambia a 'Reservado', marcar timestamp de entrada
+  if(patch.status==='Reservado'&&leads[idx].status!=='Reservado')patch.reservadoAt=new Date().toISOString();
   Object.assign(leads[idx],patch);
   leads[idx].lastInteraction=new Date().toISOString();leads[idx].unread=false;leads[idx].alertLevel=calcAlert(leads[idx]);
   await tWrite(F.leads,req.tenant,leads);res.json(leads[idx]);
@@ -358,21 +440,24 @@ app.post('/api/chat',async(req,res)=>{
   leads[idx].chatHistory=leads[idx].chatHistory||[];leads[idx].chatHistory.push({role:'user',content:message,ts:Date.now()});
   leads[idx].unread=true;
   if(leads[idx].botActive!==false){
-    const p=await marcela(tenant,leads[idx].chatHistory.slice(0,-1),message,leads[idx].notes);
+    const assignedUserChat=allUsers.find(u=>u.username===leads[idx].assignedTo)||RMG_VENDORS.find(v=>v.username===leads[idx].assignedTo);
+    const assignedNameChat=assignedUserChat?.name||null;
+    const p=await marcela(tenant,leads[idx].chatHistory.slice(0,-1),message,leads[idx].notes,assignedNameChat);
     leads[idx].chatHistory.push({role:'bot',content:p.reply,ts:Date.now()});
     applySignal(leads[idx],p);
-    // KEYWORD DETECTOR — status NUNCA cambia, solo nota + alerta WA
+    // KEYWORD DETECTOR — status NUNCA cambia, solo nota en bitácora + WA al vendedor
     if(esKeywordCalif(message)&&!leads[idx].keywordAlertSent){
       leads[idx].keywordAlertSent=true;
       leads[idx].intentSignal='BLUE';
-      const resumen='🧠 Resumen IA: El cliente mencionó interés en financiamiento/retoma/seguro. Mensaje: "'+message.slice(0,120)+'"';
+      // Resumen contextualizado con los últimos mensajes
+      const histSnip=leads[idx].chatHistory.slice(-6).map(m=>(m.role==='user'?'Cliente':'IA')+': '+m.content).join('\n');
+      const resumen='🧠 Resumen IA (crédito/retoma detectado):\n'+histSnip;
       leads[idx].notes=Array.isArray(leads[idx].notes)?leads[idx].notes:[];
-      leads[idx].notes.push({content:resumen,author:'Marcela IA',ts:Date.now()});
-      const assignedUser=allUsers.find(u=>u.username===leads[idx].assignedTo);
-      if(assignedUser?.phone)sendWA(assignedUser.phone,
-        '✅ Lead Interesado: '+leads[idx].name+'. El cliente ya dio datos de compra. Te dejé un resumen en la bitácora del CRM.'
+      leads[idx].notes.push({content:resumen,author:assignedNameChat||'Marcela IA',ts:Date.now()});
+      if(assignedUserChat?.phone)sendWA(assignedUserChat.phone,
+        '✅ Lead Asignado: '+leads[idx].name+'. Lee el resumen de crédito/retoma en la bitácora del CRM.'
       ).catch(()=>{});
-      console.log('[keyword-calif] '+leads[idx].name+' — nota guardada, WA enviado');
+      console.log('[keyword-calif] '+leads[idx].name+' asignado a '+assignedNameChat+' — nota guardada');
     }
     leads[idx].alertLevel=calcAlert(leads[idx]);
     await tWrite(F.leads,tenant,leads);
@@ -399,21 +484,23 @@ app.post('/webhook',async(req,res)=>{
     ld[tenant][idx].chatHistory=ld[tenant][idx].chatHistory||[];ld[tenant][idx].chatHistory.push({role:'user',content:body,ts:Date.now()});
     ld[tenant][idx].unread=true;
     if(ld[tenant][idx].botActive!==false){
-      const p=await marcela(tenant,ld[tenant][idx].chatHistory.slice(0,-1),body,ld[tenant][idx].notes);
+      const allUsersWH=await tRead(F.users,tenant);
+      const assignedUserWH=allUsersWH.find(u=>u.username===ld[tenant][idx].assignedTo)||RMG_VENDORS.find(v=>v.username===ld[tenant][idx].assignedTo);
+      const assignedNameWH=assignedUserWH?.name||null;
+      const p=await marcela(tenant,ld[tenant][idx].chatHistory.slice(0,-1),body,ld[tenant][idx].notes,assignedNameWH);
       ld[tenant][idx].chatHistory.push({role:'bot',content:p.reply,ts:Date.now()});applySignal(ld[tenant][idx],p);
-      // KEYWORD DETECTOR — status NUNCA cambia, solo nota + alerta WA
+      // KEYWORD DETECTOR — status NUNCA cambia, nota en bitácora + WA al vendedor
       if(esKeywordCalif(body)&&!ld[tenant][idx].keywordAlertSent){
         ld[tenant][idx].keywordAlertSent=true;
         ld[tenant][idx].intentSignal='BLUE';
-        const resumenWH='🧠 Resumen IA: El cliente mencionó interés en financiamiento/retoma/seguro. Mensaje: "'+body.slice(0,120)+'"';
+        const histSnipWH=ld[tenant][idx].chatHistory.slice(-6).map(m=>(m.role==='user'?'Cliente':'IA')+': '+m.content).join('\n');
+        const resumenWH='🧠 Resumen IA (crédito/retoma detectado):\n'+histSnipWH;
         ld[tenant][idx].notes=Array.isArray(ld[tenant][idx].notes)?ld[tenant][idx].notes:[];
-        ld[tenant][idx].notes.push({content:resumenWH,author:'Marcela IA',ts:Date.now()});
-        const allUsersWH=await tRead(F.users,tenant);
-        const assignedUser=allUsersWH.find(u=>u.username===ld[tenant][idx].assignedTo);
-        if(assignedUser?.phone)sendWA(assignedUser.phone,
-          '✅ Lead Interesado: '+ld[tenant][idx].name+'. El cliente ya dio datos de compra. Te dejé un resumen en la bitácora del CRM.'
+        ld[tenant][idx].notes.push({content:resumenWH,author:assignedNameWH||'Marcela IA',ts:Date.now()});
+        if(assignedUserWH?.phone)sendWA(assignedUserWH.phone,
+          '✅ Lead Asignado: '+ld[tenant][idx].name+'. Lee el resumen de crédito/retoma en la bitácora del CRM.'
         ).catch(()=>{});
-        console.log('[keyword-calif] '+ld[tenant][idx].name+' — nota guardada, WA enviado');
+        console.log('[keyword-calif] '+ld[tenant][idx].name+' asignado a '+assignedNameWH);
       }
       await sendWA(from,p.reply);
     }
