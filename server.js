@@ -467,7 +467,7 @@ app.post('/api/chat',async(req,res)=>{
         leads[idx].notes.push({content:'🧠 '+resumenIA,author:'Resumen IA',ts:Date.now()});
         if(assignedUserChat?.phone)sendWA(assignedUserChat.phone,'✅ Lead Asignado: '+leads[idx].name+'. Resumen IA: '+resumenIA+' — Entra al CRM para cerrar.').catch(()=>{});
       }catch(eIA){
-        console.error('[OpenAI Resumen Error /chat]:', eIA.message, eIA.status||'');
+        console.error('[Resumen-Error /chat]', eIA);
         leads[idx].notes.push({content:'🧠 Cliente mencionó crédito/retoma/seguro. Revisar chat. (OpenAI falló: '+eIA.message+')',author:'Resumen IA',ts:Date.now()});
         if(assignedUserChat?.phone)sendWA(assignedUserChat.phone,'✅ Lead Asignado: '+leads[idx].name+'. Lee el resumen en la bitácora del CRM.').catch(()=>{});
       }
@@ -515,7 +515,7 @@ app.post('/webhook',async(req,res)=>{
           ld[tenant][idx].notes.push({content:'🧠 '+resumenIAWH,author:'Resumen IA',ts:Date.now()});
           if(assignedUserWH?.phone)sendWA(assignedUserWH.phone,'✅ Lead Asignado: '+ld[tenant][idx].name+'. Resumen IA: '+resumenIAWH+' — Entra al CRM.').catch(()=>{});
         }catch(eIAWH){
-          console.error('[OpenAI Resumen Error /webhook]:', eIAWH.message, eIAWH.status||'');
+          console.error('[Resumen-Error /webhook]', eIAWH);
           ld[tenant][idx].notes.push({content:'🧠 Cliente mencionó crédito/retoma/seguro. (OpenAI falló: '+eIAWH.message+')',author:'Resumen IA',ts:Date.now()});
           if(assignedUserWH?.phone)sendWA(assignedUserWH.phone,'✅ Lead Asignado: '+ld[tenant][idx].name+'. Revisa la bitácora del CRM.').catch(()=>{});
         }
