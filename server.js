@@ -51,27 +51,7 @@ const INV_HARDCODED = `
 - Land Rover Defender 110 P300 SE 2024 | Stock:1 | $49.990.000 | Bencina | 300HP, tecnología de punta, ícono
 `.trim();
 
-const INV_HARDCODED = `
-- Toyota Yaris 1.5 XLS CVT 2024 | Stock:7 | $11.490.000
-- Toyota Corolla 2.0 CVT GR Sport 2024 | Stock:6 | $15.990.000
-- Toyota RAV4 2.5 Hybrid AWD 2024 | Stock:3 | $29.990.000
-- Peugeot 208 PureTech 100 Like AT 2024 | Stock:8 | $11.990.000
-- Peugeot 3008 PureTech 130 EAT8 2024 | Stock:4 | $18.990.000
-- Peugeot 5008 BlueHDi 130 EAT8 2023 | Stock:2 | $22.490.000
-- Kia Sportage 1.6 T-GDi HEV AWD 2024 | Stock:3 | $21.990.000
-- Kia K5 2.5 MPI GT-Line AT 2023 | Stock:2 | $17.990.000
-- Volkswagen Polo 1.6 MSI Trendline AT 2024 | Stock:5 | $12.490.000
-- Volkswagen Vento 1.6 MSI Highline AT 2024 | Stock:4 | $14.990.000
-- Ford Ranger XLT 4x4 2020 | Stock:2 | $18.200.000
-- Suzuki Swift GLX 2022 | Stock:3 | $9.800.000
-- Chevrolet Tracker Premier 2023 | Stock:1 | $14.500.000
-- Nissan Qashqai Advance 2019 | Stock:2 | $12.900.000
-- Kia Morning Nonstop 2021 | Stock:4 | $7.500.000
-- Hyundai Tucson Value 2022 | Stock:2 | $17.100.000
-- Mazda CX-5 GTX 2018 | Stock:1 | $13.800.000
-- MG ZS 1.5 MT 2022 | Stock:3 | $9.500.000
-- Chery Tiggo 2 Pro 2023 | Stock:2 | $10.200.000
-- Nissan NP300 Navara 2020 | Stock:1 | $17.500.000`;
+// INV_HARDCODED definido una sola vez (la versión completa con highlights queda arriba)
 
 function marcelaSys(biz,invS,notes){
   invS = INV_HARDCODED;
@@ -127,8 +107,14 @@ function esKeywordCalif(texto){
 }
 
 function applySignal(lead,p){
-  if(p.intent_signal==='BLUE'||p.intent_signal==='YELLOW'){lead.intentSignal=p.intent_signal;lead.status='Calificado';lead.scheduleText=p.schedule_text||'';}
-  else if(!lead.intentSignal)lead.intentSignal='NONE';
+  // NUNCA toca lead.status — el semáforo SLA debe seguir corriendo
+  // Solo actualiza la señal visual y el texto de agenda
+  if(p.intent_signal==='BLUE'||p.intent_signal==='YELLOW'){
+    lead.intentSignal=p.intent_signal;
+    lead.scheduleText=p.schedule_text||'';
+  } else if(!lead.intentSignal){
+    lead.intentSignal='NONE';
+  }
 }
 
 async function sendWA(to,text){
@@ -355,22 +341,7 @@ app.post('/api/demo/fastforward',auth('admin'),async(req,res)=>{
   const ms=minutes*60000;leads[idx].lastClientTs=new Date(new Date(leads[idx].lastClientTs||Date.now()).getTime()-ms).toISOString();leads[idx].lastInteraction=new Date(new Date(leads[idx].lastInteraction||Date.now()).getTime()-ms).toISOString();leads[idx].alertLevel=calcAlert(leads[idx]);await tWrite(F.leads,req.tenant,leads);res.json({ok:true,lead:leads[idx]});
 });
 
-// Endpoint masivo: adelanta 31 min a TODOS los leads 'Nuevo' del tenant
-app.post('/api/force-sla',auth('admin'),async(req,res)=>{
-  const leads=await tRead(F.leads,req.tenant);
-  const ms=31*60000;let count=0;
-  for(const l of leads){
-    if(l.status==='Nuevo'){
-      l.lastClientTs=new Date(new Date(l.lastClientTs||Date.now()).getTime()-ms).toISOString();
-      l.lastInteraction=new Date(new Date(l.lastInteraction||Date.now()).getTime()-ms).toISOString();
-      l.alertLevel=calcAlert(l);count++;
-    }
-  }
-  await tWrite(F.leads,req.tenant,leads);
-  const updated=await applySlaRules(req.tenant);
-  console.log('[force-sla] '+count+' leads adelantados 31 min, SLA re-evaluado.');
-  res.json({ok:true,count,leads:updated.filter(l=>l.status==='Nuevo')});
-});
+// /api/force-sla — definido una sola vez (arriba, línea ~339)
 
 app.post('/api/chat',async(req,res)=>{
   const tenant=validT(req.body?.tenant||req.query.tenant);const{sessionId,message}=req.body||{};
@@ -390,7 +361,19 @@ app.post('/api/chat',async(req,res)=>{
     const p=await marcela(tenant,leads[idx].chatHistory.slice(0,-1),message,leads[idx].notes);
     leads[idx].chatHistory.push({role:'bot',content:p.reply,ts:Date.now()});
     applySignal(leads[idx],p);
-    // STATUS SOLO LO CAMBIA UN HUMANO — el bot nunca toca lead.status
+    // KEYWORD DETECTOR — status NUNCA cambia, solo nota + alerta WA
+    if(esKeywordCalif(message)&&!leads[idx].keywordAlertSent){
+      leads[idx].keywordAlertSent=true;
+      leads[idx].intentSignal='BLUE';
+      const resumen='🧠 Resumen IA: El cliente mencionó interés en financiamiento/retoma/seguro. Mensaje: "'+message.slice(0,120)+'"';
+      leads[idx].notes=Array.isArray(leads[idx].notes)?leads[idx].notes:[];
+      leads[idx].notes.push({content:resumen,author:'Marcela IA',ts:Date.now()});
+      const assignedUser=allUsers.find(u=>u.username===leads[idx].assignedTo);
+      if(assignedUser?.phone)sendWA(assignedUser.phone,
+        '✅ Lead Interesado: '+leads[idx].name+'. El cliente ya dio datos de compra. Te dejé un resumen en la bitácora del CRM.'
+      ).catch(()=>{});
+      console.log('[keyword-calif] '+leads[idx].name+' — nota guardada, WA enviado');
+    }
     leads[idx].alertLevel=calcAlert(leads[idx]);
     await tWrite(F.leads,tenant,leads);
     return res.json({reply:p.reply,sessionId,leadCaptured:captured,leadId,intentSignal:leads[idx].intentSignal,status:leads[idx].status});
@@ -418,7 +401,20 @@ app.post('/webhook',async(req,res)=>{
     if(ld[tenant][idx].botActive!==false){
       const p=await marcela(tenant,ld[tenant][idx].chatHistory.slice(0,-1),body,ld[tenant][idx].notes);
       ld[tenant][idx].chatHistory.push({role:'bot',content:p.reply,ts:Date.now()});applySignal(ld[tenant][idx],p);
-      // STATUS SOLO LO CAMBIA UN HUMANO — el bot nunca toca lead.status
+      // KEYWORD DETECTOR — status NUNCA cambia, solo nota + alerta WA
+      if(esKeywordCalif(body)&&!ld[tenant][idx].keywordAlertSent){
+        ld[tenant][idx].keywordAlertSent=true;
+        ld[tenant][idx].intentSignal='BLUE';
+        const resumenWH='🧠 Resumen IA: El cliente mencionó interés en financiamiento/retoma/seguro. Mensaje: "'+body.slice(0,120)+'"';
+        ld[tenant][idx].notes=Array.isArray(ld[tenant][idx].notes)?ld[tenant][idx].notes:[];
+        ld[tenant][idx].notes.push({content:resumenWH,author:'Marcela IA',ts:Date.now()});
+        const allUsersWH=await tRead(F.users,tenant);
+        const assignedUser=allUsersWH.find(u=>u.username===ld[tenant][idx].assignedTo);
+        if(assignedUser?.phone)sendWA(assignedUser.phone,
+          '✅ Lead Interesado: '+ld[tenant][idx].name+'. El cliente ya dio datos de compra. Te dejé un resumen en la bitácora del CRM.'
+        ).catch(()=>{});
+        console.log('[keyword-calif] '+ld[tenant][idx].name+' — nota guardada, WA enviado');
+      }
       await sendWA(from,p.reply);
     }
     ld[tenant][idx].lastInteraction=new Date().toISOString();ld[tenant][idx].alertLevel=calcAlert(ld[tenant][idx]);
