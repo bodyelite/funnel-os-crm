@@ -127,6 +127,7 @@
     <div id="agendaInfo" style="margin-top:6px;font-size:11px;color:var(--tm)"></div>
   </div>
 </div>
+<button class="pm" id="btnResumen" style="background:var(--as);color:var(--ac);border:1px solid var(--ac);margin-bottom:8px">🧠 Generar Resumen IA</button>
 <button class="pm" id="mSv">Guardar cambios</button>
 </div>
 </div>
@@ -308,6 +309,19 @@ $('agendaBtn').addEventListener('click',async()=>{
     await refresh();
   }catch(e){toast('Error: '+e.message,true);}finally{btn.disabled=false;btn.textContent='Agendar';}
 });
+$('btnResumen').addEventListener('click',async()=>{
+  if(!S.mid)return;
+  const btn=$('btnResumen');btn.disabled=true;btn.textContent='Generando...';
+  try{
+    const r=await api('POST','/api/leads/'+S.mid+'/resumen');
+    toast('Resumen generado y guardado en bitacora');
+    const idx=S.leads.findIndex(x=>x.id===S.mid);
+    if(idx!==-1)S.leads[idx]={...S.leads[idx],...r.lead};
+    await refresh();renderModal();
+  }catch(e){toast('Error: '+e.message,true);}
+  finally{btn.disabled=false;btn.textContent='🧠 Generar Resumen IA';}
+});
+
 $('mSv').addEventListener('click',async()=>{if(!S.mid)return;const btn=$('mSv');btn.disabled=true;btn.textContent='…';try{const l=findLead(S.mid);const st=$('mSt').value;const note=$('mNt').value.trim();const payload={};if(st&&st!==l?.status)payload.status=st;if(note)payload.note=note;if(!Object.keys(payload).length){toast('Sin cambios');btn.disabled=false;btn.textContent='Guardar cambios';return;}await api('PATCH','/api/leads/'+S.mid,payload);$('mNt').value='';toast('Lead actualizado ✓');await refresh();renderModal();}catch(e){toast(e.message,true);}finally{btn.disabled=false;btn.textContent='Guardar cambios';}});
 document.querySelectorAll('.sb nav button').forEach(btn=>{btn.addEventListener('click',async()=>{const view=btn.dataset.view;document.querySelectorAll('.sb nav button').forEach(b=>b.classList.remove('active'));document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));btn.classList.add('active');$('view-'+view).classList.add('active');S.view=view;$('mainTb').style.display=view==='config'?'none':'';if(view==='config'){await loadConfig();await loadUsers();}});});
 syncQ();updRI();

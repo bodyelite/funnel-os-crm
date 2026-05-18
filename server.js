@@ -369,6 +369,32 @@ app.patch('/api/leads/:id',auth(),async(req,res)=>{
   await tWrite(F.leads,req.tenant,leads);res.json(leads[idx]);
 });
 app.put('/api/leads/:id',auth(),async(req,res)=>{const leads=await tRead(F.leads,req.tenant);const idx=leads.findIndex(x=>x.id==req.params.id);if(idx===-1)return res.status(404).json({error:'No encontrado'});if(req.user.role==='vendedor'&&leads[idx].assignedTo!==req.user.username)return res.status(403).json({error:'Sin permisos'});if(req.user.role==='vendedor')delete req.body.assignedTo;leads[idx]={...leads[idx],...req.body,lastInteraction:new Date().toISOString()};leads[idx].alertLevel=calcAlert(leads[idx]);await tWrite(F.leads,req.tenant,leads);res.json(leads[idx]);});
+app.post('/api/leads/:id/resumen',auth('admin','vendedor'),async(req,res)=>{
+  const leads=await tRead(F.leads,req.tenant);
+  const idx=leads.findIndex(x=>x.id==req.params.id);
+  if(idx===-1)return res.status(404).json({error:'No encontrado'});
+  const lead=leads[idx];
+  const histSnip=(lead.chatHistory||[]).slice(-14).map(m=>(m.role==='user'?'Cliente':m.role==='agent'?'Vendedor':'IA')+': '+m.content).join('\n');
+  const notasSnip=(lead.notes||[]).slice(-5).map(n=>n.author+': '+n.content).join('\n');
+  if(!histSnip&&!notasSnip)return res.status(400).json({error:'Sin historial para resumir'});
+  try{
+    const resComp=await openai.chat.completions.create({model:'gpt-4o-mini',temperature:0.4,max_tokens:200,
+      messages:[{role:'system',content:'Eres un asistente comercial de automotora. Con el historial de chat y las notas del vendedor, redacta un BRIEFING narrativo de maximo 3 lineas: (1) [Nombre] consulta por [auto especifico]. (2) [Que dijo sobre financiamiento, retoma, fecha o acuerdo]. (3) Sugerencia: [accion concreta para el vendedor ahora]. Espanol directo, sin emojis, sin titulos, solo el parrafo.'},
+        {role:'user',content:'NOMBRE: '+lead.name+'\nHISTORIAL:\n'+histSnip+(notasSnip?'\nNOTAS DEL VENDEDOR:\n'+notasSnip:'')}]});
+    const resumen=(resComp.choices?.[0]?.message?.content||'').trim();
+    if(!resumen)return res.status(500).json({error:'OpenAI no devolvio resumen'});
+    lead.notes=Array.isArray(lead.notes)?lead.notes:[];
+    lead.notes.push({content:'🧠 '+resumen,author:'Resumen IA',ts:Date.now()});
+    lead.keywordAlertSent=true;
+    await tWrite(F.leads,req.tenant,leads);
+    console.log('[resumen-manual] '+lead.name);
+    res.json({ok:true,resumen,lead});
+  }catch(e){
+    console.error('[resumen-manual ERROR]',e);
+    res.status(500).json({error:'OpenAI error: '+e.message});
+  }
+});
+
 app.post('/api/leads/:id/bot',auth(),async(req,res)=>{const leads=await tRead(F.leads,req.tenant);const idx=leads.findIndex(x=>x.id==req.params.id);if(idx===-1)return res.status(404).json({error:'No encontrado'});if(req.user.role==='vendedor'&&leads[idx].assignedTo!==req.user.username)return res.status(403).json({error:'Sin permisos'});leads[idx].botActive=!!req.body.botActive;await tWrite(F.leads,req.tenant,leads);res.json(leads[idx]);});
 app.post('/api/leads/:id/message',auth('admin','vendedor'),async(req,res)=>{
   const{content}=req.body||{};if(!content)return res.status(400).json({error:'content requerido'});
