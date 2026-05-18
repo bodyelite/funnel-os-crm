@@ -32,44 +32,56 @@ const RMG_VENDORS = [
   {username:'carlos', name:'Carlos Fracachan',role:'vendedor',phone:'56900000002',status:'Activo'},
 ];
 
-// ── CSV dinámico desde Google Sheets ───────────────────────
-const URL_CSV = process.env.CSV_INVENTORY_URL || '';
-let csvCache = { ts: 0, data: '' };
+// ── Web Scraper Heurístico — rmgautos.cl/usados/ ───────────
+const RMG_SCRAPE_URL = 'https://rmgautos.cl/usados/';
+const MARCAS_RE = /Toyota|Peugeot|Kia|Volkswagen|Ford|Chevrolet|Hyundai|Nissan|Suzuki|Mazda|Honda|Mitsubishi|Jeep|Land Rover|BMW|Mercedes|Audi|Subaru|Volvo|Chery|MG|BAIC|Renault/gi;
+let scrapeCache = { ts: 0, data: '' };
 
-async function fetchCsvInventario() {
-  if (!URL_CSV) return '';
+async function scrapeRMG() {
   const now = Date.now();
-  if (csvCache.data && (now - csvCache.ts) < 10 * 60 * 1000) return csvCache.data; // TTL 10 min
+  if (scrapeCache.data && (now - scrapeCache.ts) < 30 * 60 * 1000) return scrapeCache.data;
   try {
-    const r = await fetch(URL_CSV, { signal: AbortSignal.timeout(6000) });
+    const r = await fetch(RMG_SCRAPE_URL, { signal: AbortSignal.timeout(10000), headers: { 'User-Agent': 'Mozilla/5.0 (compatible; RMG-CRM-Bot/1.0)' } });
     if (!r.ok) throw new Error('HTTP ' + r.status);
-    const raw = await r.text();
-    // Columnas CSV: marca, modelo, version, anno, kilometraje, ventaiva
-    const lines = raw.split('\n').map(l => l.trim()).filter(Boolean);
-    const header = lines[0].toLowerCase().split(',').map(h => h.trim());
-    const iOf = k => header.indexOf(k);
-    const rows = lines.slice(1).map(line => {
-      const c = line.split(',').map(x => x.trim());
-      const marca = c[iOf('marca')] || '';
-      const modelo = c[iOf('modelo')] || '';
-      const version = c[iOf('version')] || '';
-      const anno = c[iOf('anno')] || '';
-      const km = c[iOf('kilometraje')] || '0';
-      const precio = c[iOf('ventaiva')] || '0';
-      if (!marca && !modelo) return null;
-      const precioNum = parseInt(precio.replace(/\D/g, ''), 10) || 0;
-      const precioFmt = precioNum ? '$' + precioNum.toLocaleString('es-CL') : '(consultar)';
-      const kmFmt = parseInt(km.replace(/\D/g, ''), 10) ? km + ' km' : 'Nuevo';
-      return `- ${marca} ${modelo} ${version} ${anno} | ${kmFmt} | ${precioFmt}`.trim();
-    }).filter(Boolean);
-    csvCache = { ts: now, data: rows.join('\n') };
-    console.log('[CSV] inventario actualizado: ' + rows.length + ' autos');
-    return csvCache.data;
+    const html = await r.text();
+    const autos = [];
+    const pSign = String.fromCharCode(36);
+    const bloqueRE = /<(?:article|div|li)[^>]*class="[^"]*(?:car|vehicle|product|listing|post|item)[^"]*"[^>]*>([\s\S]*?)<\/(?:article|div|li)>/gi;
+    let bloque;
+    while ((bloque = bloqueRE.exec(html)) !== null && autos.length < 40) {
+      const seg = bloque[1].replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ');
+      const marcaM = seg.match(MARCAS_RE); if (!marcaM) continue;
+      const marca = marcaM[0];
+      const annoM = seg.match(/\b(201\d|202[0-5])\b/); const anno = annoM ? annoM[0] : '';
+      const precioM = seg.match(/\$\s*(\d{1,2}[.,]\d{3}[.,]\d{3})/);
+      const precio = precioM ? pSign + precioM[1] : '(consultar)';
+      const kmM = seg.match(/(\d{2,3}[.,]\d{3})\s*(?:km|kms)/i) || seg.match(/(\d{4,6})\s*km/i);
+      const km = kmM ? kmM[1].replace(/\./g,'') + ' km' : '';
+      const modRE = new RegExp(marca + '\\s+([A-Za-z0-9\\s]{2,25}?)\\s+(?:' + (anno||'\\d{4}') + '|\\$)', 'i');
+      const modM = seg.match(modRE); const modelo = modM ? modM[1].trim().split(/\s+/).slice(0,4).join(' ') : '';
+      autos.push(('- ' + marca + ' ' + modelo + ' ' + anno + ' | ' + (km||'km no indicado') + ' | ' + precio).replace(/\s{2,}/g,' ').trim());
+    }
+    if (autos.length < 3) {
+      const plainText = html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ');
+      plainText.split(/(?=\$\d)/).forEach(tok => {
+        if (autos.length >= 30) return;
+        const pM = tok.match(/\$\s*(\d{1,2}[.,]\d{3}[.,]\d{3})/); if (!pM) return;
+        const mM = tok.match(MARCAS_RE); if (!mM) return;
+        const aM = tok.match(/\b(201\d|202[0-5])\b/);
+        autos.push(('- ' + mM[0] + ' ' + (aM?aM[0]:'') + ' | ' + pSign + pM[1]).trim());
+      });
+    }
+    if (autos.length === 0) throw new Error('0 autos encontrados');
+    scrapeCache = { ts: now, data: [...new Set(autos)].join('\n') };
+    console.log('[RMG-Scraper] ' + autos.length + ' autos capturados de rmgautos.cl');
+    return scrapeCache.data;
   } catch(e) {
-    console.warn('[CSV] Error al obtener inventario:', e.message);
-    return csvCache.data || '';
+    console.warn('[RMG-Scraper] Error:', e.message, '— fallback INV_HARDCODED');
+    return scrapeCache.data || '';
   }
 }
+setInterval(async()=>{try{await scrapeRMG();}catch(e){}}, 30*60*1000);
+scrapeRMG().catch(()=>{});
 
 function invStr(inv){if(!Array.isArray(inv)||!inv.length)return'(sin inventario)';return inv.map(i=>`- [${i.id}] ${i.brand||''} ${i.model}${i.year?' '+i.year:''} | Stock:${i.stock} | $${(i.price||0).toLocaleString('es-CL')}${i.fuel?'|'+i.fuel:''}${i.highlights?'|'+i.highlights:''}`).join('\n');}
 
@@ -112,12 +124,9 @@ function fueraH(txt){const m=(txt||'').match(/(\d{1,2})\s*(?::|\.)?\s*(\d{2})?\s
 async function marcela(tenant, history, msg, notes, assignedName) {
   try {
     const cfg = (await read(F.config))[tenant] || {};
-    // Inventario: CSV dinámico primero, fallback a JSON del disco
-    let invS = await fetchCsvInventario();
-    if (!invS) {
-      const invArr = await tRead(F.inventory, tenant, []);
-      invS = invStr(invArr);
-    }
+    // Inventario: scraper live → caché → INV_HARDCODED
+    let invS = scrapeCache.data || await scrapeRMG();
+    if (!invS) invS = INV_HARDCODED;
     const completion = await openai.chat.completions.create({
       model: 'gpt-4o-mini',
       temperature: 0.5,
@@ -349,7 +358,7 @@ app.patch('/api/leads/:id',auth(),async(req,res)=>{
   const leads=await tRead(F.leads,req.tenant);const idx=leads.findIndex(x=>x.id==req.params.id);
   if(idx===-1)return res.status(404).json({error:'No encontrado'});
   if(req.user.role==='vendedor'&&leads[idx].assignedTo!==req.user.username)return res.status(403).json({error:'Sin permisos'});
-  const ALLOWED=['status','interest','name','phone','botActive'];if(req.user.role!=='vendedor')ALLOWED.push('assignedTo');
+  const ALLOWED=['status','interest','name','phone','botActive','nextAction'];if(req.user.role!=='vendedor')ALLOWED.push('assignedTo');
   const patch={};for(const k of ALLOWED)if(req.body[k]!==undefined)patch[k]=req.body[k];
   if(patch.status!==undefined&&!VALID_ST.has(patch.status))return res.status(400).json({error:'Status inválido'});
   if(req.body.note&&String(req.body.note).trim()){leads[idx].notes=Array.isArray(leads[idx].notes)?leads[idx].notes:[];leads[idx].notes.push({content:String(req.body.note).trim(),author:req.user.name||req.user.username,ts:Date.now()});}
@@ -445,19 +454,23 @@ app.post('/api/chat',async(req,res)=>{
     const p=await marcela(tenant,leads[idx].chatHistory.slice(0,-1),message,leads[idx].notes,assignedNameChat);
     leads[idx].chatHistory.push({role:'bot',content:p.reply,ts:Date.now()});
     applySignal(leads[idx],p);
-    // KEYWORD DETECTOR — status NUNCA cambia, solo nota en bitácora + WA al vendedor
+        // KEYWORD DETECTOR — status NUNCA cambia; resumen IA via OpenAI
     if(esKeywordCalif(message)&&!leads[idx].keywordAlertSent){
       leads[idx].keywordAlertSent=true;
       leads[idx].intentSignal='BLUE';
-      // Resumen contextualizado con los últimos mensajes
-      const histSnip=leads[idx].chatHistory.slice(-6).map(m=>(m.role==='user'?'Cliente':'IA')+': '+m.content).join('\n');
-      const resumen='🧠 Resumen IA (crédito/retoma detectado):\n'+histSnip;
       leads[idx].notes=Array.isArray(leads[idx].notes)?leads[idx].notes:[];
-      leads[idx].notes.push({content:resumen,author:assignedNameChat||'Marcela IA',ts:Date.now()});
-      if(assignedUserChat?.phone)sendWA(assignedUserChat.phone,
-        '✅ Lead Asignado: '+leads[idx].name+'. Lee el resumen de crédito/retoma en la bitácora del CRM.'
-      ).catch(()=>{});
-      console.log('[keyword-calif] '+leads[idx].name+' asignado a '+assignedNameChat+' — nota guardada');
+      try{
+        const histSnip=leads[idx].chatHistory.slice(-10).map(m=>(m.role==='user'?'Cliente':'Asesor')+': '+m.content).join('\n');
+        const notasSnip=(leads[idx].notes||[]).slice(-3).map(n=>n.author+': '+n.content).join('\n');
+        const resComp=await openai.chat.completions.create({model:'gpt-4o-mini',temperature:0.3,max_tokens:120,messages:[{role:'system',content:'Eres un asistente CRM. Lee el chat y redacta un resumen ejecutivo de máximo 2 líneas para el vendedor indicando: qué auto busca el cliente, su método de pago (crédito/contado) y si tiene auto en retoma. Responde solo el resumen, sin introducción.'},{role:'user',content:'CHAT:\n'+histSnip+(notasSnip?'\nNOTAS PREVIAS:\n'+notasSnip:'')}]});
+        const resumenIA=(resComp.choices?.[0]?.message?.content||'').trim()||'Interés detectado en crédito/retoma.';
+        leads[idx].notes.push({content:'🧠 '+resumenIA,author:'Resumen IA',ts:Date.now()});
+        if(assignedUserChat?.phone)sendWA(assignedUserChat.phone,'✅ Lead Asignado: '+leads[idx].name+'. Resumen IA: '+resumenIA+' — Entra al CRM para cerrar.').catch(()=>{});
+      }catch(eIA){
+        leads[idx].notes.push({content:'🧠 Cliente mencionó crédito/retoma/seguro. Revisar chat.',author:'Resumen IA',ts:Date.now()});
+        if(assignedUserChat?.phone)sendWA(assignedUserChat.phone,'✅ Lead Asignado: '+leads[idx].name+'. Lee el resumen en la bitácora del CRM.').catch(()=>{});
+      }
+      console.log('[keyword-calif] '+leads[idx].name+' — resumen IA generado, WA enviado');
     }
     leads[idx].alertLevel=calcAlert(leads[idx]);
     await tWrite(F.leads,tenant,leads);
@@ -489,18 +502,21 @@ app.post('/webhook',async(req,res)=>{
       const assignedNameWH=assignedUserWH?.name||null;
       const p=await marcela(tenant,ld[tenant][idx].chatHistory.slice(0,-1),body,ld[tenant][idx].notes,assignedNameWH);
       ld[tenant][idx].chatHistory.push({role:'bot',content:p.reply,ts:Date.now()});applySignal(ld[tenant][idx],p);
-      // KEYWORD DETECTOR — status NUNCA cambia, nota en bitácora + WA al vendedor
+            // KEYWORD DETECTOR — status NUNCA cambia; resumen IA via OpenAI
       if(esKeywordCalif(body)&&!ld[tenant][idx].keywordAlertSent){
         ld[tenant][idx].keywordAlertSent=true;
         ld[tenant][idx].intentSignal='BLUE';
-        const histSnipWH=ld[tenant][idx].chatHistory.slice(-6).map(m=>(m.role==='user'?'Cliente':'IA')+': '+m.content).join('\n');
-        const resumenWH='🧠 Resumen IA (crédito/retoma detectado):\n'+histSnipWH;
         ld[tenant][idx].notes=Array.isArray(ld[tenant][idx].notes)?ld[tenant][idx].notes:[];
-        ld[tenant][idx].notes.push({content:resumenWH,author:assignedNameWH||'Marcela IA',ts:Date.now()});
-        if(assignedUserWH?.phone)sendWA(assignedUserWH.phone,
-          '✅ Lead Asignado: '+ld[tenant][idx].name+'. Lee el resumen de crédito/retoma en la bitácora del CRM.'
-        ).catch(()=>{});
-        console.log('[keyword-calif] '+ld[tenant][idx].name+' asignado a '+assignedNameWH);
+        try{
+          const histSnipWH=ld[tenant][idx].chatHistory.slice(-10).map(m=>(m.role==='user'?'Cliente':'Asesor')+': '+m.content).join('\n');
+          const resCompWH=await openai.chat.completions.create({model:'gpt-4o-mini',temperature:0.3,max_tokens:120,messages:[{role:'system',content:'Eres un asistente CRM. Lee el chat y redacta un resumen ejecutivo de máximo 2 líneas para el vendedor indicando: qué auto busca el cliente, su método de pago (crédito/contado) y si tiene auto en retoma. Responde solo el resumen, sin introducción.'},{role:'user',content:'CHAT:\n'+histSnipWH}]});
+          const resumenIAWH=(resCompWH.choices?.[0]?.message?.content||'').trim()||'Interés en crédito/retoma detectado.';
+          ld[tenant][idx].notes.push({content:'🧠 '+resumenIAWH,author:'Resumen IA',ts:Date.now()});
+          if(assignedUserWH?.phone)sendWA(assignedUserWH.phone,'✅ Lead Asignado: '+ld[tenant][idx].name+'. Resumen IA: '+resumenIAWH+' — Entra al CRM.').catch(()=>{});
+        }catch(eIAWH){
+          ld[tenant][idx].notes.push({content:'🧠 Cliente mencionó crédito/retoma/seguro.',author:'Resumen IA',ts:Date.now()});
+          if(assignedUserWH?.phone)sendWA(assignedUserWH.phone,'✅ Lead Asignado: '+ld[tenant][idx].name+'. Revisa la bitácora del CRM.').catch(()=>{});
+        }
       }
       await sendWA(from,p.reply);
     }
