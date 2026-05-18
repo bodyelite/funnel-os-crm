@@ -292,7 +292,7 @@ app.post('/api/chat',async(req,res)=>{
     const p=await marcela(tenant,leads[idx].chatHistory.slice(0,-1),message,leads[idx].notes);
     leads[idx].chatHistory.push({role:'bot',content:p.reply,ts:Date.now()});
     applySignal(leads[idx],p);
-    if(sess.step>=2&&leads[idx].status==='Nuevo'&&leads[idx].intentSignal==='NONE')leads[idx].status='Contactado';
+    // STATUS SOLO LO CAMBIA UN HUMANO — el bot nunca toca lead.status
     leads[idx].alertLevel=calcAlert(leads[idx]);
     await tWrite(F.leads,tenant,leads);
     return res.json({reply:p.reply,sessionId,leadCaptured:captured,leadId,intentSignal:leads[idx].intentSignal,status:leads[idx].status});
@@ -320,8 +320,7 @@ app.post('/webhook',async(req,res)=>{
     if(ld[tenant][idx].botActive!==false){
       const p=await marcela(tenant,ld[tenant][idx].chatHistory.slice(0,-1),body,ld[tenant][idx].notes);
       ld[tenant][idx].chatHistory.push({role:'bot',content:p.reply,ts:Date.now()});applySignal(ld[tenant][idx],p);
-      const ut=ld[tenant][idx].chatHistory.filter(m=>m.role==='user').length;
-      if(ut>=2&&ld[tenant][idx].status==='Nuevo'&&ld[tenant][idx].intentSignal==='NONE')ld[tenant][idx].status='Contactado';
+      // STATUS SOLO LO CAMBIA UN HUMANO — el bot nunca toca lead.status
       await sendWA(from,p.reply);
     }
     ld[tenant][idx].lastInteraction=new Date().toISOString();ld[tenant][idx].alertLevel=calcAlert(ld[tenant][idx]);
