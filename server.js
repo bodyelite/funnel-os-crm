@@ -28,20 +28,80 @@ const validT=t=>TENANTS.includes(t)?t:TENANTS[0];
 
 function invStr(inv){if(!Array.isArray(inv)||!inv.length)return'(sin inventario)';return inv.map(i=>`- [${i.id}] ${i.brand||''} ${i.model}${i.year?' '+i.year:''} | Stock:${i.stock} | $${(i.price||0).toLocaleString('es-CL')}${i.fuel?'|'+i.fuel:''}${i.highlights?'|'+i.highlights:''}`).join('\n');}
 
+const INV_HARDCODED = `
+- Toyota Yaris 1.5 XLS CVT 2024 | Stock:7 | $11.490.000 | Bencina | Compacto, 5 años garantía, ideal primer auto
+- Toyota Corolla 2.0 CVT GR Sport 2024 | Stock:6 | $15.990.000 | Bencina | Sport, Android Auto, equipamiento top
+- Toyota RAV4 2.5 Hybrid AWD 2024 | Stock:3 | $29.990.000 | Híbrido | 222HP, tracción total, bajo consumo
+- Toyota Hilux 2.8 TDI SRX AT 4x4 2024 | Stock:3 | $32.990.000 | Diésel | Cabina doble, garantía 5 años
+- Toyota Hilux GR Sport 4x4 2024 | Stock:1 | $36.990.000 | Diésel | 204HP, equipamiento top, edición especial
+- Toyota Fortuner 2.8 GD-6 SR 4x4 2024 | Stock:2 | $34.990.000 | Diésel | 7 plazas, 4x4, familia grande
+- Peugeot 208 PureTech 100 Like AT 2024 | Stock:8 | $11.990.000 | Bencina | Ciudad, económico, cuota baja
+- Peugeot 308 PureTech 130 Allure AT 2024 | Stock:3 | $16.990.000 | Bencina | i-Cockpit, CarPlay, diseño premium
+- Peugeot 3008 PureTech 130 EAT8 2024 | Stock:4 | $18.990.000 | Bencina | SUV compacto, pantalla 10 pulgadas
+- Peugeot 408 PureTech 130 EAT8 2024 | Stock:5 | $16.490.000 | Bencina | Fastback, diseño único
+- Peugeot 5008 BlueHDi 130 EAT8 2023 | Stock:2 | $22.490.000 | Diésel | 7 plazas, 5.5L/100km, familiar
+- Kia Stonic 1.4 MPI LX AT 2024 | Stock:6 | $12.990.000 | Bencina | Crossover compacto, precio justo
+- Kia Sportage 1.6 T-GDi HEV AWD 2024 | Stock:3 | $21.990.000 | Híbrido | 180HP, AWD, tecnología
+- Kia K5 2.5 MPI GT-Line AT 2023 | Stock:2 | $17.990.000 | Bencina | Sedán premium, diseño aerodinámico
+- Kia EV6 77.4 kWh AWD GT-Line 2024 | Stock:1 | $39.990.000 | Eléctrico | 530km autonomía, carga ultrarrápida
+- Volkswagen Polo 1.6 MSI Trendline AT 2024 | Stock:5 | $12.490.000 | Bencina | 5 estrellas NCAP, conectividad
+- Volkswagen Vento 1.6 MSI Highline AT 2024 | Stock:4 | $14.990.000 | Bencina | Sedán ejecutivo, cuero, garantía
+- Peugeot E-208 50 kWh Allure 2024 | Stock:2 | $19.990.000 | Eléctrico | 362km, libre restricción vehicular
+- Land Rover Discovery Sport 2.0D HSE 2023 | Stock:1 | $43.690.000 | Diésel | 7 plazas, 4WD, garantía extendida
+- Land Rover Defender 110 P300 SE 2024 | Stock:1 | $49.990.000 | Bencina | 300HP, tecnología de punta, ícono
+`.trim();
+
+const INV_HARDCODED = `
+- Toyota Yaris 1.5 XLS CVT 2024 | Stock:7 | $11.490.000
+- Toyota Corolla 2.0 CVT GR Sport 2024 | Stock:6 | $15.990.000
+- Toyota RAV4 2.5 Hybrid AWD 2024 | Stock:3 | $29.990.000
+- Peugeot 208 PureTech 100 Like AT 2024 | Stock:8 | $11.990.000
+- Peugeot 3008 PureTech 130 EAT8 2024 | Stock:4 | $18.990.000
+- Peugeot 5008 BlueHDi 130 EAT8 2023 | Stock:2 | $22.490.000
+- Kia Sportage 1.6 T-GDi HEV AWD 2024 | Stock:3 | $21.990.000
+- Kia K5 2.5 MPI GT-Line AT 2023 | Stock:2 | $17.990.000
+- Volkswagen Polo 1.6 MSI Trendline AT 2024 | Stock:5 | $12.490.000
+- Volkswagen Vento 1.6 MSI Highline AT 2024 | Stock:4 | $14.990.000
+- Ford Ranger XLT 4x4 2020 | Stock:2 | $18.200.000
+- Suzuki Swift GLX 2022 | Stock:3 | $9.800.000
+- Chevrolet Tracker Premier 2023 | Stock:1 | $14.500.000
+- Nissan Qashqai Advance 2019 | Stock:2 | $12.900.000
+- Kia Morning Nonstop 2021 | Stock:4 | $7.500.000
+- Hyundai Tucson Value 2022 | Stock:2 | $17.100.000
+- Mazda CX-5 GTX 2018 | Stock:1 | $13.800.000
+- MG ZS 1.5 MT 2022 | Stock:3 | $9.500.000
+- Chery Tiggo 2 Pro 2023 | Stock:2 | $10.200.000
+- Nissan NP300 Navara 2020 | Stock:1 | $17.500.000`;
+
 function marcelaSys(biz,invS,notes){
+  invS = INV_HARDCODED;
+  biz = 'RMG Autos';
   const notesBlock=notes&&notes.length?`\nNOTAS INTERNAS DEL EQUIPO (úsalas para personalizar):\n${notes.slice(-5).map(n=>`- ${n.author}: ${n.content}`).join('\n')}`:'';
-  return`Eres Marcela, top asesora de ventas de ${biz} 🚗✨. Eres cálida, directa, empática y MUY persuasiva. Hablas en español chileno, con frases cortas, emojis naturales y cero rollo.
-TU MISIÓN: Enamorar al cliente del auto perfecto y cerrar una visita o llamada.
-INVENTARIO DISPONIBLE:\n${invS}${notesBlock}
-REGLAS DE ORO:
-1. Si preguntan por un modelo: confirma stock y resalta beneficios. IMPORTANTE: Vendemos autos NUEVOS y USADOS. Si piden un usado y tenemos el modelo, ofrécelo con entusiasmo. NUNCA digas que solo vendemos nuevos.
-2. Siempre termina con una pregunta que invite a avanzar: visita, test drive o llamada de un ejecutivo.
-3. Si detectas intención de compra real, propón: "¿Te llamo un ejecutivo ahora para darte el mejor precio? 😊 Trabajamos hasta las 20:00."
-4. Horario fuera de 09:00-20:00: propón "mañana a las 09:00".
-5. Precios en CLP con puntos. Nunca inventes datos. Si no sabes, di "déjame confirmarlo con el equipo".
-6. Sé breve y conversacional. Máximo 3-4 oraciones por respuesta.
+  const inv=(invS&&invS!=='(sin inventario)')?invS:INV_HARDCODED;
+  return`Eres Marcela, asesora consultiva de ${biz} 🚗 Eres cálida, empática y profesional. Hablas en español chileno con frases cortas y emojis naturales.
+
+ROL CONSULTIVO — LEE ESTO ANTES DE RESPONDER:
+Tu objetivo NO es cerrar de inmediato ni pedir test drive en el primer mensaje.
+Tu rol es entender la situación real del cliente antes de proponer algo.
+En cada conversación debes indagar amablemente al menos UNO de estos puntos:
+  a) ¿Busca financiamiento o paga al contado?
+  b) ¿Tiene auto para dejar en parte de pago (retoma)?
+  c) ¿Necesita seguro incluido en la cuota?
+Solo después de tener esa información, propón el vehículo más adecuado con precio y cuota estimada.
+
+INVENTARIO DISPONIBLE (precios en CLP, con puntos):
+${inv}${notesBlock}
+
+REGLAS:
+1. Vendemos autos NUEVOS y USADOS. Nunca digas que solo vendemos nuevos.
+2. Confirma stock antes de ofrecer. Nunca inventes datos ni precios.
+3. Precios en CLP con puntos (ej: $11.490.000). Cuotas estimadas si preguntan.
+4. Máximo 3 oraciones por respuesta. Siempre termina con UNA pregunta.
+5. Fuera de horario 09:00-20:00: propón "mañana a las 09:00".
+6. Si el cliente ya dio datos de compra (crédito, retoma, seguro), propón hablar con un ejecutivo.
+
 RESPONDE SOLO JSON (sin markdown):
-{"reply":"<texto con emojis>","intent_signal":"NONE"|"BLUE"|"YELLOW","intent_reason":"<nota>","schedule_detected":true|false,"schedule_text":"<hora si aplica>"}`;
+{"reply":"<texto>","intent_signal":"NONE"|"BLUE"|"YELLOW","intent_reason":"<nota>","schedule_detected":true|false,"schedule_text":"<hora si aplica>"}`;
 }
 
 function parseJ(raw){if(!raw)return null;const a=raw.indexOf('{'),b=raw.lastIndexOf('}');if(a===-1||b===-1)return null;try{return JSON.parse(raw.slice(a,b+1));}catch{return null;}}
@@ -57,6 +117,13 @@ async function marcela(tenant,history,msg,notes){
     if(p.schedule_detected&&fueraH(p.schedule_text)){p.reply+='\n\n(Nuestro horario es 09:00-20:00 ⏰ ¿Te acomoda mañana a las 09:00?)';p.intent_signal='YELLOW';}
     return p;
   }catch(e){console.error('Marcela:',e.message);return{reply:'Tuve un problemita técnico 😅 ¿Puedes repetir?',intent_signal:'NONE',intent_reason:'error',schedule_detected:false,schedule_text:''};}
+}
+
+function esKeywordCalif(texto){
+  if(!texto)return false;
+  const t=texto.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'');
+  return['credito','pie','seguro','retoma','parte de pago','financiamiento',
+    'cuota','mensualidad','bono','leasing','credito automotriz'].some(k=>t.includes(k));
 }
 
 function applySignal(lead,p){
@@ -269,9 +336,40 @@ app.get('/api/bot',auth('admin'),async(req,res)=>res.json(await tRead(F.bot,req.
 app.put('/api/bot',auth('admin'),async(req,res)=>{const u={...await tRead(F.bot,req.tenant,{}),...req.body};await tWrite(F.bot,req.tenant,u);res.json(u);});
 app.get('/api/inventory',auth('admin','vendedor'),async(req,res)=>res.json(await tRead(F.inventory,req.tenant)));
 
+app.post('/api/force-sla',auth('admin'),async(req,res)=>{
+  const leads=await tRead(F.leads,req.tenant);
+  const ms=31*60000;let count=0;
+  for(const l of leads){
+    if(l.status==='Nuevo'){
+      l.lastClientTs=new Date(new Date(l.lastClientTs||Date.now()).getTime()-ms).toISOString();
+      l.lastInteraction=new Date(new Date(l.lastInteraction||Date.now()).getTime()-ms).toISOString();
+      l.alertLevel=calcAlert(l);count++;
+    }
+  }
+  await tWrite(F.leads,req.tenant,leads);
+  const updated=await applySlaRules(req.tenant);
+  res.json({ok:true,count,leads:updated.filter(l=>l.status==='Nuevo')});
+});
 app.post('/api/demo/fastforward',auth('admin'),async(req,res)=>{
   const{leadId,minutes=35}=req.body||{};const leads=await tRead(F.leads,req.tenant);const idx=leads.findIndex(x=>x.id==leadId);if(idx===-1)return res.status(404).json({error:'Lead no encontrado'});
   const ms=minutes*60000;leads[idx].lastClientTs=new Date(new Date(leads[idx].lastClientTs||Date.now()).getTime()-ms).toISOString();leads[idx].lastInteraction=new Date(new Date(leads[idx].lastInteraction||Date.now()).getTime()-ms).toISOString();leads[idx].alertLevel=calcAlert(leads[idx]);await tWrite(F.leads,req.tenant,leads);res.json({ok:true,lead:leads[idx]});
+});
+
+// Endpoint masivo: adelanta 31 min a TODOS los leads 'Nuevo' del tenant
+app.post('/api/force-sla',auth('admin'),async(req,res)=>{
+  const leads=await tRead(F.leads,req.tenant);
+  const ms=31*60000;let count=0;
+  for(const l of leads){
+    if(l.status==='Nuevo'){
+      l.lastClientTs=new Date(new Date(l.lastClientTs||Date.now()).getTime()-ms).toISOString();
+      l.lastInteraction=new Date(new Date(l.lastInteraction||Date.now()).getTime()-ms).toISOString();
+      l.alertLevel=calcAlert(l);count++;
+    }
+  }
+  await tWrite(F.leads,req.tenant,leads);
+  const updated=await applySlaRules(req.tenant);
+  console.log('[force-sla] '+count+' leads adelantados 31 min, SLA re-evaluado.');
+  res.json({ok:true,count,leads:updated.filter(l=>l.status==='Nuevo')});
 });
 
 app.post('/api/chat',async(req,res)=>{

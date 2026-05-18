@@ -182,13 +182,14 @@ $('selF').addEventListener('change',()=>{S.seller=$('selF').value;refresh();});
 const btnFF = $('btnFastForward');
 if(btnFF) {
   btnFF.addEventListener('click', async()=>{
-    btnFF.disabled=true; btnFF.textContent='Acelerando... ';
-    toast('Adelantando tiempo 35 min...');
+    if(!confirm('¿Adelantar 31 minutos a TODOS los leads Nuevos? Esto activa el semáforo de reasignación.'))return;
+    btnFF.disabled=true; btnFF.textContent='⏳ Procesando...';
+    toast('Forzando SLA en todos los leads Nuevos...');
     try{
-      await api('POST', '/api/demo/fastforward');
-      toast('¡Tiempo adelantado! Revisando SLAs... ✓');
+      const r=await api('POST', '/api/force-sla');
+      toast('✅ SLA forzado: '+r.count+' leads afectados. Reasignaciones activas.');
       await refresh();
-    }catch(e){ toast(e.message, true); }
+    }catch(e){ toast('Error: '+e.message, true); }
     finally{ btnFF.disabled=false; btnFF.textContent='⏳ Forzar SLA 30m'; }
   });
 }
