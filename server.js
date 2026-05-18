@@ -498,6 +498,7 @@ app.post('/api/chat',async(req,res)=>{
   leads[idx].chatHistory=leads[idx].chatHistory||[];leads[idx].chatHistory.push({role:'user',content:message,ts:Date.now()});
   leads[idx].unread=true;
   if(leads[idx].botActive!==false){
+    if(message.trim().toLowerCase()==='/reset'){leads[idx].chatHistory=[];leads[idx].intentSignal='NONE';leads[idx].keywordAlertSent=false;leads[idx].notes=(leads[idx].notes||[]).concat({content:'🔄 Historial reseteado por comando',author:'Sistema',ts:Date.now()});await tWrite(F.leads,req.tenant,leads);return res.json({reply:'🔄 Memoria borrada. ¡Empecemos de cero! 🚗',status:leads[idx].status});}
     const assignedUserChat=allUsers.find(u=>u.username===leads[idx].assignedTo)||RMG_VENDORS.find(v=>v.username===leads[idx].assignedTo);
     const assignedNameChat=assignedUserChat?.name||null;
     const p=await marcela(tenant,leads[idx].chatHistory.slice(0,-1),message,leads[idx].notes,assignedNameChat);
@@ -547,6 +548,7 @@ app.post('/webhook',async(req,res)=>{
     ld[tenant][idx].chatHistory=ld[tenant][idx].chatHistory||[];ld[tenant][idx].chatHistory.push({role:'user',content:body,ts:Date.now()});
     ld[tenant][idx].unread=true;
     if(ld[tenant][idx].botActive!==false){
+      if(body.trim().toLowerCase()==='/reset'){ld[tenant][idx].chatHistory=[];ld[tenant][idx].intentSignal='NONE';ld[tenant][idx].keywordAlertSent=false;ld[tenant][idx].notes=(ld[tenant][idx].notes||[]).concat({content:'🔄 Historial reseteado por comando',author:'Sistema',ts:Date.now()});await tWrite(F.leads,tenant,ld[tenant]);await sendWA(from,'🔄 Memoria borrada. ¡Empecemos de cero! 🚗');return res.status(200).send('');}
       const allUsersWH=await tRead(F.users,tenant);
       const assignedUserWH=allUsersWH.find(u=>u.username===ld[tenant][idx].assignedTo)||RMG_VENDORS.find(v=>v.username===ld[tenant][idx].assignedTo);
       const assignedNameWH=assignedUserWH?.name||null;
