@@ -299,6 +299,37 @@ function renderTeam(){
   var vR=team.map(function(v){return'<div class="bar-row"><span class="blabel">'+esc((v.name||'?').split(' ')[0])+'</span><div style="flex:1;display:flex;gap:4px;font-size:10.5px;font-weight:700"><span style="color:var(--ok)">🟢'+v.sla.fresh+'</span><span style="color:var(--wn)">🟡'+v.sla.risk+'</span><span style="color:var(--bd2)">🔴'+v.sla.critical+'</span><span style="color:var(--ac);margin-left:auto">'+v.closed+' cerr.</span></div></div>';}).join('');
   cont.innerHTML='<div class="kpi-grid"><div class="kpi-card"><h4>📡 Pipeline por Canal</h4><div class="bar-wrap">'+chB+'</div></div><div class="kpi-card"><h4>⏱ Tiempo Medio 1ª Respuesta</h4><div class="bar-wrap">'+rB+'</div><div style="margin-top:8px;font-size:11px;color:var(--tm)">🟢 &lt;15m &nbsp;🟡 15-30m &nbsp;🔴 &gt;30m</div></div><div class="kpi-card" style="display:grid;grid-template-columns:1fr 1fr;gap:8px"><h4 style="grid-column:1/-1">📊 Métricas Globales</h4><div class="kpi-stat"><div class="ks-n" style="color:'+(parseFloat(tR)>20?'var(--bd2)':'var(--ok)')+'">'+tR+'%</div><div class="ks-l">Tasa Reasignación</div></div><div class="kpi-stat"><div class="ks-n" style="color:var(--ok)">'+tC+'%</div><div class="ks-l">Tasa Conversión</div></div></div><div class="kpi-card"><h4>👥 Vendedores</h4><div class="bar-wrap">'+vR+'</div></div></div>';
 }
+
+async function renderInventario(){
+  var grid=$('invGrid'),bs=$('invBrand');if(!grid)return;
+  grid.innerHTML='<div class="ke" style="grid-column:1/-1;padding:20px">Cargando vehículos desde la base de datos...</div>';
+  try{
+    var data=await api('GET','/api/inventory/scraper');
+    var inv=data.structured||[];
+    if(bs){
+      var brands=[...new Set(inv.map(function(i){return i.brand;}).filter(Boolean))].sort();
+      bs.innerHTML='<option value="">Todas las marcas</option>'+brands.map(function(b){return"<option>"+esc(b)+"</option>";}).join('');
+    }
+    var mp=$('invMaxPrice'),pl=$('invPriceLbl');
+    function applyF(){
+      var br=(bs?bs.value:'').toLowerCase(),mx=parseInt(mp?mp.value:50000000);
+      var fil=inv.filter(function(i){return(!br||(i.brand||'').toLowerCase()===br)&&((i.price||0)<=mx);});
+      if(!fil.length){grid.innerHTML='<div class="ke" style="grid-column:1/-1;padding:20px">Sin resultados en este rango.</div>';return;}
+      grid.innerHTML=fil.map(function(i){
+        return'<div class="inv-card"><div class="inv-brand">'+esc(i.brand||'—')+'</div>'
+          +'<div class="inv-model">'+esc(i.model)+(i.year?' '+i.year:'')+'</div>'
+          +'<div class="inv-price">'+fCLP(i.price||0)+'</div>'
+          +'<div class="inv-meta">Stock: '+(i.stock||0)+(i.fuel?' · '+esc(i.fuel):'')+(i.color?' · '+esc(i.color):'')+'</div>'
+          +(i.highlights?'<div class="inv-meta">'+esc(i.highlights)+'</div>':'')
+          +'</div>';
+      }).join('');
+    }
+    applyF();
+    if(bs)bs.onchange=applyF;
+    if(mp)mp.oninput=function(){if(pl)pl.textContent='Hasta '+fCLP(parseInt(mp.value));applyF();};
+    var rb=$('invRefresh');if(rb)rb.onclick=renderInventario;
+  }catch(e){grid.innerHTML='<div class="ke" style="grid-column:1/-1;padding:20px;color:var(--bd2)">Error: '+esc(e.message)+'</div>';}
+}
 async function loadConfig(){try{const cfg=await api('GET','/api/config');$('cfgN').value=cfg.businessName||'';$('cfgC').value=cfg.accentColor||'#3b82f6';}catch(e){toast('Error config',true);}}
 async function loadUsers(){try{const users=await api('GET','/api/users');S.users=users;renderUserTable(users);}catch(e){toast('Error usuarios',true);}}
 function renderUserTable(users){const tbody=$('uTbd');tbody.innerHTML=users.map(u=>`<tr data-un="${esc(u.username)}"><td><strong>${esc(u.username)}</strong></td><td><input class="un" value="${esc(u.name)}"></td><td><select class="ur"><option value="admin" ${u.role==='admin'?'selected':''}>Admin</option><option value="vendedor" ${u.role==='vendedor'?'selected':''}>Vendedor</option><option value="secretaria" ${u.role==='secretaria'?'selected':''}>Secretaria</option></select></td><td><input class="up" value="${esc(u.phone||'')}"></td><td><select class="us"><option value="Activo" ${(u.status||'Activo')==='Activo'?'selected':''}>Activo</option><option value="Inactivo" ${u.status==='Inactivo'?'selected':''}>Inactivo</option></select></td><td style="display:flex;gap:6px"><button class="bp usv" style="padding:6px 10px;font-size:12px">Guardar</button>${u.role!=='admin'?`<button class="bdn udl">Eliminar</button>`:''}</td></tr>`).join('');tbody.querySelectorAll('tr[data-un]').forEach(row=>{const un=row.dataset.un;row.querySelector('.usv').addEventListener('click',async()=>{const btn=row.querySelector('.usv');btn.disabled=true;btn.textContent='…';try{await api('PUT','/api/users/'+encodeURIComponent(un),{name:row.querySelector('.un').value.trim(),role:row.querySelector('.ur').value,phone:row.querySelector('.up').value.trim(),status:row.querySelector('.us').value});toast(un+' actualizado ✓');await loadUsers();}catch(e){toast(e.message,true);}finally{btn.disabled=false;btn.textContent='Guardar';}});const delBtn=row.querySelector('.udl');if(delBtn)delBtn.addEventListener('click',async()=>{if(!confirm('¿Eliminar '+un+'?'))return;try{await api('DELETE','/api/users/'+encodeURIComponent(un));toast('Usuario eliminado');await loadUsers();}catch(e){toast(e.message,true);}});});}
@@ -356,7 +387,7 @@ $('btnResumen').addEventListener('click',async()=>{
 });
 
 $('mSv').addEventListener('click',async()=>{if(!S.mid)return;const btn=$('mSv');btn.disabled=true;btn.textContent='…';try{const l=findLead(S.mid);const st=$('mSt').value;const note=$('mNt').value.trim();const payload={};if(st&&st!==l?.status)payload.status=st;if(note)payload.note=note;if(!Object.keys(payload).length){toast('Sin cambios');btn.disabled=false;btn.textContent='Guardar cambios';return;}await api('PATCH','/api/leads/'+S.mid,payload);$('mNt').value='';toast('Lead actualizado ✓');await refresh();renderModal();}catch(e){toast(e.message,true);}finally{btn.disabled=false;btn.textContent='Guardar cambios';}});
-document.querySelectorAll('.sb nav button').forEach(btn=>{btn.addEventListener('click',async()=>{const view=btn.dataset.view;document.querySelectorAll('.sb nav button').forEach(b=>b.classList.remove('active'));document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));btn.classList.add('active');$('view-'+view).classList.add('active');S.view=view;$('mainTb').style.display=view==='config'?'none':'';if(view==='config'){await loadConfig();await loadUsers();}});});
+document.querySelectorAll('.sb nav button').forEach(btn=>{btn.addEventListener('click',async()=>{const view=btn.dataset.view;document.querySelectorAll('.sb nav button').forEach(b=>b.classList.remove('active'));document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));btn.classList.add('active');$('view-'+view).classList.add('active');S.view=view;$('mainTb').style.display=view==='config'?'none':'';if(view==='config'){await loadConfig();await loadUsers();}else if(view==='inventario'){await renderInventario();}});});
 syncQ();updRI();
 if(S.token&&S.user)enterApp();else{$('av').style.display='none';$('lv').style.display='grid';}
 </script>
