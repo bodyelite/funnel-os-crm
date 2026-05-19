@@ -27,7 +27,7 @@ jobs:
                 const plain = c.replace(/<[^>]+>/g,' ').replace(/\s+/g,' ');
                 const precios = [...plain.matchAll(/\$(\d{1,2}\.\d{3}\.\d{3})/g)].map(m=>parseInt(m[1].replace(/\./g,'')));
                 const vendido = /VENDIDO/i.test(plain);
-                const price = vendido ? 0 : (precios[1]||precios[0]||0);
+                const price = vendido ? 0 : (precios[0]||0);
                 const yearM = plain.match(/\b(201\d|202[0-5])\b/);
                 const year = yearM ? parseInt(yearM[0]) : null;
                 let brand = '', modelName = '';
