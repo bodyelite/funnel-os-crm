@@ -607,7 +607,6 @@ app.get('/api/inventory/scraper',auth('admin','vendedor'),async(req,res)=>{
   let finalInv = webInv.length > 0 ? webInv : dbInv;
   res.json({ts:scrapeCache.ts, raw:webText, structured: finalInv});
 });
-});
 setInterval(async()=>{
   for(const t of TENANTS){
     try{
