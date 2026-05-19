@@ -12,61 +12,61 @@ jobs:
           node << 'JS'
           const https = require('https');
           const UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/124.0.0.0 Safari/537.36';
-          
-          function get(url) {
-            return new Promise((res, rej) => {
-              https.get(url, {headers:{'User-Agent':UA,'Accept':'text/html'}}, r => {
-                let d=''; r.on('data',c=>d+=c); r.on('end',()=>res(d));
+          function get(url){
+            return new Promise((res,rej)=>{
+              https.get(url,{headers:{'User-Agent':UA,'Accept':'text/html'}},r=>{
+                let d='';r.on('data',c=>d+=c);r.on('end',()=>res(d));
               }).on('error',rej).setTimeout(15000,function(){this.destroy(new Error('timeout'));});
             });
           }
-          
-          async function main() {
-            // Paso 1: obtener lista de links /product/ desde /usados/
+          async function main(){
             const html = await get('https://rmgautos.cl/usados/');
             const links = [...new Set([...html.matchAll(/href="(https:\/\/rmgautos\.cl\/product\/[^"]+)"/g)].map(m=>m[1]))];
-            console.log('Links encontrados:', links.length);
-            if(links.length === 0){ console.log('Cloudflare bloqueó /usados/'); process.exit(0); }
-            
-            // Paso 2: visitar cada ficha individual para obtener precio real
-            const inv = [];
-            for(const link of links.slice(0,35)) {
-              try {
-                await new Promise(r=>setTimeout(r,800)); // delay para no ser bloqueado
+            console.log('Links:', links.length);
+            if(!links.length){console.log('Bloqueado');process.exit(0);}
+            const MARCAS=['CHANGAN','SUZUKI','RAM','PEUGEOT','OPEL','KIA','CHERY','VOLKSWAGEN','HONDA','SSANGYONG','FORD','HYUNDAI','TOYOTA','BMW','MG','KARRY','NISSAN','ALFA'];
+            const inv=[];
+            for(const link of links.slice(0,35)){
+              try{
+                await new Promise(r=>setTimeout(r,800));
                 const page = await get(link);
                 const plain = page.replace(/<[^>]+>/g,' ').replace(/\s+/g,' ');
-                const MARCAS = ['CHANGAN','SUZUKI','RAM','PEUGEOT','OPEL','KIA','CHERY','VOLKSWAGEN','HONDA','SSANGYONG','FORD','HYUNDAI','TOYOTA','BMW','MG','KARRY','NISSAN','ALFA'];
-                let brand = '';
-                for(const m of MARCAS){ if(plain.toUpperCase().includes(' '+m+' ')||plain.toUpperCase().includes('>'+m+'<')){brand=m;break;} }
-                if(!brand) continue;
-                // Precio Lista: primer precio grande
-                const priceM = plain.match(/Precio\s+Lista[^$]*\$([\d\.]+)/i) || plain.match(/\$([\d]{1,2}\.[\d]{3}\.[\d]{3})/);
-                const price = priceM ? parseInt(priceM[1].replace(/\./g,'')) : 0;
-                if(!price) continue;
-                const yearM = plain.match(/\b(201[0-9]|202[0-5])\b/);
-                const year = yearM ? parseInt(yearM[0]) : null;
-                const kmM = plain.match(/Kilometraje[^0-9]*(\d{1,3}\.?\d{3})/i);
-                const km = kmM ? kmM[1].replace(/\./g,'') : '';
-                const fuelM = plain.match(/Combustible[^A-Za-z]*([A-Za-z]+)/i);
+                let brand='';
+                for(const m of MARCAS){if(plain.toUpperCase().includes(m)){brand=m;break;}}
+                if(!brand)continue;
+                // Precio Lista específico
+                const plM = plain.match(/Precio\s+Lista\s*\$?\s*([\d\.]+)/i);
+                const price = plM ? parseInt(plM[1].replace(/\./g,'')) : 0;
+                if(!price)continue;
+                // Año
+                const yearM = plain.match(/A[ñn]o\s*:?\s*(201[0-9]|202[0-5])/i);
+                const year = yearM ? parseInt(yearM[1]) : null;
+                // Kilometraje — campo específico, no precio
+                const kmM = plain.match(/Kilometraje\s*:?\s*([\d\.]+)/i);
+                const kmVal = kmM ? parseInt(kmM[1].replace(/\./g,'')) : 0;
+                const km = kmVal > 0 ? kmVal.toLocaleString('es-CL')+' km' : '';
+                // Combustible y transmisión
+                const fuelM = plain.match(/Combustible\s*:?\s*([A-Za-záéíóúÁÉÍÓÚ]+)/i);
                 const fuel = fuelM ? fuelM[1] : '';
-                const modelM = link.match(/\/product\/([^\/]+)\//);
-                const modelSlug = modelM ? modelM[1].replace(/-/g,' ').toUpperCase() : brand;
+                const transM = plain.match(/Transmisi[oó]n\s*:?\s*([A-Za-záéíóúÁÉÍÓÚ]+)/i);
+                const trans = transM ? transM[1] : '';
+                // Modelo desde slug
+                const slugM = link.match(/\/product\/([^\/]+)\//);
+                const modelSlug = slugM ? slugM[1].replace(/-/g,' ').toUpperCase() : brand;
                 const vendido = /VENDIDO/i.test(plain);
-                inv.push({id:'WEB-'+inv.length, brand, model:modelSlug, year, price:vendido?0:price,
-                  km: km ? parseInt(km).toLocaleString('es-CL')+' km' : '',
-                  stock:vendido?0:1, link, highlights:[fuel, km?parseInt(km).toLocaleString('es-CL')+' km':'', vendido?'VENDIDO':''].filter(Boolean).join(' | ')});
-                console.log('OK:', brand, modelSlug, '$'+price.toLocaleString());
-              } catch(e){ console.error('Error en', link, e.message); }
+                inv.push({id:'WEB-'+inv.length,brand,model:modelSlug,year,price:vendido?0:price,
+                  km,stock:vendido?0:1,link,
+                  highlights:[fuel,trans,km,vendido?'VENDIDO':''].filter(Boolean).join(' | ')});
+                console.log('OK:',brand,modelSlug,'$'+price.toLocaleString(),'|',km);
+              }catch(e){console.error('Error:',link,e.message);}
             }
-            
-            if(inv.length === 0){ console.log('Sin autos válidos'); process.exit(0); }
-            
-            const body = JSON.stringify(inv);
+            if(!inv.length){console.log('Sin autos');process.exit(0);}
+            const body=JSON.stringify(inv);
             await new Promise((res,rej)=>{
-              const req = https.request('https://body-elite-giftcards.onrender.com/api/inventory/push?tenant=demo_automotora',
+              const req=https.request('https://body-elite-giftcards.onrender.com/api/inventory/push?tenant=demo_automotora',
                 {method:'POST',headers:{'Content-Type':'application/json','x-push-key':'rmg2025push','Content-Length':Buffer.byteLength(body)}},
                 r=>{let d='';r.on('data',c=>d+=c);r.on('end',()=>{console.log('Sync OK:',d);res();});});
-              req.on('error',rej); req.write(body); req.end();
+              req.on('error',rej);req.write(body);req.end();
             });
           }
           main().catch(e=>{console.error(e);process.exit(1);});
