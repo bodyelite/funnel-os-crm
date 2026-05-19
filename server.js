@@ -386,8 +386,7 @@ app.post('/api/leads/:id/resumen',auth('admin','vendedor'),async(req,res)=>{
         {role:'user',content:'NOMBRE: '+lead.name+'\nHISTORIAL:\n'+histSnip+(notasSnip?'\nNOTAS DEL VENDEDOR:\n'+notasSnip:'')}]});
     const resumen=(resComp.choices?.[0]?.message?.content||'').trim();
     if(!resumen)return res.status(500).json({error:'OpenAI no devolvio resumen'});
-    lead.notes=Array.isArray(lead.notes)?lead.notes:[];
-    lead.notes.push({content:'🧠 '+resumen,author:'Resumen IA',ts:Date.now()});
+    lead.ai_summary=resumen;
     lead.keywordAlertSent=true;
     await tWrite(F.leads,req.tenant,leads);
     console.log('[resumen-manual] '+lead.name);
@@ -511,10 +510,9 @@ app.post('/api/chat',async(req,res)=>{
     if(esKeywordCalif(message)&&!leads[idx].keywordAlertSent){
       leads[idx].keywordAlertSent=true;
       leads[idx].intentSignal='BLUE';
-      leads[idx].notes=Array.isArray(leads[idx].notes)?leads[idx].notes:[];
       try{
         const histSnip=leads[idx].chatHistory.slice(-10).map(m=>(m.role==='user'?'Cliente':'Asesor')+': '+m.content).join('\n');
-        const notasSnip=(leads[idx].notes||[]).slice(-3).map(n=>n.author+': '+n.content).join('\n');
+        const notasSnip=(leads[idx].notes||[]).filter(n=>n.author!=='Resumen IA').slice(-3).map(n=>n.author+': '+n.content).join('\n');
         const resComp=await openai.chat.completions.create({model:'gpt-4o-mini',temperature:0.4,max_tokens:200,messages:[{role:'system',content:'Eres un asistente comercial de automotora. Con el historial de chat y las notas del vendedor, redacta un BRIEFING narrativo de maximo 3 lineas: (1) [Nombre] consulta por [auto especifico]. (2) [Que dijo sobre financiamiento, retoma, fecha o acuerdo]. (3) Sugerencia: [accion concreta para el vendedor ahora]. Espanol directo, sin emojis, sin titulos, solo el parrafo.'},{role:'user',content:'NOMBRE: '+leads[idx].name+'\nHISTORIAL:\n'+histSnip+(notasSnip?'\nNOTAS DEL VENDEDOR:\n'+notasSnip:'')}]});
         const resumenIA=(resComp.choices?.[0]?.message?.content||'').trim()||'Interés detectado en crédito/retoma.';
         leads[idx].ai_summary=resumenIA;
