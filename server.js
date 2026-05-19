@@ -631,3 +631,23 @@ setTimeout(async () => {
     }
   } catch(e) { console.log('Error en parche', e); }
 }, 3000);
+
+// --- PARCHE DE EMERGENCIA: MIGRAR LEADS A VENDEDORES REALES ---
+setTimeout(async () => {
+  try {
+    if (typeof tRead === 'function' && typeof tWrite === 'function' && typeof F !== 'undefined') {
+        let leads = await tRead(F.leads, 'demo_automotora');
+        let changed = false;
+        if (leads && Array.isArray(leads)) {
+            leads.forEach(l => {
+                if (l.assignedTo === 'vendedor1') { l.assignedTo = 'daniela'; changed = true; }
+                if (l.assignedTo === 'vendedor2') { l.assignedTo = 'carlos'; changed = true; }
+            });
+            if (changed) {
+                await tWrite(F.leads, 'demo_automotora', leads);
+                console.log('✅ Leads de prueba asignados a Daniela y Carlos con éxito.');
+            }
+        }
+    }
+  } catch(e) { console.log('Error en parche migración', e); }
+}, 4000);
