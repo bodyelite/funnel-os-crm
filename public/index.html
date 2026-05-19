@@ -301,40 +301,9 @@ function renderTeam(){
 }
 
 async function syncInventario(){
-  var btn=document.getElementById('btnSyncInv');
-  btn.textContent='⏳ Cargando...';btn.disabled=true;
-  try{
-    var MARCAS=['CHANGAN','SUZUKI','RAM','PEUGEOT','OPEL','KIA','CHERY','VOLKSWAGEN','HONDA','SSANGYONG','FORD','HYUNDAI','TOYOTA','BMW','MG','KARRY','NISSAN','ALFA'];
-    var inv=[];
-    var iframe=document.createElement('iframe');
-    iframe.style.cssText='position:fixed;top:-9999px;left:-9999px;width:1px;height:1px;';
-    iframe.src='https://rmgautos.cl/usados/';
-    document.body.appendChild(iframe);
-    await new Promise(function(r){iframe.onload=function(){setTimeout(r,2000);};setTimeout(r,10000);});
-    var doc=iframe.contentDocument||iframe.contentWindow.document;
-    doc.querySelectorAll('a[href*="/product/"]').forEach(function(a){
-      if(!a.innerText.match(/con/i))return;
-      var link=a.href;var card=a;
-      for(var i=0;i<12;i++)card=card.parentElement;
-      var txt=card.innerText;var lines=txt.split('\n').map(function(l){return l.trim();}).filter(Boolean);
-      var brand='',modelName='';
-      for(var j=0;j<lines.length;j++){if(MARCAS.indexOf(lines[j])>=0){brand=lines[j];modelName=lines[j+1]||'';break;}}
-      if(!brand)return;
-      var vendido=/VENDIDO/i.test(txt);var precios=[];
-      txt.replace(/\$([\d]{1,2}\.[\d]{3}\.[\d]{3})/g,function(_,n){precios.push(parseInt(n.replace(/\./g,'')));});
-      var price=vendido?0:(precios[1]||precios[0]||0);
-      var year=null;var ym=txt.match(/\b(201[0-9]|202[0-5])\b/);if(ym)year=parseInt(ym[0]);
-      var km='';txt.replace(/\b(\d{1,3})\.(\d{3})\b/g,function(_,a,b){if(km)return;var v=parseInt(a+b);if(v>500&&v<999999&&String(v)!==String(year))km=v.toLocaleString('es-CL')+' km';});
-      inv.push({id:'WEB-'+inv.length,brand:brand,model:(brand+' '+modelName).trim(),year:year,price:price,km:km,stock:vendido?0:1,link:link,highlights:km+(vendido?' | VENDIDO':'')});
-    });
-    document.body.removeChild(iframe);
-    if(inv.length===0){toast('Sin autos encontrados — verifica conexión');btn.textContent='🔄 Sync RMG';btn.disabled=false;return;}
-    var r=await api('POST','/api/inventory/push',inv);
-    toast('✅ '+r.count+' autos sincronizados desde RMG');
-    if(S.view==='inventario')await renderInventario();
-  }catch(e){toast('Error sync: '+e.message,true);}
-  btn.textContent='🔄 Sync RMG';btn.disabled=false;
+  toast('✅ El inventario se sincroniza automáticamente cada hora desde GitHub Actions. Último sync: '+new Date().toLocaleTimeString('es-CL'));
 }
+
 async function renderInventario(){
   var grid=$('invGrid'),bs=$('invBrand');if(!grid)return;
   grid.innerHTML='<div class="ke" style="grid-column:1/-1;padding:20px">Cargando vehículos desde la base de datos...</div>';
