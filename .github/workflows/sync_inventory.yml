@@ -7,41 +7,67 @@ jobs:
   sync:
     runs-on: ubuntu-latest
     steps:
-      - name: Fetch and push inventory
+      - name: Sync inventory from rmgautos.cl
         run: |
           node << 'JS'
           const https = require('https');
-          const url = 'https://rmgautos.cl/usados/';
-          https.get(url, {headers:{'User-Agent':'Mozilla/5.0 Chrome/124.0.0.0'}}, res => {
-            let html = '';
-            res.on('data', d => html += d);
-            res.on('end', () => {
-              const MARCAS = ['CHANGAN','SUZUKI','RAM','PEUGEOT','OPEL','KIA','CHERY','VOLKSWAGEN','HONDA','SSANGYONG','FORD','HYUNDAI','TOYOTA','BMW','MG','KARRY','NISSAN','ALFA'];
-              const inv = [];
-              const linkRE = /href="(https:\/\/rmgautos\.cl\/product\/[^"]+)"/g;
-              const cards = html.split('href="https://rmgautos.cl/product/').slice(1);
-              // Extraer por bloque de tarjeta
-              const bloqueRE = /\$(\d{1,2}\.\d{3}\.\d{3})/g;
-              cards.forEach((c, i) => {
-                const link = 'https://rmgautos.cl/product/' + c.split('"')[0];
-                const plain = c.replace(/<[^>]+>/g,' ').replace(/\s+/g,' ');
-                const precios = [...plain.matchAll(/\$(\d{1,2}\.\d{3}\.\d{3})/g)].map(m=>parseInt(m[1].replace(/\./g,'')));
-                const vendido = /VENDIDO/i.test(plain);
-                const price = vendido ? 0 : (precios[0]||0);
-                const yearM = plain.match(/\b(201\d|202[0-5])\b/);
-                const year = yearM ? parseInt(yearM[0]) : null;
-                let brand = '', modelName = '';
-                for(const m of MARCAS) { if(plain.toUpperCase().includes(m)) { brand=m; break; } }
-                if(!brand || !price) return;
-                const kmM = plain.match(/\b(\d{1,3})\.(\d{3})\b/g);
-                let km = '';
-                if(kmM) for(const k of kmM) { const v=parseInt(k.replace(/\./g,'')); if(v>500&&v<999999&&String(v)!==String(year)){km=v.toLocaleString('es-CL')+' km';break;} }
-                inv.push({id:'WEB-'+inv.length,brand,model:brand,year,price,km,stock:vendido?0:1,link,highlights:km+(vendido?' | VENDIDO':'')});
-              });
-              if(inv.length === 0){console.log('0 autos - Cloudflare bloqueó');process.exit(0);}
-              const body = JSON.stringify(inv);
-              const req = https.request('https://body-elite-giftcards.onrender.com/api/inventory/push?tenant=demo_automotora',{method:'POST',headers:{'Content-Type':'application/json','x-push-key':'rmg2025push','Content-Length':Buffer.byteLength(body)}},r=>{let d='';r.on('data',c=>d+=c);r.on('end',()=>console.log('Sync OK:',d));});
-              req.write(body);req.end();
+          const UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/124.0.0.0 Safari/537.36';
+          
+          function get(url) {
+            return new Promise((res, rej) => {
+              https.get(url, {headers:{'User-Agent':UA,'Accept':'text/html'}}, r => {
+                let d=''; r.on('data',c=>d+=c); r.on('end',()=>res(d));
+              }).on('error',rej).setTimeout(15000,function(){this.destroy(new Error('timeout'));});
             });
-          }).on('error',e=>console.error(e));
+          }
+          
+          async function main() {
+            // Paso 1: obtener lista de links /product/ desde /usados/
+            const html = await get('https://rmgautos.cl/usados/');
+            const links = [...new Set([...html.matchAll(/href="(https:\/\/rmgautos\.cl\/product\/[^"]+)"/g)].map(m=>m[1]))];
+            console.log('Links encontrados:', links.length);
+            if(links.length === 0){ console.log('Cloudflare bloqueó /usados/'); process.exit(0); }
+            
+            // Paso 2: visitar cada ficha individual para obtener precio real
+            const inv = [];
+            for(const link of links.slice(0,35)) {
+              try {
+                await new Promise(r=>setTimeout(r,800)); // delay para no ser bloqueado
+                const page = await get(link);
+                const plain = page.replace(/<[^>]+>/g,' ').replace(/\s+/g,' ');
+                const MARCAS = ['CHANGAN','SUZUKI','RAM','PEUGEOT','OPEL','KIA','CHERY','VOLKSWAGEN','HONDA','SSANGYONG','FORD','HYUNDAI','TOYOTA','BMW','MG','KARRY','NISSAN','ALFA'];
+                let brand = '';
+                for(const m of MARCAS){ if(plain.toUpperCase().includes(' '+m+' ')||plain.toUpperCase().includes('>'+m+'<')){brand=m;break;} }
+                if(!brand) continue;
+                // Precio Lista: primer precio grande
+                const priceM = plain.match(/Precio\s+Lista[^$]*\$([\d\.]+)/i) || plain.match(/\$([\d]{1,2}\.[\d]{3}\.[\d]{3})/);
+                const price = priceM ? parseInt(priceM[1].replace(/\./g,'')) : 0;
+                if(!price) continue;
+                const yearM = plain.match(/\b(201[0-9]|202[0-5])\b/);
+                const year = yearM ? parseInt(yearM[0]) : null;
+                const kmM = plain.match(/Kilometraje[^0-9]*(\d{1,3}\.?\d{3})/i);
+                const km = kmM ? kmM[1].replace(/\./g,'') : '';
+                const fuelM = plain.match(/Combustible[^A-Za-z]*([A-Za-z]+)/i);
+                const fuel = fuelM ? fuelM[1] : '';
+                const modelM = link.match(/\/product\/([^\/]+)\//);
+                const modelSlug = modelM ? modelM[1].replace(/-/g,' ').toUpperCase() : brand;
+                const vendido = /VENDIDO/i.test(plain);
+                inv.push({id:'WEB-'+inv.length, brand, model:modelSlug, year, price:vendido?0:price,
+                  km: km ? parseInt(km).toLocaleString('es-CL')+' km' : '',
+                  stock:vendido?0:1, link, highlights:[fuel, km?parseInt(km).toLocaleString('es-CL')+' km':'', vendido?'VENDIDO':''].filter(Boolean).join(' | ')});
+                console.log('OK:', brand, modelSlug, '$'+price.toLocaleString());
+              } catch(e){ console.error('Error en', link, e.message); }
+            }
+            
+            if(inv.length === 0){ console.log('Sin autos válidos'); process.exit(0); }
+            
+            const body = JSON.stringify(inv);
+            await new Promise((res,rej)=>{
+              const req = https.request('https://body-elite-giftcards.onrender.com/api/inventory/push?tenant=demo_automotora',
+                {method:'POST',headers:{'Content-Type':'application/json','x-push-key':'rmg2025push','Content-Length':Buffer.byteLength(body)}},
+                r=>{let d='';r.on('data',c=>d+=c);r.on('end',()=>{console.log('Sync OK:',d);res();});});
+              req.on('error',rej); req.write(body); req.end();
+            });
+          }
+          main().catch(e=>{console.error(e);process.exit(1);});
           JS
