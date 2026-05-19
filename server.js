@@ -582,7 +582,31 @@ app.post('/webhook',async(req,res)=>{
 });
 
 app.get('/api/inventory/scraper',auth('admin','vendedor'),async(req,res)=>{
-  res.json({ts:scrapeCache.ts,raw:scrapeCache.data||'',structured:await tRead(F.inventory,req.tenant)});
+  let dbInv = await tRead(F.inventory,req.tenant);
+  if(!Array.isArray(dbInv)) dbInv = [];
+  let webText = scrapeCache.data || '';
+  let webInv = [];
+  if (webText) {
+     webText.split('\n').forEach((line, i) => {
+        if(!line.includes('|')) return;
+        let parts = line.split('|');
+        let namePart = parts[0].replace('-','').trim();
+        let pricePart = parts[parts.length-1].replace(/\D/g,'');
+        let brand = namePart.split(' ')[0];
+        let model = namePart.substring(brand.length).trim();
+        webInv.push({
+           id: 'WEB-'+i,
+           brand: brand,
+           model: model || 'Stock Web',
+           price: parseInt(pricePart || 0),
+           stock: 1,
+           highlights: parts.length > 2 ? parts[1].trim() : 'Scrapeado de rmgautos.cl'
+        });
+     });
+  }
+  let finalInv = webInv.length > 0 ? webInv : dbInv;
+  res.json({ts:scrapeCache.ts, raw:webText, structured: finalInv});
+});
 });
 setInterval(async()=>{
   for(const t of TENANTS){
