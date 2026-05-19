@@ -321,6 +321,7 @@ async function renderInventario(){
           +'<div class="inv-price">'+fCLP(i.price||0)+'</div>'
           +'<div class="inv-meta">Stock: '+(i.stock||0)+(i.fuel?' · '+esc(i.fuel):'')+(i.color?' · '+esc(i.color):'')+'</div>'
           +(i.highlights?'<div class="inv-meta">'+esc(i.highlights)+'</div>':'')
+          +(i.link?'<div class="inv-meta" style="margin-top:6px"><a href="'+i.link+'" target="_blank" style="color:var(--ac);font-size:11px;text-decoration:none">🔗 Ver ficha completa</a></div>':'')
           +'</div>';
       }).join('');
     }
