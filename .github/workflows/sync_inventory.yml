@@ -14,50 +14,43 @@ jobs:
           const UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/124.0.0.0 Safari/537.36';
           function get(url){
             return new Promise((res,rej)=>{
-              https.get(url,{headers:{'User-Agent':UA,'Accept':'text/html'}},r=>{
+              https.get(url,{headers:{'User-Agent':UA}},r=>{
                 let d='';r.on('data',c=>d+=c);r.on('end',()=>res(d));
-              }).on('error',rej).setTimeout(15000,function(){this.destroy(new Error('timeout'));});
+              }).on('error',rej).setTimeout(15000,function(){this.destroy();});
             });
           }
           async function main(){
             const html = await get('https://rmgautos.cl/usados/');
-            const links = [...new Set([...html.matchAll(/href="(https:\/\/rmgautos\.cl\/product\/[^"]+)"/g)].map(m=>m[1]))];
-            console.log('Links:', links.length);
+            const links=[...new Set([...html.matchAll(/href="(https:\/\/rmgautos\.cl\/product\/[^"]+)"/g)].map(m=>m[1]))];
+            console.log('Links:',links.length);
             if(!links.length){console.log('Bloqueado');process.exit(0);}
             const MARCAS=['CHANGAN','SUZUKI','RAM','PEUGEOT','OPEL','KIA','CHERY','VOLKSWAGEN','HONDA','SSANGYONG','FORD','HYUNDAI','TOYOTA','BMW','MG','KARRY','NISSAN','ALFA'];
             const inv=[];
             for(const link of links.slice(0,35)){
               try{
                 await new Promise(r=>setTimeout(r,800));
-                const page = await get(link);
-                const plain = page.replace(/<[^>]+>/g,' ').replace(/\s+/g,' ');
+                const page=await get(link);
+                const plain=page.replace(/<[^>]+>/g,' ').replace(/\s+/g,' ');
                 let brand='';
                 for(const m of MARCAS){if(plain.toUpperCase().includes(m)){brand=m;break;}}
                 if(!brand)continue;
-                // Precio Lista específico
-                const plM = plain.match(/Precio\s+Lista\s*\$?\s*([\d\.]+)/i);
-                const price = plM ? parseInt(plM[1].replace(/\./g,'')) : 0;
+                const plM=plain.match(/Precio\s+Lista\s*\$\s*([\d\.]+)/i);
+                const price=plM?parseInt(plM[1].replace(/\./g,'')):0;
                 if(!price)continue;
-                // Año
-                const yearM = plain.match(/A[ñn]o\s*:?\s*(201[0-9]|202[0-5])/i);
-                const year = yearM ? parseInt(yearM[1]) : null;
-                // Kilometraje — campo específico, no precio
-                const kmM = plain.match(/Kilometraje\s*:?\s*([\d\.]+)/i);
-                const kmVal = kmM ? parseInt(kmM[1].replace(/\./g,'')) : 0;
-                const km = kmVal > 0 ? kmVal.toLocaleString('es-CL')+' km' : '';
-                // Combustible y transmisión
-                const fuelM = plain.match(/Combustible\s*:?\s*([A-Za-záéíóúÁÉÍÓÚ]+)/i);
-                const fuel = fuelM ? fuelM[1] : '';
-                const transM = plain.match(/Transmisi[oó]n\s*:?\s*([A-Za-záéíóúÁÉÍÓÚ]+)/i);
-                const trans = transM ? transM[1] : '';
-                // Modelo desde slug
-                const slugM = link.match(/\/product\/([^\/]+)\//);
-                const modelSlug = slugM ? slugM[1].replace(/-/g,' ').toUpperCase() : brand;
-                const vendido = /VENDIDO/i.test(plain);
-                inv.push({id:'WEB-'+inv.length,brand,model:modelSlug,year,price:vendido?0:price,
-                  km,stock:vendido?0:1,link,
-                  highlights:[fuel,trans,km,vendido?'VENDIDO':''].filter(Boolean).join(' | ')});
-                console.log('OK:',brand,modelSlug,'$'+price.toLocaleString(),'|',km);
+                const yearM=plain.match(/A.o\s*:?\s*(201[0-9]|202[0-5])/i);
+                const year=yearM?parseInt(yearM[1]):null;
+                const kmM=plain.match(/Kilometraje\s*:?\s*([\d\.]+)/i);
+                const kmVal=kmM?parseInt(kmM[1].replace(/\./g,'')):0;
+                const km=kmVal>0?kmVal.toLocaleString('es-CL')+' km':'';
+                const fuelM=plain.match(/Combustible\s*:?\s*(\w+)/i);
+                const fuel=fuelM?fuelM[1]:'';
+                const transM=plain.match(/Transmisi.n\s*:?\s*(\w+)/i);
+                const trans=transM?transM[1]:'';
+                const slugM=link.match(/\/product\/([^\/]+)\//);
+                const model=slugM?slugM[1].replace(/-/g,' ').toUpperCase():brand;
+                const vendido=/VENDIDO/i.test(plain);
+                inv.push({id:'WEB-'+inv.length,brand,model,year,price:vendido?0:price,km,stock:vendido?0:1,link,highlights:[fuel,trans,km,vendido?'VENDIDO':''].filter(Boolean).join(' | ')});
+                console.log('OK:',brand,model,'$'+price.toLocaleString(),'|',km);
               }catch(e){console.error('Error:',link,e.message);}
             }
             if(!inv.length){console.log('Sin autos');process.exit(0);}
