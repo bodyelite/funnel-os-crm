@@ -11,6 +11,8 @@ const PORT=process.env.PORT||3000;
 const DATA=process.env.RENDER?'/var/data':path.join(__dirname,'data');
 if(!fsSync.existsSync(DATA))fsSync.mkdirSync(DATA,{recursive:true});
 app.use(express.json({limit:'2mb'}));
+app.use((req,res,next)=>{res.header('Access-Control-Allow-Origin','*');res.header('Access-Control-Allow-Headers','Content-Type,X-Auth-Token,Authorization');res.header('Access-Control-Allow-Methods','GET,POST,PUT,PATCH,DELETE,OPTIONS');if(req.method==='OPTIONS')return res.sendStatus(200);next();});
+
 const F={users:path.join(DATA,'users.json'),leads:path.join(DATA,'leads.json'),config:path.join(DATA,'config.json'),bot:path.join(DATA,'bot.json'),inventory:path.join(DATA,'inventory.json'),rr:path.join(DATA,'rr.json'),spend:path.join(DATA,'spend.json')};
 const TENANTS=['demo_automotora','demo_clinica'];
 const sessions=new Map();
