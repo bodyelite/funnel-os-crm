@@ -615,3 +615,19 @@ app.use(express.static(path.join(__dirname,'public')));
 app.get('*',(req,res)=>res.sendFile(path.join(__dirname,'public','index.html')));
 setInterval(async()=>{for(const t of TENANTS){try{await applySlaRules(t);}catch(e){console.error('SLA',t,e.message);}}},60000);
 app.listen(PORT,()=>{console.log(`🚀 FunnelOS :${PORT} | SLA_GREEN=${SLA_GREEN} SLA_REASSIGN=${SLA_REASSIGN} SLA_YELLOW=${SLA_YELLOW}`);seed().catch(console.error);});
+
+// --- PARCHE DE EMERGENCIA: AUTO-RESETEO DE CLAVES EN RENDER ---
+setTimeout(async () => {
+  try {
+    if (typeof TENANTS !== 'undefined' && typeof tRead === 'function' && typeof tWrite === 'function' && typeof F !== 'undefined') {
+        for (let t of TENANTS) {
+            let usrs = await tRead(F.users, t);
+            if (usrs && Array.isArray(usrs)) {
+                usrs.forEach(u => u.password = 'demo');
+                await tWrite(F.users, t, usrs);
+                console.log('✅ Claves reseteadas a "demo" internamente en Render.');
+            }
+        }
+    }
+  } catch(e) { console.log('Error en parche', e); }
+}, 3000);
