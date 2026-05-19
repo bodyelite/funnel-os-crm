@@ -647,7 +647,8 @@ app.post('/webhook',async(req,res)=>{
 });
 
 // ── NUEVO: endpoint para actualizar inventario desde el navegador ──
-app.post('/api/inventory/push', auth('admin'), async (req, res) => {
+app.post('/api/inventory/push', async (req, res) => {
+  if(req.headers['x-push-key'] !== (process.env.PUSH_KEY||'rmg2025push')) return res.status(401).json({error:'key invalida'});
   try {
     const items = req.body;
     if (!Array.isArray(items) || items.length === 0) return res.status(400).json({ error: 'Array vacio' });
