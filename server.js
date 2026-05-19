@@ -436,7 +436,7 @@ app.post('/api/auth/login',async(req,res)=>{
   const u=users.find(x=>x.username===username&&x.password===password);
   if(!u)return res.status(401).json({error:'Credenciales incorrectas'});
   const token=crypto.randomBytes(24).toString('hex');const safe={username:u.username,name:u.name,role:u.role};
-  sessions.set(token,{user:safe,tenant:t});res.json({token,user:safe,tenant:t});
+  sessions.set(token,{user:safe,tenant:t});res.json({token,user:safe,tenant:t,expires:Date.now()+86400000});
 });
 app.post('/api/auth/logout',(req,res)=>{sessions.delete(req.header('X-Auth-Token'));res.json({ok:true});});
 app.get('/api/me',auth(),(req,res)=>res.json({user:req.user,tenant:req.tenant}));
