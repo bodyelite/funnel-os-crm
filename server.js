@@ -39,44 +39,48 @@ let scrapeCache = { ts: 0, data: '' };
 
 async function scrapeRMG() {
   const now = Date.now();
-  if (scrapeCache.data && (now - scrapeCache.ts) < 30 * 60 * 1000) return scrapeCache.data;
+  if (scrapeCache.items && scrapeCache.items.length && (now - scrapeCache.ts) < 30 * 60 * 1000) return scrapeCache.data;
   try {
-    const r = await fetch(RMG_SCRAPE_URL, { signal: AbortSignal.timeout(10000), headers: { 'User-Agent': 'Mozilla/5.0 (compatible; RMG-CRM-Bot/1.0)' } });
+    const r = await fetch(RMG_SCRAPE_URL, { signal: AbortSignal.timeout(12000), headers: { 'User-Agent': 'Mozilla/5.0 (compatible; RMG-CRM-Bot/1.0)' } });
     if (!r.ok) throw new Error('HTTP ' + r.status);
     const html = await r.text();
-    const autos = [];
+    const items = [];
+    const base = 'https://rmgautos.cl';
     const pSign = String.fromCharCode(36);
     const bloqueRE = /<(?:article|div|li)[^>]*class="[^"]*(?:car|vehicle|product|listing|post|item)[^"]*"[^>]*>([\s\S]*?)<\/(?:article|div|li)>/gi;
     let bloque;
-    while ((bloque = bloqueRE.exec(html)) !== null && autos.length < 40) {
-      const seg = bloque[1].replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ');
-      const marcaM = seg.match(MARCAS_RE); if (!marcaM) continue;
+    while ((bloque = bloqueRE.exec(html)) !== null && items.length < 50) {
+      const raw = bloque[1];
+      const hrefM = raw.match(/href="([^"]*(?:rmgautos\.cl|\/usados\/|\/auto\/|\/vehiculo\/|\/producto\/)[^"]*)"/i) || raw.match(/href="(\/[^"]{4,80})"/i);
+      const link = hrefM ? (hrefM[1].startsWith('http') ? hrefM[1] : base + hrefM[1]) : '';
+      const titleM = raw.match(/<(?:h[1-4]|strong)[^>]*>([^<]{4,80})<\/(?:h[1-4]|strong)>/i) || raw.match(/<a[^>]*title="([^"]{4,80})"/i) || raw.match(/alt="([^"]{4,80})"/i);
+      const titulo = titleM ? titleM[1].replace(/&amp;/g,'&').replace(/&#039;/g,"'").trim() : '';
+      const descM = raw.match(/<(?:p|span)[^>]*class="[^"]*(?:desc|detail|attr|spec|feature|highlight)[^"]*"[^>]*>([^<]{5,120})<\/(?:p|span)>/i) || raw.match(/<p[^>]*>([^<]{10,120})<\/p>/i);
+      const desc = descM ? descM[1].replace(/<[^>]+>/g,'').trim() : '';
+      const seg = raw.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ');
+      const marcaM = (titulo || seg).match(MARCAS_RE); if (!marcaM) continue;
       const marca = marcaM[0];
-      const annoM = seg.match(/\b(201\d|202[0-5])\b/); const anno = annoM ? annoM[0] : '';
-      const precioM = seg.match(/\$\s*(\d{1,2}[.,]\d{3}[.,]\d{3})/);
-      const precio = precioM ? pSign + precioM[1] : '(consultar)';
-      const kmM = seg.match(/(\d{2,3}[.,]\d{3})\s*(?:km|kms)/i) || seg.match(/(\d{4,6})\s*km/i);
-      const km = kmM ? kmM[1].replace(/\./g,'') + ' km' : '';
-      const modRE = new RegExp(marca + '\\s+([A-Za-z0-9\\s]{2,25}?)\\s+(?:' + (anno||'\\d{4}') + '|\\$)', 'i');
-      const modM = seg.match(modRE); const modelo = modM ? modM[1].trim().split(/\s+/).slice(0,4).join(' ') : '';
-      autos.push(('- ' + marca + ' ' + modelo + ' ' + anno + ' | ' + (km||'km no indicado') + ' | ' + precio).replace(/\s{2,}/g,' ').trim());
+      const annoM = (titulo + ' ' + seg).match(/\b(201\d|202[0-5])\b/);
+      const anno = annoM ? annoM[0] : '';
+      const precioM = seg.match(/\$?\s*(\d{1,3}[.,]\d{3}[.,]\d{3})/);
+      const precio = precioM ? parseInt(precioM[1].replace(/[.,]/g, '').slice(0, 9)) : 0;
+      const kmM = seg.match(/(\d{2,3})[.,](\d{3})\s*(?:km|kms)/i) || seg.match(/(\d{4,6})\s*km/i);
+      const km = kmM ? (kmM[2] ? kmM[1]+kmM[2] : kmM[1]) + ' km' : '';
+      let modelo = titulo || '';
+      if (!modelo) {
+        const modRE = new RegExp(marca + '\\s+([A-Za-z0-9][\\w\\s-]{2,30}?)(?:\\s+' + (anno||'\\d{4}') + '|\\s+\\$|$)', 'i');
+        const modM = seg.match(modRE);
+        modelo = modM ? modM[1].trim() : marca;
+      }
+      items.push({ id: 'WEB-' + items.length, brand: marca, model: modelo, year: anno ? parseInt(anno) : null, price: precio, km: km, stock: 1, link: link, highlights: [km, desc].filter(Boolean).join(' | ') || 'Ver detalles en rmgautos.cl' });
     }
-    if (autos.length < 3) {
-      const plainText = html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ');
-      plainText.split(/(?=\$\d)/).forEach(tok => {
-        if (autos.length >= 30) return;
-        const pM = tok.match(/\$\s*(\d{1,2}[.,]\d{3}[.,]\d{3})/); if (!pM) return;
-        const mM = tok.match(MARCAS_RE); if (!mM) return;
-        const aM = tok.match(/\b(201\d|202[0-5])\b/);
-        autos.push(('- ' + mM[0] + ' ' + (aM?aM[0]:'') + ' | ' + pSign + pM[1]).trim());
-      });
-    }
-    if (autos.length === 0) throw new Error('0 autos encontrados');
-    scrapeCache = { ts: now, data: [...new Set(autos)].join('\n') };
-    console.log('[RMG-Scraper] ' + autos.length + ' autos capturados de rmgautos.cl');
+    if (items.length === 0) throw new Error('0 autos encontrados');
+    const dataStr = items.map(i => '- ' + i.model + (i.year ? ' ' + i.year : '') + ' | ' + (i.km || 'km n/d') + ' | ' + pSign + (i.price ? i.price.toLocaleString('es-CL') : 'consultar') + (i.link ? ' | Link: ' + i.link : '')).join('\n');
+    scrapeCache = { ts: now, data: dataStr, items };
+    console.log('[RMG-Scraper] ' + items.length + ' autos estructurados de rmgautos.cl');
     return scrapeCache.data;
   } catch(e) {
-    console.warn('[RMG-Scraper] Error:', e.message, '— fallback INV_HARDCODED');
+    console.warn('[RMG-Scraper] Error:', e.message);
     return scrapeCache.data || '';
   }
 }
@@ -582,28 +586,9 @@ app.post('/webhook',async(req,res)=>{
 app.get('/api/inventory/scraper',auth('admin','vendedor'),async(req,res)=>{
   let dbInv = await tRead(F.inventory,req.tenant);
   if(!Array.isArray(dbInv)) dbInv = [];
-  let webText = scrapeCache.data || '';
-  let webInv = [];
-  if (webText) {
-     webText.split('\n').forEach((line, i) => {
-        if(!line.includes('|')) return;
-        let parts = line.split('|');
-        let namePart = parts[0].replace('-','').trim();
-        let pricePart = parts[parts.length-1].replace(/\D/g,'');
-        let brand = namePart.split(' ')[0];
-        let model = namePart.substring(brand.length).trim();
-        webInv.push({
-           id: 'WEB-'+i,
-           brand: brand,
-           model: model || 'Stock Web',
-           price: parseInt(pricePart || 0),
-           stock: 1,
-           highlights: parts.length > 2 ? parts[1].trim() : 'Scrapeado de rmgautos.cl'
-        });
-     });
-  }
-  let finalInv = webInv.length > 0 ? webInv : dbInv;
-  res.json({ts:scrapeCache.ts, raw:webText, structured: finalInv});
+  const webItems = (scrapeCache.items && scrapeCache.items.length) ? scrapeCache.items : [];
+  const finalInv = webItems.length > 0 ? webItems : dbInv;
+  res.json({ts:scrapeCache.ts, raw:scrapeCache.data||'', structured: finalInv});
 });
 setInterval(async()=>{
   for(const t of TENANTS){
