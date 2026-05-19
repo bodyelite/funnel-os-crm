@@ -65,12 +65,37 @@
   .fg{grid-template-columns:1fr 1fr}
   .sb2 .sc{font-size:26px}
 }
-}.toast.show{opacity:1;transform:translateY(0)}.toast.err{background:var(--bd2)}</style>
+}.toast.show{opacity:1;transform:translateY(0)}.toast.err{background:var(--bd2)}
+.bb.ip{background:linear-gradient(135deg,rgba(139,92,246,.18),rgba(109,40,217,.12));border:1px solid rgba(139,92,246,.35);color:#4c1d95;align-self:flex-end;border-top-right-radius:2px}
+.ai-sum-box{margin-top:10px;background:linear-gradient(135deg,rgba(139,92,246,.1),rgba(59,130,246,.06));border:1px solid rgba(139,92,246,.35);border-radius:9px;padding:10px 12px;display:none}
+.ai-sum-box .ai-label{font-size:10.5px;font-weight:700;color:#7c3aed;text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px}
+.ai-sum-box .ai-txt{font-size:12px;color:var(--ts);line-height:1.5}
+.inv-filters{background:var(--p);border:1px solid var(--bd);border-radius:var(--r);padding:12px 16px;margin-bottom:14px;display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.inv-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:10px}
+.inv-card{background:var(--p);border:1px solid var(--bd);border-radius:var(--r);padding:14px;transition:all var(--tr)}
+.inv-card:hover{border-color:var(--bdm);transform:translateY(-1px)}
+.inv-brand{font-size:10.5px;font-weight:700;color:var(--tm);text-transform:uppercase;letter-spacing:.05em}
+.inv-model{font-weight:700;font-size:13px;margin:2px 0 6px}
+.inv-price{font-size:18px;font-weight:800;color:var(--ac);letter-spacing:-.02em}
+.inv-meta{font-size:11px;color:var(--tm);margin-top:4px}
+.kpi-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px}
+.kpi-card{background:var(--p);border:1px solid var(--bd);border-radius:var(--r);padding:18px}
+.kpi-card h4{font-size:11px;font-weight:700;color:var(--tm);text-transform:uppercase;letter-spacing:.06em;margin-bottom:12px}
+.bar-wrap{display:flex;flex-direction:column;gap:6px}
+.bar-row{display:flex;align-items:center;gap:8px;font-size:12px}
+.bar-row .blabel{min-width:90px;color:var(--ts);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.bar-row .btrack{flex:1;background:var(--p2);border-radius:4px;height:10px;overflow:hidden}
+.bar-row .bfill{height:100%;border-radius:4px;background:var(--ac)}
+.bar-row .bval{min-width:36px;text-align:right;font-weight:700}
+.kpi-stat{text-align:center;padding:10px 0}
+.kpi-stat .ks-n{font-size:40px;font-weight:800;letter-spacing:-.03em;color:var(--ac)}
+.kpi-stat .ks-l{font-size:12px;color:var(--tm);margin-top:4px}
+</style>
 </head>
 <body>
 <div id="lv" class="lw"><div class="lc"><h1>FunnelOS CRM</h1><div class="sub">Torre de Control · Marcela IA</div><label>Empresa</label><select id="liT"><option value="demo_automotora">Automotora Andes</option><option value="demo_clinica">Clínica Vital</option></select><label>Usuario</label><input id="liU" value="gerente" placeholder="gerente|vendedor1|vendedor2"><label>Contraseña</label><input id="liP" type="password" value="demo"><button id="liB">Entrar</button><div class="err" id="liE"></div><div class="hint">Demo: <strong>gerente / demo</strong> · vendedor1 / demo · vendedor2 / demo</div></div></div>
 <div id="av" class="app" style="display:none">
-<aside class="sb"><h1 id="bizName">FunnelOS</h1><div class="who" id="uBadge">—</div><nav><button class="active" data-view="dashboard">📊 Operación</button><button data-view="leads">📋 Leads</button><button data-view="pipeline">🗂 Pipeline</button><button data-view="analytics" id="navA">📈 Analítica</button><button data-view="team" id="navT">👥 Equipo</button><button data-view="config" id="navC">⚙️ Config</button></nav><button class="lout" id="loutB">Cerrar sesión</button></aside>
+<aside class="sb"><h1 id="bizName">FunnelOS</h1><div class="who" id="uBadge">—</div><nav><button class="active" data-view="dashboard">📊 Operación</button><button data-view="leads">📋 Leads</button><button data-view="pipeline">🗂 Pipeline</button><button data-view="analytics" id="navA">📈 Analítica</button><button data-view="team" id="navT">👥 Equipo</button><button data-view="inventario" id="navInv">🚗 Inventario</button><button data-view="config" id="navC">⚙️ Config</button></nav><button class="lout" id="loutB">Cerrar sesión</button></aside>
 <main class="mn">
 <div class="tb" id="mainTb"><span class="lbl">Rango</span><div class="qk"><button data-q="all">Todo</button><button data-q="today">Hoy</button><button data-q="yesterday">Ayer</button><button data-q="7d">7d</button><button data-q="30d">30d</button></div><span class="lbl">Desde</span><input type="date" id="dS"><span class="lbl">Hasta</span><input type="date" id="dE"><button class="clr" id="dC">Limpiar</button><button id="btnFastForward" class="clr" style="color:var(--wn); border-color:var(--wn); font-weight:700;">⏳ Forzar SLA 30m</button><span class="lbl" id="lblS">Vendedor</span><select id="selF"><option value="">Todos</option></select><span class="ri" id="rI">Sin filtro</span></div>
 <section id="view-dashboard" class="view active">
@@ -86,17 +111,26 @@
 <div class="bt">② Embudo de Ventas</div>
 <div class="fg" id="fG"></div>
 <div class="xe" id="funX" style="margin-top:10px"><div class="xt" id="funXT">—</div><div class="xs" id="funXB"></div></div>
-<div class="bt">③ Rendimiento por Vendedor</div>
-<div class="pt" id="perfT"></div>
 </section>
 <section id="view-leads" class="view"><div class="st">Leads</div><div class="tw" id="lTbl"></div></section>
 <section id="view-pipeline" class="view"><div class="st">Pipeline Kanban</div><div class="kb" id="kbn"></div><div class="cw"><div class="bt">Agenda de la Semana</div><div class="cg" id="calG"></div></div></section>
 <section id="view-analytics" class="view"><div class="st">Analítica de Canales</div><div class="ct" id="chBx"></div></section>
-<section id="view-team" class="view"><div class="st">Gestión de Equipo</div><div class="tg" id="tGrd"></div></section>
+<section id="view-team" class="view"><div class="st">📊 KPIs del Equipo</div><div id="kpiDash"></div></section>
+<section id="view-inventario" class="view">
+<div class="st">🚗 Inventario</div>
+<div class="inv-filters">
+  <span style="font-size:11.5px;font-weight:600;color:var(--tm)">Filtrar:</span>
+  <select id="invBrand" style="background:var(--p2);border:1px solid var(--bd);color:var(--tx);padding:6px 10px;border-radius:7px;font-family:inherit;font-size:12px"><option value="">Todas las marcas</option></select>
+  <input type="range" id="invMaxPrice" min="0" max="50000000" step="500000" value="50000000" style="flex:1;max-width:200px">
+  <span id="invPriceLbl" style="font-size:12px;color:var(--ts);font-weight:600;white-space:nowrap">Hasta $50.000.000</span>
+  <button id="invRefresh" class="bs" style="padding:6px 12px;font-size:12px">🔄 Actualizar</button>
+</div>
+<div class="inv-grid" id="invGrid"><div class="ke" style="padding:20px;grid-column:1/-1">Cargando...</div></div>
+</section>
 <section id="view-config" class="view">
 <div class="st">⚙️ Configuración</div>
 <div class="cfs"><h3>🏢 Empresa</h3><div class="cfg"><div><label class="cfl">Nombre</label><input class="cfi" id="cfgN" placeholder="Automotora Andes"></div><div><label class="cfl">Color acento</label><input type="color" class="cfi" id="cfgC" value="#3b82f6" style="padding:4px;height:36px;cursor:pointer"></div></div><div class="ca" style="margin-top:12px"><button class="bp" id="cfgSB">Guardar Empresa</button></div></div>
-<div class="cfs"><h3>👥 Equipo</h3><div style="overflow-x:auto"><table class="ut" id="uTbl"><thead><tr><th>Usuario</th><th>Nombre</th><th>Rol</th><th>Teléfono</th><th>Estado</th><th>Acciones</th></tr></thead><tbody id="uTbd"></tbody></table></div><div class="ca"><button class="bp" id="addUB">+ Agregar</button></div></div>
+<div class="cfs"><h3>👥 Equipo</h3><div style="overflow-x:auto"><table class="ut" id="uTbl"><thead><tr><th>Usuario</th><th>Nombre</th><th>Rol</th><th>Teléfono</th><th>Nueva Pwd</th><th>Estado</th><th>Acciones</th></tr></thead><tbody id="uTbd"></tbody></table></div><div class="ca"><button class="bp" id="addUB">+ Agregar</button></div></div>
 <div class="cfs" id="nuF" style="display:none"><h3>➕ Nuevo Usuario</h3><div class="cfg"><div><label class="cfl">Username</label><input class="cfi" id="nuU"></div><div><label class="cfl">Contraseña</label><input class="cfi" id="nuPw" value="demo"></div><div><label class="cfl">Nombre</label><input class="cfi" id="nuN"></div><div><label class="cfl">Rol</label><select class="cfi" id="nuR"><option value="vendedor">Vendedor</option><option value="admin">Admin</option><option value="secretaria">Secretaria</option></select></div><div><label class="cfl">Teléfono WA</label><input class="cfi" id="nuPh"></div><div><label class="cfl">Estado</label><select class="cfi" id="nuSt"><option value="Activo">Activo</option><option value="Inactivo">Inactivo</option></select></div></div><div class="ca"><button class="bp" id="nuSv">Crear</button><button class="bs" id="nuCn">Cancelar</button></div></div>
 </section>
 </main>
@@ -109,10 +143,12 @@
 <div id="mCtx" class="ctx" style="display:none"></div>
 <div><h4>Historial de chat</h4><div class="cbx" id="mChat"></div></div>
 <div><div class="acl">Responder al cliente (→ WhatsApp)</div><div class="acmp"><textarea id="aMsg" placeholder="Escribe un mensaje..." rows="2"></textarea><button class="snb" id="aSnd">Enviar ➤</button></div></div>
+<div class="ai-sum-box" id="aiSumBox"><div class="ai-label">🧠 Resumen IA</div><div class="ai-txt" id="aiSumTxt"></div></div>
 </div>
 <div class="ca2">
 <div><h4>Control IA</h4><div class="btw"><div class="btl"><span>🤖</span><span>Marcela IA</span></div><div style="display:flex;align-items:center;gap:8px"><span class="bst" id="bTxt">ON</span><label class="bsw"><input type="checkbox" id="bChk" checked><span class="bsl"></span></label></div></div></div>
 <div><h4>Estado</h4><select id="mSt"></select></div>
+<div id="mAssignBlock" style="display:none"><h4>Reasignar a <span style="font-size:10px;background:var(--as);color:var(--ac);padding:2px 6px;border-radius:4px;font-weight:700">ADMIN</span></h4><select id="mAssign" style="width:100%;padding:8px 10px;background:var(--p2);border:1px solid var(--bd);color:var(--tx);border-radius:7px;font-family:inherit;font-size:12.5px"></select></div>
 <div>
   <h4>Notas internas</h4>
   <div class="nl" id="mNts"></div>
@@ -122,6 +158,7 @@
     <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
       <input type="text" id="agendaText" placeholder="Ej: Llamar al cliente" style="flex:1;min-width:140px;padding:6px 9px;background:var(--p3);border:1px solid var(--bd);color:var(--tx);border-radius:7px;font-size:12px;font-family:inherit">
       <input type="datetime-local" id="agendaDate" style="padding:6px 9px;background:var(--p3);border:1px solid var(--bd);color:var(--tx);border-radius:7px;font-size:12px;font-family:inherit;color-scheme:dark">
+      <label style="display:flex;align-items:center;gap:5px;font-size:11.5px;color:var(--ts);cursor:pointer;user-select:none"><input type="checkbox" id="delegaIA" style="accent-color:var(--ac)"> 🤖 Delegar IA</label>
       <button id="agendaBtn" class="bp" style="padding:6px 12px;font-size:12px;white-space:nowrap">Agendar</button>
     </div>
     <div id="agendaInfo" style="margin-top:6px;font-size:11px;color:var(--tm)"></div>

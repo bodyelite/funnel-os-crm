@@ -230,16 +230,19 @@ async function applySlaRules(tenant){
       if(mins>SLA_REASSIGN&&!lead.reassigned){
         const nextObj=await rrNext(tenant,lead.assignedTo);
         if(nextObj&&nextObj.username!==lead.assignedTo){
-          lead.assignedTo=nextObj.username;lead.reassigned=true;lead.reassignedAt=new Date().toISOString();changed=true;
-          if(nextObj.phone)sendWA(nextObj.phone,`🚨 REASIGNACIÓN: Se te asignó el lead [${lead.name}] porque el vendedor anterior no respondió en 30 min. ¡Atiéndelo ya!`).catch(()=>{});
-          const admin=allUsers.find(u=>u.role==='admin');
-          if(admin?.phone)sendWA(admin.phone,`📢 AVISO GERENCIAL: El lead [${lead.name}] fue reasignado a [${nextObj.name||nextObj.username}] por negligencia (>30 min).`).catch(()=>{});
-        }else{lead.reassigned=true;lead.reassignedAt=new Date().toISOString();changed=true;}
+          const aiSumR=lead.ai_summary?' Resumen IA: '+lead.ai_summary:'';
+          lead.assignedTo=nextObj.username;lead.reassigned=true;lead.reassignedAt=new Date().toISOString();lead.adminReassignAlertSent=false;changed=true;
+          if(nextObj.phone)sendWA(nextObj.phone,'🚨 REASIGNACIÓN: Se te asignó el lead ['+lead.name+'] porque el anterior no respondió en 30 min.'+aiSumR).catch(()=>{});
+        }else{lead.reassigned=true;lead.reassignedAt=new Date().toISOString();lead.adminReassignAlertSent=false;changed=true;}
       }
-      if(mins>SLA_YELLOW&&!lead.criticalAlertSent){
-        lead.criticalAlertSent=true;changed=true;
-        const admin=allUsers.find(u=>u.role==='admin');
-        if(admin?.phone)sendWA(admin.phone,`🚨 ALERTA CRÍTICA: El lead [${lead.name}] lleva más de 50 min sin atención tras ser reasignado.`).catch(()=>{});
+      if(lead.reassigned&&lead.reassignedAt&&lead.unread&&lead.adminReassignAlertSent===false){
+        const minsR=(Date.now()-new Date(lead.reassignedAt).getTime())/60000;
+        if(minsR>SLA_REASSIGN){
+          lead.adminReassignAlertSent=true;changed=true;
+          const adminU=allUsers.find(u=>u.role==='admin');
+          const aiSumA=lead.ai_summary?' Resumen IA: '+lead.ai_summary:'';
+          if(adminU?.phone)sendWA(adminU.phone,'📢 ALERTA ADMIN: ['+lead.name+'] lleva 30+ min sin atención tras reasignación.'+aiSumA).catch(()=>{});
+        }
       }
     }
     const lvl=calcAlert(lead);
@@ -563,8 +566,8 @@ app.post('/webhook',async(req,res)=>{
           const histSnipWH=ld[tenant][idx].chatHistory.slice(-10).map(m=>(m.role==='user'?'Cliente':'Asesor')+': '+m.content).join('\n');
           const resCompWH=await openai.chat.completions.create({model:'gpt-4o-mini',temperature:0.4,max_tokens:200,messages:[{role:'system',content:'Eres un asistente comercial de automotora. Con el historial de chat y las notas del vendedor, redacta un BRIEFING narrativo de maximo 3 lineas: (1) [Nombre] consulta por [auto especifico]. (2) [Que dijo sobre financiamiento, retoma, fecha o acuerdo]. (3) Sugerencia: [accion concreta para el vendedor ahora]. Espanol directo, sin emojis, sin titulos, solo el parrafo.'},{role:'user',content:'NOMBRE: '+ld[tenant][idx].name+'\nHISTORIAL:\n'+histSnipWH}]});
           const resumenIAWH=(resCompWH.choices?.[0]?.message?.content||'').trim()||'Interés en crédito/retoma detectado.';
-          ld[tenant][idx].notes.push({content:'🧠 '+resumenIAWH,author:'Resumen IA',ts:Date.now()});
-          if(assignedUserWH?.phone)sendWA(assignedUserWH.phone,'✅ Lead Asignado: '+ld[tenant][idx].name+'. Resumen IA: '+resumenIAWH+' — Entra al CRM.').catch(()=>{});
+          ld[tenant][idx].ai_summary=resumenIAWH;
+          if(assignedUserWH?.phone)sendWA(assignedUserWH.phone,'✅ Lead Reasignado: '+ld[tenant][idx].name+'. Resumen IA: '+resumenIAWH+' — Entra al CRM.').catch(()=>{});
         }catch(eIAWH){
           console.error('[Resumen-Error /webhook]', eIAWH);
           ld[tenant][idx].notes.push({content:'🧠 Cliente mencionó crédito/retoma/seguro. (OpenAI falló: '+eIAWH.message+')',author:'Resumen IA',ts:Date.now()});
@@ -578,6 +581,36 @@ app.post('/webhook',async(req,res)=>{
   }catch(e){console.error('Webhook:',e);}
 });
 
+app.get('/api/inventory/scraper',auth('admin','vendedor'),async(req,res)=>{
+  res.json({ts:scrapeCache.ts,raw:scrapeCache.data||'',structured:await tRead(F.inventory,req.tenant)});
+});
+setInterval(async()=>{
+  for(const t of TENANTS){
+    try{
+      const leads=await tRead(F.leads,t);let changed=false;
+      for(const lead of leads){
+        if(FINAL_ST.has(lead.status))continue;
+        const na=lead.nextAction;
+        if(!na||!na.date||!na.delegateToIA||na.iaCompleted)continue;
+        if(new Date(na.date)>new Date())continue;
+        try{
+          const histSnip=(lead.chatHistory||[]).slice(-10).map(m=>(m.role==='user'?'Cliente':m.role==='agent'?'Vendedor':'IA')+': '+m.content).join('\n');
+          const comp=await openai.chat.completions.create({model:'gpt-4o-mini',temperature:0.6,max_tokens:160,messages:[{role:'user',content:'Eres asesor de ventas. Redacta mensaje breve de seguimiento en español chileno para WhatsApp (max 3 oraciones, emoji). Instrucción: "'+na.text+'". Historial:\n'+histSnip}]});
+          const iaMsg=(comp.choices?.[0]?.message?.content||'').trim();
+          if(!iaMsg)continue;
+          const phone=(lead.phone||'').replace(/\D/g,'');
+          if(phone)await sendWA(phone,iaMsg).catch(()=>{});
+          lead.chatHistory=lead.chatHistory||[];
+          lead.chatHistory.push({role:'ia_proactiva',content:iaMsg,ts:Date.now(),agentName:'IA Proactiva'});
+          na.iaCompleted=true;na.iaCompletedAt=new Date().toISOString();
+          lead.lastInteraction=new Date().toISOString();changed=true;
+          console.log('[IA-Proactiva] Enviado a '+lead.name);
+        }catch(eP){console.error('[IA-Proactiva]',lead.name,eP.message);}
+      }
+      if(changed)await tWrite(F.leads,t,leads);
+    }catch(eT){console.error('[IA-Proactiva-cron]',eT.message);}
+  }
+},60000);
 app.use(express.static(path.join(__dirname,'public')));
 app.get('*',(req,res)=>res.sendFile(path.join(__dirname,'public','index.html')));
 setInterval(async()=>{for(const t of TENANTS){try{await applySlaRules(t);}catch(e){console.error('SLA',t,e.message);}}},60000);
