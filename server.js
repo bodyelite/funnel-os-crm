@@ -265,7 +265,7 @@ async function marcela(tenant, history, msg, notes, assignedName) {
       temperature: 0.5,
       response_format: { type: 'json_object' },
       messages: [
-        { role: 'system', content: marcelaSys(cfg.businessName || 'RMG Autos', invS, notes || [], assignedName) },
+        { role: 'system', content: (function(){ try{ var _b=JSON.parse(fs.readFileSync(path.join(process.cwd(),'data','bot.json'),'utf8')); var _sp=(_b[tenant]||{}).systemPrompt; if(_sp) return _sp+'\n\nINVENTARIO DISPONIBLE:\n'+invS; }catch(_){} return marcelaSys(cfg.businessName||'RMG Autos',invS,notes||[],assignedName); })() },
         ...history.slice(-14).map(h => ({ role: h.role === 'user' ? 'user' : 'assistant', content: h.content })),
         { role: 'user', content: msg }
       ].flat()
@@ -570,7 +570,7 @@ app.post('/api/chat',async(req,res)=>{
   leads[idx].chatHistory=leads[idx].chatHistory||[];leads[idx].chatHistory.push({role:'user',content:message,ts:Date.now()});
   leads[idx].unread=true;
   if(leads[idx].botActive!==false){
-    if(message.trim().toLowerCase()==='/reset'){leads[idx].chatHistory=[];leads[idx].intentSignal='NONE';leads[idx].keywordAlertSent=false;leads[idx].notes=(leads[idx].notes||[]).concat({content:'🔄 Historial reseteado por comando',author:'Sistema',ts:Date.now()});await tWrite(F.leads,tenant,leads);return res.json({reply:'🔄 Memoria borrada. ¡Empecemos de cero! 🚗',status:leads[idx].status});}
+    if(message.trim().toLowerCase()==='/reset'){const _rn=new Date().toISOString();leads[idx].chatHistory=[];leads[idx].intentSignal='NONE';leads[idx].keywordAlertSent=false;leads[idx].status='Nuevo';leads[idx].alertLevel='none';leads[idx].unread=true;leads[idx].reassigned=false;leads[idx].reassignedAt=null;leads[idx].adminReassignAlertSent=false;leads[idx].nextAction=null;leads[idx].ai_summary='';leads[idx].lastInteraction=_rn;leads[idx].lastClientTs=_rn;leads[idx].notes=(leads[idx].notes||[]).concat({content:'🔄 Historial reseteado por comando',author:'Sistema',ts:Date.now()});await tWrite(F.leads,tenant,leads);return res.json({reply:'🔄 Memoria borrada. ¡Empecemos de cero! 🚗',status:'Nuevo',alertLevel:'none',lead:leads[idx]});}
     const assignedUserChat=allUsers.find(u=>u.username===leads[idx].assignedTo)||RMG_VENDORS.find(v=>v.username===leads[idx].assignedTo);
     const assignedNameChat=assignedUserChat?.name||null;
     const p=await marcela(tenant,leads[idx].chatHistory.slice(0,-1),message,leads[idx].notes,assignedNameChat);
@@ -592,6 +592,7 @@ app.post('/api/chat',async(req,res)=>{
         if(assignedUserChat?.phone)sendWA(assignedUserChat.phone,'✅ Lead Asignado: '+leads[idx].name+'. Lee el resumen en la bitácora del CRM.').catch(()=>{});
       }
     }
+    if(p.reply&&p.reply.indexOf('rmgautos.cl')!==-1){leads[idx].nextAction={text:'¿Pudiste ver la ficha en el enlace? Fíjate en los detalles del equipamiento 👀 ¿Qué te pareció?',date:new Date(Date.now()+2*60000).toISOString(),createdAt:new Date().toISOString(),delegateToIA:true,iaCompleted:false};}
     leads[idx].alertLevel=calcAlert(leads[idx]);
     await tWrite(F.leads,tenant,leads);
     return res.json({reply:p.reply,sessionId,leadCaptured:captured,leadId,intentSignal:leads[idx].intentSignal,status:leads[idx].status});
@@ -617,12 +618,13 @@ app.post('/webhook',async(req,res)=>{
     ld[tenant][idx].chatHistory=ld[tenant][idx].chatHistory||[];ld[tenant][idx].chatHistory.push({role:'user',content:body,ts:Date.now()});
     ld[tenant][idx].unread=true;
     if(ld[tenant][idx].botActive!==false){
-      if(body.trim().toLowerCase()==='/reset'){ld[tenant][idx].chatHistory=[];ld[tenant][idx].intentSignal='NONE';ld[tenant][idx].keywordAlertSent=false;ld[tenant][idx].notes=(ld[tenant][idx].notes||[]).concat({content:'🔄 Historial reseteado por comando',author:'Sistema',ts:Date.now()});await tWrite(F.leads,tenant,ld[tenant]);await sendWA(from,'🔄 Memoria borrada. ¡Empecemos de cero! 🚗');return;}
+      if(body.trim().toLowerCase()==='/reset'){const _rn=new Date().toISOString();ld[tenant][idx].chatHistory=[];ld[tenant][idx].intentSignal='NONE';ld[tenant][idx].keywordAlertSent=false;ld[tenant][idx].status='Nuevo';ld[tenant][idx].alertLevel='none';ld[tenant][idx].unread=true;ld[tenant][idx].reassigned=false;ld[tenant][idx].reassignedAt=null;ld[tenant][idx].adminReassignAlertSent=false;ld[tenant][idx].nextAction=null;ld[tenant][idx].ai_summary='';ld[tenant][idx].lastInteraction=_rn;ld[tenant][idx].lastClientTs=_rn;ld[tenant][idx].notes=(ld[tenant][idx].notes||[]).concat({content:'🔄 Historial reseteado por comando',author:'Sistema',ts:Date.now()});await tWrite(F.leads,tenant,ld[tenant]);await sendWA(from,'🔄 Memoria borrada. ¡Empecemos de cero! 🚗');return;}
       const allUsersWH=await tRead(F.users,tenant);
       const assignedUserWH=allUsersWH.find(u=>u.username===ld[tenant][idx].assignedTo)||RMG_VENDORS.find(v=>v.username===ld[tenant][idx].assignedTo);
       const assignedNameWH=assignedUserWH?.name||null;
       const p=await marcela(tenant,ld[tenant][idx].chatHistory.slice(0,-1),body,ld[tenant][idx].notes,assignedNameWH);
       ld[tenant][idx].chatHistory.push({role:'bot',content:p.reply,ts:Date.now()});applySignal(ld[tenant][idx],p);
+      if(p.reply&&p.reply.indexOf('rmgautos.cl')!==-1&&!(ld[tenant][idx].nextAction&&!ld[tenant][idx].nextAction.iaCompleted)){ld[tenant][idx].nextAction={text:'¿Pudiste ver la ficha en el enlace? Fíjate en los detalles del equipamiento 👀 ¿Qué te pareció?',date:new Date(Date.now()+2*60000).toISOString(),createdAt:new Date().toISOString(),delegateToIA:true,iaCompleted:false};}
       if(esKeywordCalif(body)&&!ld[tenant][idx].keywordAlertSent){
         ld[tenant][idx].keywordAlertSent=true;
         ld[tenant][idx].intentSignal='BLUE';
@@ -679,7 +681,7 @@ setInterval(async()=>{
       for(const lead of leads){
         if(FINAL_ST.has(lead.status))continue;
         const na=lead.nextAction;
-        if(!na||!na.date||!na.delegateToIA||na.iaCompleted)continue;
+        if(!na||!na.date||!na.text||na.iaCompleted===true)continue;
         if(new Date(na.date)>new Date())continue;
         try{
           const histSnip=(lead.chatHistory||[]).slice(-10).map(m=>(m.role==='user'?'Cliente':m.role==='agent'?'Vendedor':'IA')+': '+m.content).join('\n');

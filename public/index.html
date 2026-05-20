@@ -252,7 +252,57 @@ function renderXRows(items,timeFn){if(!items.length)return'<div class="xe2">Sin 
 function bindXRows(c){c.querySelectorAll('.xlr[data-id]').forEach(el=>el.addEventListener('click',()=>openModal(+el.dataset.id)));}
 function renderLeads(){const gc='grid-template-columns:8px 8px 11px 1.3fr .9fr 1.1fr .85fr .85fr 1.2fr .75fr';const hd=`<div class="tr2 hd" style="${gc}"><div></div><div></div><div></div><div>Nombre</div><div>Tel.</div><div>Interés</div><div>Canal</div><div>Asignado</div><div>Estado</div><div>Última</div></div>`;const rows=S.leads.length?S.leads.map(l=>`<div class="tr2" style="${gc}" data-id="${l.id}">${l.unread?'<div class="ud"></div>':'<div></div>'}${adot(l.alertLevel)}${sdot(l.intentSignal||'NONE')}<div><strong>${esc(l.name)}</strong></div><div style="font-size:11.5px;color:var(--tm)">${esc(l.phone||'—')}</div><div style="font-size:11.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(l.interest||'—')}</div><div>${cSrc(l.source)}</div><div>${cUsr(l.assignedTo)}</div><div>${stpl(l.status)}</div><div style="font-size:11px;color:var(--tm)">${fDT(l.lastClientTs||l.lastInteraction)}</div></div>`).join(''):'<div class="ke" style="padding:16px">Sin leads.</div>';$('lTbl').innerHTML=hd+rows;$('lTbl').querySelectorAll('.tr2[data-id]').forEach(el=>el.addEventListener('click',()=>openModal(+el.dataset.id)));}
 function renderKanban(){const stages=S.config?.stages||[];const grp={};stages.forEach(s=>grp[s]=[]);S.leads.forEach(l=>{if(!grp[l.status])grp[l.status]=[];grp[l.status].push(l);});$('kbn').innerHTML=stages.map(st=>{const items=grp[st]||[];const isQ=st==='Calificado';const isR=st==='Reservado';return`<div class="kbc ${isQ?'ql':''}${isR?' rs-col':''}"><div class="kbh" style="${isR?'color:var(--wn)':''}">${isQ?'⭐ Calificado':isR?'🔒 Reservado':esc(st)}<span class="cnt">${items.length}</span>${isR&&items.some(l=>l.alertLevel==='critical')?'<span style="color:var(--bd2);font-size:11px;margin-left:6px">⚠️ vencidos</span>':''}</div><div class="kbs">${items.length?items.map(l=>`<div class="kc ${l.alertLevel||''}" data-id="${l.id}">${l.unread?'<div class="ud"></div>':''}<div style="flex:1;min-width:0"><div class="kn">${esc(l.name)}</div><div class="kt">${l.status==='Reservado'?'🔒 '+fMin(l.reservadoAt||l.lastInteraction):fMin(mAgo(l.lastClientTs||l.lastInteraction))}</div>${l.nextAction&&l.nextAction.date?'<div style="font-size:11px;color:#f59e0b;font-weight:bold;margin-top:4px">⏰ '+new Date(l.nextAction.date).toLocaleString('es-CL',{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'})+'</div>':''}</div></div>`).join(''):'<div class="ke">Vacío</div>'}</div></div>`;}).join('');$('kbn').querySelectorAll('.kc[data-id]').forEach(el=>el.addEventListener('click',()=>openModal(+el.dataset.id)));}
-function renderCalendar(){const today=new Date();today.setHours(0,0,0,0);const dow=today.getDay();const mon=new Date(today);mon.setDate(today.getDate()-(dow===0?6:dow-1));const days=['Lun','Mar','Mié','Jue','Vie','Sáb','Dom'];const SCHED=new Set(['Agendado','Calificado']);$('calG').innerHTML=days.map((d,i)=>{const day=new Date(mon);day.setDate(mon.getDate()+i);const isTd=day.getTime()===today.getTime();const ds=day.toISOString().slice(0,10);const byStatus=S.leads.filter(l=>SCHED.has(l.status)).filter(l=>{let ref=new Date(l.scheduleText);if(isNaN(ref))ref=new Date(l.lastInteraction||0);return!isNaN(ref)&&ref.toISOString().slice(0,10)===ds;});const byNext=S.leads.filter(l=>l.nextAction&&l.nextAction.date&&!['Cerrado','Abandonado','Perdido'].includes(l.status)).filter(l=>l.nextAction.date.slice(0,10)===ds&&!byStatus.find(x=>x.id===l.id));const dl=[...byStatus,...byNext];return`<div class="cd ${isTd?'td':''}"><div class="cdh">${d} ${day.getDate()}</div><div class="cdb">${dl.length?dl.map(l=>{const isNext=!SCHED.has(l.status)&&l.nextAction?.date?.slice(0,10)===ds;const hora=isNext?new Date(l.nextAction.date).toLocaleTimeString('es-CL',{hour:'2-digit',minute:'2-digit'}):'';return`<div class="ce ${l.status==='Agendado'?'ag':'ca'}" data-id="${l.id}" title="${isNext?l.nextAction.text||'Tarea':l.status}">${esc(l.name)}${hora?' ⏰'+hora:''}</div>`;}).join(''):'<div class="cem">—</div>'}</div></div>`;}).join('');$('calG').querySelectorAll('.ce[data-id]').forEach(el=>el.addEventListener('click',()=>openModal(+el.dataset.id)));}
+function renderCalendar(){
+  const today=new Date();today.setHours(0,0,0,0);
+  const dow=today.getDay();
+  const mon=new Date(today);mon.setDate(today.getDate()-(dow===0?6:dow-1));
+  const DAY_NAMES=['Lun','Mar','Mié','Jue','Vie','Sáb','Dom'];
+  const HOURS=Array.from({length:13},(_,i)=>i+8);
+  const FINAL_S=new Set(['Cerrado','Abandonado','Perdido']);
+  const SCHED=new Set(['Agendado','Calificado']);
+  const weekDates=DAY_NAMES.map((_,i)=>{const d=new Date(mon);d.setDate(mon.getDate()+i);return d;});
+  const evMap={};
+  function addEv(ds,h,lead,isTask){const k=ds+':'+String(h).padStart(2,'0');if(!evMap[k])evMap[k]=[];evMap[k].push({lead,isTask});}
+  S.leads.forEach(l=>{
+    if(FINAL_S.has(l.status))return;
+    if(l.nextAction&&l.nextAction.date){const d=new Date(l.nextAction.date);if(!isNaN(d.getTime()))addEv(d.toISOString().slice(0,10),d.getHours(),l,true);}
+    if(SCHED.has(l.status)&&l.scheduleText){const d=new Date(l.scheduleText);if(!isNaN(d.getTime()))addEv(d.toISOString().slice(0,10),d.getHours(),l,false);}
+  });
+  const nowH=new Date().getHours();
+  let html='<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:11px;min-width:560px;border:1px solid var(--bd);border-radius:8px;overflow:hidden"><thead><tr>'
+    +'<th style="width:46px;padding:5px 6px;background:var(--p2);border-bottom:2px solid var(--bdm);border-right:2px solid var(--bdm);color:var(--tm);font-size:9.5px;font-weight:700;text-align:center">Hora</th>';
+  weekDates.forEach((d,i)=>{
+    const isTd=d.getTime()===today.getTime();
+    html+='<th style="padding:5px 4px;background:'+(isTd?'var(--as)':'var(--p2)')+';border-bottom:2px solid var(--bdm);border-right:1px solid var(--bd);color:'+(isTd?'var(--ac)':'var(--tm)')+';font-weight:'+(isTd?'800':'600')+';text-align:center;font-size:10.5px">'+DAY_NAMES[i]+'<br><span style="font-size:14px;font-weight:800;color:'+(isTd?'var(--ac)':'var(--tx)')+'">'+d.getDate()+'</span></th>';
+  });
+  html+='</tr></thead><tbody>';
+  HOURS.forEach(h=>{
+    const isNowRow=h===nowH;
+    html+='<tr><td style="padding:3px 6px;background:var(--p2);border-right:2px solid var(--bdm);border-bottom:1px solid var(--bd);color:'+(isNowRow?'var(--ac)':'var(--tm)')+';font-weight:'+(isNowRow?'700':'500')+';font-size:10.5px;white-space:nowrap;vertical-align:top">'+String(h).padStart(2,'0')+':00</td>';
+    weekDates.forEach(d=>{
+      const ds=d.toISOString().slice(0,10);
+      const k=ds+':'+String(h).padStart(2,'0');
+      const evs=evMap[k]||[];
+      const isTd=d.getTime()===today.getTime();
+      let cell='';
+      evs.forEach(({lead:l,isTask})=>{
+        const now=new Date();
+        const isPast=isTask&&new Date(l.nextAction.date)<=now;
+        const isIA=isTask&&l.nextAction&&l.nextAction.delegateToIA;
+        const col=isTask?(isPast?'#16a34a':'#f59e0b'):(l.status==='Agendado'?'var(--ok)':'var(--wn)');
+        const bg=isTask?(isPast?'rgba(22,163,74,.13)':'rgba(245,158,11,.13)'):(l.status==='Agendado'?'var(--oks)':'var(--wns)');
+        const icon=isTask?(isIA?(isPast?'&#x2705; ':'&#x1F916; '):(isPast?'&#x2713; ':'&#x23F0; ')):(l.status==='Agendado'?'&#x1F4C5; ':'&#x2B50; ');
+        const label=isTask?(l.nextAction&&l.nextAction.text||'Tarea'):l.status;
+        cell+='<div class="ce" data-id="'+l.id+'" style="background:'+bg+';border-left:2px solid '+col+';color:var(--tx);padding:3px 5px;border-radius:3px;margin-bottom:2px;cursor:pointer;font-size:10px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="'+esc(l.name)+' - '+esc(label)+'">'+icon+esc(l.name)+'</div>';
+      });
+      html+='<td style="padding:3px;border-right:1px solid var(--bd);border-bottom:1px solid var(--bd);vertical-align:top;min-height:32px;background:'+(isTd?'rgba(37,99,235,.025)':'var(--p)')+'">'+cell+'</td>';
+    });
+    html+='</tr>';
+  });
+  html+='</tbody></table></div>';
+  $('calG').innerHTML=html;
+  $('calG').querySelectorAll('.ce[data-id]').forEach(el=>el.addEventListener('click',()=>openModal(+el.dataset.id)));
+}
 
 function renderAnalytics(){
   const ch=S.channels||[];
@@ -391,7 +441,7 @@ $('btnResumen').addEventListener('click',async()=>{
   finally{btn.disabled=false;btn.textContent='🧠 Generar Resumen IA';}
 });
 
-$('mSv').addEventListener('click',async()=>{if(!S.mid)return;const btn=$('mSv');btn.disabled=true;btn.textContent='…';try{const l=findLead(S.mid);const st=$('mSt').value;const note=$('mNt').value.trim();const payload={};if(st&&st!==l?.status)payload.status=st;if(note)payload.note=note;if(!Object.keys(payload).length){toast('Sin cambios');btn.disabled=false;btn.textContent='Guardar cambios';return;}await api('PATCH','/api/leads/'+S.mid,payload);$('mNt').value='';toast('Lead actualizado ✓');await refresh();renderModal();}catch(e){toast(e.message,true);}finally{btn.disabled=false;btn.textContent='Guardar cambios';}});
+$('mSv').addEventListener('click',async()=>{if(!S.mid)return;const btn=$('mSv');btn.disabled=true;btn.textContent='…';try{const l=findLead(S.mid);const st=$('mSt').value;const note=$('mNt').value.trim();const payload={};if(st&&st!==l?.status)payload.status=st;if(S.user&&S.user.role==='admin'){const mAss=$('mAssign');if(mAss&&mAss.value&&mAss.value!==l?.assignedTo)payload.assignedTo=mAss.value;}if(note)payload.note=note;if(!Object.keys(payload).length){toast('Sin cambios');btn.disabled=false;btn.textContent='Guardar cambios';return;}await api('PATCH','/api/leads/'+S.mid,payload);$('mNt').value='';toast('Lead actualizado ✓');await refresh();renderModal();}catch(e){toast(e.message,true);}finally{btn.disabled=false;btn.textContent='Guardar cambios';}});
 document.querySelectorAll('.sb nav button').forEach(btn=>{btn.addEventListener('click',async()=>{const view=btn.dataset.view;document.querySelectorAll('.sb nav button').forEach(b=>b.classList.remove('active'));document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));btn.classList.add('active');$('view-'+view).classList.add('active');S.view=view;$('mainTb').style.display=view==='config'?'none':'';if(view==='config'){await loadConfig();await loadUsers();}else if(view==='inventario'){await renderInventario();}});});
 syncQ();updRI();
 if(S.token&&S.user)enterApp();else{$('av').style.display='none';$('lv').style.display='grid';}
