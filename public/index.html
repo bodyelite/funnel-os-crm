@@ -114,7 +114,7 @@
 <div class="xe" id="funX" style="margin-top:10px"><div class="xt" id="funXT">—</div><div class="xs" id="funXB"></div></div>
 </section>
 <section id="view-leads" class="view"><div class="st">Leads</div><div class="tw" id="lTbl"></div></section>
-<section id="view-pipeline" class="view"><div class="st">Pipeline Kanban</div><div class="kb" id="kbn"></div><div class="cw"><div class="bt">Agenda de la Semana</div><div class="cg" id="calG"></div></div></section>
+<section id="view-pipeline" class="view"><div class="st">Pipeline Kanban</div><div class="kb" id="kbn"></div><div class="cw"><div class="bt" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">Agenda de la Semana<div class="cal-nav" style="display:flex;align-items:center;gap:6px"><button id="calPrev" style="background:var(--p2);border:1px solid var(--bd);color:var(--ts);padding:5px 11px;border-radius:7px;font-size:12px;cursor:pointer;font-family:inherit">&laquo; Anterior</button><button id="calHoy" style="background:var(--ac);color:#fff;border:none;padding:5px 11px;border-radius:7px;font-size:12px;cursor:pointer;font-family:inherit;font-weight:600">Hoy</button><button id="calNext" style="background:var(--p2);border:1px solid var(--bd);color:var(--ts);padding:5px 11px;border-radius:7px;font-size:12px;cursor:pointer;font-family:inherit">Siguiente &raquo;</button></div></div><div style="overflow-x:auto"><div class="cg" id="calG"></div></div></div></section>
 <section id="view-analytics" class="view"><div class="st">Analítica de Canales</div><div class="ct" id="chBx"></div></section>
 <section id="view-team" class="view"><div id="kpiDash"></div></section>
 <section id="view-inventario" class="view">
@@ -173,6 +173,7 @@
 </div>
 <div class="toast" id="tst"></div>
 <script>
+var calWeekOffset=0;
 const S={token:localStorage.getItem('ft')||null,user:JSON.parse(localStorage.getItem('fu')||'null'),tenant:localStorage.getItem('ftn')||'demo_automotora',config:null,leads:[],team:[],channels:[],users:[],range:{start:null,end:null,quick:'all'},seller:'',acc:new Set(JSON.parse(localStorage.getItem('fa')||'[]')),pollTimer:null,mid:null,slaOpen:null,funOpen:null,view:'dashboard'};
 const $=id=>document.getElementById(id);
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -253,7 +254,66 @@ function renderXRows(items,timeFn){if(!items.length)return'<div class="xe2">Sin 
 function bindXRows(c){c.querySelectorAll('.xlr[data-id]').forEach(el=>el.addEventListener('click',()=>openModal(+el.dataset.id)));}
 function renderLeads(){const gc='grid-template-columns:8px 8px 11px 1.3fr .9fr 1.1fr .85fr .85fr 1.2fr .75fr';const hd=`<div class="tr2 hd" style="${gc}"><div></div><div></div><div></div><div>Nombre</div><div>Tel.</div><div>Interés</div><div>Canal</div><div>Asignado</div><div>Estado</div><div>Última</div></div>`;const rows=S.leads.length?S.leads.map(l=>`<div class="tr2" style="${gc}" data-id="${l.id}">${l.unread?'<div class="ud"></div>':'<div></div>'}${adot(l.alertLevel)}${sdot(l.intentSignal||'NONE')}<div><strong>${esc(l.name)}</strong></div><div style="font-size:11.5px;color:var(--tm)">${esc(l.phone||'—')}</div><div style="font-size:11.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(l.interest||'—')}</div><div>${cSrc(l.source)}</div><div>${cUsr(l.assignedTo)}</div><div>${stpl(l.status)}</div><div style="font-size:11px;color:var(--tm)">${fDT(l.lastClientTs||l.lastInteraction)}</div></div>`).join(''):'<div class="ke" style="padding:16px">Sin leads.</div>';$('lTbl').innerHTML=hd+rows;$('lTbl').querySelectorAll('.tr2[data-id]').forEach(el=>el.addEventListener('click',()=>openModal(+el.dataset.id)));}
 function renderKanban(){const stages=S.config?.stages||[];const grp={};stages.forEach(s=>grp[s]=[]);S.leads.forEach(l=>{if(!grp[l.status])grp[l.status]=[];grp[l.status].push(l);});$('kbn').innerHTML=stages.map(st=>{const items=grp[st]||[];const isQ=st==='Calificado';const isR=st==='Reservado';return`<div class="kbc ${isQ?'ql':''}${isR?' rs-col':''}"><div class="kbh" style="${isR?'color:var(--wn)':''}">${isQ?'⭐ Calificado':isR?'🔒 Reservado':esc(st)}<span class="cnt">${items.length}</span>${isR&&items.some(l=>l.alertLevel==='critical')?'<span style="color:var(--bd2);font-size:11px;margin-left:6px">⚠️ vencidos</span>':''}</div><div class="kbs">${items.length?items.map(l=>`<div class="kc ${l.alertLevel||''}" data-id="${l.id}">${l.unread?'<div class="ud"></div>':''}<div style="flex:1;min-width:0"><div class="kn">${esc(l.name)}</div><div class="kt">${l.status==='Reservado'?'🔒 '+fMin(l.reservadoAt||l.lastInteraction):fMin(mAgo(l.lastClientTs||l.lastInteraction))}</div>${l.nextAction&&l.nextAction.date?'<div style="font-size:11px;color:#f59e0b;font-weight:bold;margin-top:4px">⏰ '+new Date(l.nextAction.date).toLocaleString('es-CL',{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'})+'</div>':''}</div></div>`).join(''):'<div class="ke">Vacío</div>'}</div></div>`;}).join('');$('kbn').querySelectorAll('.kc[data-id]').forEach(el=>el.addEventListener('click',()=>openModal(+el.dataset.id)));}
-function renderCalendar(){const today=new Date();today.setHours(0,0,0,0);const dow=today.getDay();const mon=new Date(today);mon.setDate(today.getDate()-(dow===0?6:dow-1));const days=['Lun','Mar','Mié','Jue','Vie','Sáb','Dom'];const SCHED=new Set(['Agendado','Calificado']);$('calG').innerHTML=days.map((d,i)=>{const day=new Date(mon);day.setDate(mon.getDate()+i);const isTd=day.getTime()===today.getTime();const ds=day.toISOString().slice(0,10);const byStatus=S.leads.filter(l=>SCHED.has(l.status)).filter(l=>{let ref=new Date(l.scheduleText);if(isNaN(ref))ref=new Date(l.lastInteraction||0);return!isNaN(ref)&&ref.toISOString().slice(0,10)===ds;});const byNext=S.leads.filter(l=>l.nextAction&&l.nextAction.date&&!['Cerrado','Abandonado','Perdido'].includes(l.status)).filter(l=>l.nextAction.date.slice(0,10)===ds&&!byStatus.find(x=>x.id===l.id));const dl=[...byStatus,...byNext];return`<div class="cd ${isTd?'td':''}"><div class="cdh">${d} ${day.getDate()}</div><div class="cdb">${dl.length?dl.map(l=>{const isNext=!SCHED.has(l.status)&&l.nextAction?.date?.slice(0,10)===ds;const hora=isNext?new Date(l.nextAction.date).toLocaleTimeString('es-CL',{hour:'2-digit',minute:'2-digit'}):'';return`<div class="ce ${l.status==='Agendado'?'ag':'ca'}" data-id="${l.id}" title="${isNext?l.nextAction.text||'Tarea':l.status}">${esc(l.name)}${hora?' ⏰'+hora:''}</div>`;}).join(''):'<div class="cem">—</div>'}</div></div>`;}).join('');$('calG').querySelectorAll('.ce[data-id]').forEach(el=>el.addEventListener('click',()=>openModal(+el.dataset.id)));}
+function renderCalendar(){
+  var today=new Date();today.setHours(0,0,0,0);
+  var base=new Date(today);base.setDate(today.getDate()+(calWeekOffset||0)*7);
+  var dow=base.getDay();
+  var mon=new Date(base);mon.setDate(base.getDate()-(dow===0?6:dow-1));
+  var DAY_NAMES=['Lun','Mar','Mi\u00e9','Jue','Vie','S\u00e1b','Dom'];
+  var HOURS=Array.from({length:13},function(_,i){return i+8;});
+  var FINAL_S=new Set(['Cerrado','Abandonado','Perdido']);
+  var SCHED=new Set(['Agendado','Calificado']);
+  var weekDates=DAY_NAMES.map(function(_,i){var d=new Date(mon);d.setDate(mon.getDate()+i);return d;});
+  var evMap={};
+  function addEv(ds,h,lead,isTask){var k=ds+':'+String(h).padStart(2,'0');if(!evMap[k])evMap[k]=[];evMap[k].push({lead:lead,isTask:isTask});}
+  (S.leads||[]).forEach(function(l){
+    if(FINAL_S.has(l.status))return;
+    if(l.nextAction&&l.nextAction.date){var d=new Date(l.nextAction.date);if(!isNaN(d.getTime()))addEv(d.toISOString().slice(0,10),d.getHours(),l,true);}
+    if(SCHED.has(l.status)&&l.scheduleText){var d2=new Date(l.scheduleText);if(!isNaN(d2.getTime()))addEv(d2.toISOString().slice(0,10),d2.getHours(),l,false);}
+  });
+  var nowH=new Date().getHours();
+  var isThisWeek=(calWeekOffset||0)===0;
+  var html='<table style="width:100%;border-collapse:collapse;font-size:11px;min-width:460px;border:1px solid var(--bd);border-radius:8px;overflow:hidden"><thead><tr>'
+    +'<th style="width:46px;padding:5px 6px;background:var(--p2);border-bottom:2px solid var(--bdm);border-right:2px solid var(--bdm);color:var(--tm);font-size:9.5px;font-weight:700;text-align:center">Hora</th>';
+  weekDates.forEach(function(d,i){
+    var isTd=isThisWeek&&d.getTime()===today.getTime();
+    html+='<th style="padding:5px 4px;background:'+(isTd?'var(--as)':'var(--p2)')+';border-bottom:2px solid var(--bdm);border-right:1px solid var(--bd);color:'+(isTd?'var(--ac)':'var(--tm)')+';font-weight:'+(isTd?'800':'600')+';text-align:center;font-size:10.5px">'+DAY_NAMES[i]+'<br><span style="font-size:14px;font-weight:800;color:'+(isTd?'var(--ac)':'var(--tx)')+'">'+((d.getMonth()+1)+'/'+d.getDate())+'</span></th>';
+  });
+  html+='</tr></thead><tbody>';
+  HOURS.forEach(function(h){
+    var isNowRow=isThisWeek&&h===nowH;
+    html+='<tr><td style="padding:3px 6px;background:var(--p2);border-right:2px solid var(--bdm);border-bottom:1px solid var(--bd);color:'+(isNowRow?'var(--ac)':'var(--tm)')+';font-weight:'+(isNowRow?'700':'500')+';font-size:10.5px;white-space:nowrap;vertical-align:top">'+String(h).padStart(2,'0')+':00</td>';
+    weekDates.forEach(function(d){
+      var ds=d.toISOString().slice(0,10);
+      var k=ds+':'+String(h).padStart(2,'0');
+      var evs=evMap[k]||[];
+      var isTd=isThisWeek&&d.getTime()===today.getTime();
+      var cell='';
+      evs.forEach(function(ev){
+        var l=ev.lead,isTask=ev.isTask;
+        var now=new Date();
+        var isPast=isTask&&l.nextAction&&new Date(l.nextAction.date)<=now;
+        var isIA=isTask&&l.nextAction&&l.nextAction.delegateToIA;
+        var col=isTask?(isPast?'#16a34a':'#f59e0b'):(l.status==='Agendado'?'var(--ok)':'var(--wn)');
+        var bg=isTask?(isPast?'rgba(22,163,74,.13)':'rgba(245,158,11,.13)'):(l.status==='Agendado'?'var(--oks)':'var(--wns)');
+        var icon=isTask?(isIA?(isPast?'&#x2705; ':'&#x1F916; '):(isPast?'&#x2713; ':'&#x23F0; ')):(l.status==='Agendado'?'&#x1F4C5; ':'&#x2B50; ');
+        var label=isTask?(l.nextAction&&l.nextAction.text||'Tarea'):l.status;
+        cell+='<div class="ce" data-id="'+l.id+'" style="background:'+bg+';border-left:2px solid '+col+';color:var(--tx);padding:3px 5px;border-radius:3px;margin-bottom:2px;cursor:pointer;font-size:10px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="'+esc(l.name)+' - '+esc(label)+'">'+icon+esc(l.name)+'</div>';
+      });
+      html+='<td style="padding:3px;border-right:1px solid var(--bd);border-bottom:1px solid var(--bd);vertical-align:top;min-height:32px;background:'+(isTd?'rgba(37,99,235,.025)':'var(--p)')+'">'+(cell||'')+'</td>';
+    });
+    html+='</tr>';
+  });
+  html+='</tbody></table>';
+  $('calG').innerHTML=html;
+  $('calG').querySelectorAll('.ce[data-id]').forEach(function(el){
+    el.addEventListener('click',function(){openModal(+el.dataset.id);});
+  });
+  var cp=$('calPrev'),ch=$('calHoy'),cn=$('calNext');
+  if(cp){cp.onclick=function(){calWeekOffset=(calWeekOffset||0)-1;renderCalendar();};}
+  if(ch){ch.onclick=function(){calWeekOffset=0;renderCalendar();};}
+  if(cn){cn.onclick=function(){calWeekOffset=(calWeekOffset||0)+1;renderCalendar();};}
+}
 
 function renderAnalytics(){
   const ch=S.channels||[];
