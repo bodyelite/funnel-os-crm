@@ -229,7 +229,7 @@ async function marcela(tenant, history, msg, notes, assignedName) {
     let invS = scrapeCache.data || await scrapeRMG();
     if (!invS) invS = '';
     const botCfg = await tRead(F.bot, tenant, {});
-    const systemPrompt = botCfg.systemPrompt || '';
+    const systemPrompt = (Array.isArray(botCfg) ? '' : botCfg.systemPrompt) || '';
     let sysPromptProcessed = systemPrompt.replace(/{nombreIA}/g, assignedName || 'Marcela');
     sysPromptProcessed += '\n\nINVENTARIO DISPONIBLE:\n' + invS;
     if (notes && notes.length) {
@@ -250,7 +250,7 @@ async function marcela(tenant, history, msg, notes, assignedName) {
     if (p.schedule_detected && fueraH(p.schedule_text)) { p.reply += '\n\n(Nuestro horario es 09:30-18:30 ⏰ ¿Te acomoda que te contactemos mañana a las 09:30?)'; p.intent_signal = 'YELLOW'; }
     return p;
   } catch(e) {
-    console.error('Marcela:', e.message);
+    console.error('Marcela error:', e.message);
     return { reply: 'Tuve un problemita técnico 😅 ¿Puedes repetir?', intent_signal: 'NONE', intent_reason: 'error', schedule_detected: false, schedule_text: '' };
   }
 }
