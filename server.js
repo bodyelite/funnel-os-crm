@@ -327,7 +327,6 @@ function calcAlert(lead){
   const ref=lead.lastClientTs||lead.lastInteraction;
   if(!ref)return'none';
   const m=(Date.now()-new Date(ref).getTime())/60000;
-  if(m>SLA_YELLOW)return'critical';
   if(m>SLA_GREEN)return'risk';
   return'fresh';
 }
@@ -357,18 +356,18 @@ async function applySlaRules(tenant){
       if(mins>SLA_REASSIGN&&!lead.reassigned){
         const nextObj=await rrNext(tenant,lead.assignedTo);
         if(nextObj&&nextObj.username!==lead.assignedTo){
-          const aiSumR=lead.ai_summary?' Resumen IA: '+lead.ai_summary:'';
+          const aiSumR=lead.ai_summary?' Resumen IA: '+lead.ai_summary+'.':'';
           lead.assignedTo=nextObj.username;lead.reassigned=true;lead.reassignedAt=new Date().toISOString();lead.adminReassignAlertSent=false;changed=true;
-          if(nextObj.phone)sendWA(nextObj.phone,'🚨 REASIGNACIÓN: Se te asignó el lead ['+lead.name+'] porque el anterior no respondió en 30 min.'+aiSumR).catch(()=>{});
+          if(nextObj.phone)sendWA(nextObj.phone,'🚨 REASIGNACIÓN: Se te asignó el lead ['+lead.name+'].'+aiSumR+' ¡Atiéndelo ahora!').catch(()=>{});
         }else{lead.reassigned=true;lead.reassignedAt=new Date().toISOString();lead.adminReassignAlertSent=false;changed=true;}
       }
       if(lead.reassigned&&lead.reassignedAt&&lead.unread&&lead.adminReassignAlertSent===false){
         const minsR=(Date.now()-new Date(lead.reassignedAt).getTime())/60000;
-        if(minsR>SLA_REASSIGN){
+        if(minsR>20){
           lead.adminReassignAlertSent=true;changed=true;
           const adminU=allUsers.find(u=>u.role==='admin');
-          const aiSumA=lead.ai_summary?' Resumen IA: '+lead.ai_summary:'';
-          if(adminU?.phone)sendWA(adminU.phone,'📢 ALERTA ADMIN: ['+lead.name+'] lleva 30+ min sin atención tras reasignación.'+aiSumA).catch(()=>{});
+          const aiSumG=lead.ai_summary?' Resumen: '+lead.ai_summary:'';
+          if(adminU?.phone)sendWA(adminU.phone,'📢 ALERTA GERENTE: El lead ['+lead.name+'] fue reasignado hace 20 min y sigue sin atención.'+aiSumG).catch(()=>{});
         }
       }
     }
