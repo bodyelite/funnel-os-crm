@@ -220,52 +220,27 @@ scrapeRMG().catch(()=>{});
 function invStr(inv){if(!Array.isArray(inv)||!inv.length)return'(sin inventario)';return inv.map(i=>`- [${i.id}] ${i.brand||''} ${i.model}${i.year?' '+i.year:''} | Stock:${i.stock} | $${(i.price||0).toLocaleString('es-CL')}${i.fuel?'|'+i.fuel:''}${i.highlights?'|'+i.highlights:''}`).join('\n');}
 
 // ── Prompt camaleónico: nombre del asesor asignado ─────────
-function marcelaSys(biz, invS, notes, assignedName) {
-  const nombreIA = assignedName || 'Marcela';
-  biz = biz || 'RMG Autos';
-  const notesBlock = notes && notes.length
-    ? `\nNOTAS INTERNAS (úsalas para personalizar):\n${notes.slice(-5).map(n => `- ${n.author}: ${n.content}`).join('\n')}`
-    : '';
-  const inv = (invS && invS !== '(sin inventario)') ? invS : '(inventario no disponible temporalmente)';
-  return `Eres ${nombreIA}, asesor/a de ventas de ${biz} 🚗
-Tu nombre es ${nombreIA}. Preséntate siempre con ese nombre. Eres cálido/a, empático/a y profesional. Hablas en español chileno con frases cortas y emojis naturales.
-
-FLUJO CONSULTIVO OBLIGATORIO — sigue este orden SIN saltarte pasos:
-PASO 1 — VERIFICAR STOCK: Si el cliente menciona un auto, búscalo en el INVENTARIO. Si existe, confirma disponibilidad y da precio. Si no, dile que lo consultas.
-PASO 2 — MÉTODO DE PAGO: Pregunta amablemente: ¿Piensa pagar al crédito o al contado?
-PASO 3 — RETOMA: Pregunta si tiene auto para entregar en parte de pago.
-  - Si el auto de retoma es anterior a 2012: NO lo descartes. Di que "el ejecutivo en sucursal lo tasa al momento de la visita".
-PASO 4 — VISITA: Solo DESPUÉS de los pasos anteriores, si el cliente propone fecha, confírmala con entusiasmo.
-
-INVENTARIO DISPONIBLE:
-${inv}${notesBlock}
-
-REGLAS ESTRICTAS:
-1. NUNCA pidas test drive ni visita en el primer mensaje. Primero indaga.
-2. NUNCA inventes precios ni modelos fuera del inventario.
-3. Precios en CLP con puntos (ej: $11.490.000).
-4. Máximo 3 oraciones por respuesta. Termina siempre con UNA sola pregunta.
-5. Fuera de horario 09:00-20:00: propón "mañana a las 09:00".
-6. Si el cliente da datos de crédito/retoma, di que le conectarás con un ejecutivo.
-
-RESPONDE SOLO JSON (sin markdown):
-{"reply":"<texto>","intent_signal":"NONE"|"BLUE"|"YELLOW","intent_reason":"<nota>","schedule_detected":true|false,"schedule_text":"<hora si aplica>"}`;
-}
 
 function parseJ(raw){if(!raw)return null;const a=raw.indexOf('{'),b=raw.lastIndexOf('}');if(a===-1||b===-1)return null;try{return JSON.parse(raw.slice(a,b+1));}catch{return null;}}
 function fueraH(txt){const m=(txt||'').match(/(\d{1,2})\s*(?::|\.)?\s*(\d{2})?\s*(am|pm|hrs?|h)?/i);if(!m)return false;let h=parseInt(m[1],10);const min=parseInt(m[2]||'0',10);const mer=(m[3]||'').toLowerCase();if(mer==='pm'&&h<12)h+=12;if(mer==='am'&&h===12)h=0;const total=h*60+min;return total<570||total>=1110;}
 
 async function marcela(tenant, history, msg, notes, assignedName) {
   try {
-    const cfg = (await read(F.config))[tenant] || {};
     let invS = scrapeCache.data || await scrapeRMG();
     if (!invS) invS = '';
+    const botCfg = await tRead(F.bot, tenant, {});
+    const systemPrompt = botCfg.systemPrompt || '';
+    let sysPromptProcessed = systemPrompt.replace(/{nombreIA}/g, assignedName || 'Marcela');
+    sysPromptProcessed += '\n\nINVENTARIO DISPONIBLE:\n' + invS;
+    if (notes && notes.length) {
+      sysPromptProcessed += `\nNOTAS INTERNAS:\n${notes.slice(-5).map(n => `- ${n.author}: ${n.content}`).join('\n')}`;
+    }
     const completion = await openai.chat.completions.create({
       model: 'gpt-4o-mini',
       temperature: 0.5,
       response_format: { type: 'json_object' },
       messages: [
-        { role: 'system', content: (function(){ try{ var _b=JSON.parse(fs.readFileSync(path.join(process.cwd(),'data','bot.json'),'utf8')); var _sp=(_b[tenant]||{}).systemPrompt; if(_sp) return _sp+'\n\nINVENTARIO DISPONIBLE:\n'+invS; }catch(_){} return marcelaSys(cfg.businessName||'RMG Autos',invS,notes||[],assignedName); })() },
+        { role: 'system', content: sysPromptProcessed },
         ...history.slice(-14).map(h => ({ role: h.role === 'user' ? 'user' : 'assistant', content: h.content })),
         { role: 'user', content: msg }
       ].flat()
