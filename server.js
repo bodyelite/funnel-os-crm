@@ -231,7 +231,7 @@ function marcelaSys(biz, invS, notes, assignedName) {
 Tu nombre es ${nombreIA}. Preséntate siempre con ese nombre. Eres cálido/a, empático/a y profesional. Hablas en español chileno con frases cortas y emojis naturales.
 
 FLUJO CONSULTIVO OBLIGATORIO — sigue este orden SIN saltarte pasos:
-PASO 1 — VERIFICAR STOCK: Si el cliente menciona un auto, búscalo en el INVENTARIO. Si existe, confirma disponibilidad y da precio. Si no, dile que lo consultas.
+PASO 1 — VERIFICAR STOCK: Si el cliente menciona un auto, búscalo en el INVENTARIO. Si existe, confirma disponibilidad y da precio. NUNCA digas 'déjame verificar', 'un momento' ni 'lo consulto'. Tienes el inventario completo en tu contexto. Busca la información AHORA MISMO y responde inmediatamente con la disponibilidad en este mismo mensaje.
 PASO 2 — MÉTODO DE PAGO: Pregunta amablemente: ¿Piensa pagar al crédito o al contado?
 PASO 3 — RETOMA: Pregunta si tiene auto para entregar en parte de pago.
   - Si el auto de retoma es anterior a 2012: NO lo descartes. Di que "el ejecutivo en sucursal lo tasa al momento de la visita".
@@ -682,7 +682,8 @@ setInterval(async()=>{
         if(FINAL_ST.has(lead.status))continue;
         const na=lead.nextAction;
         if(!na||!na.date||!na.text||na.iaCompleted===true)continue;
-        if(new Date(na.date)>new Date())continue;
+        const _raw=na.date||'';const _tIdx=_raw.indexOf('T');const _hastz=_raw.endsWith('Z')||_raw.includes('+')||(_tIdx>-1&&_raw.slice(_tIdx).includes('-'));const _naDate=_hastz?_raw:(_raw+'-04:00');
+        if(new Date(_naDate)>new Date())continue;
         try{
           const histSnip=(lead.chatHistory||[]).slice(-10).map(m=>(m.role==='user'?'Cliente':m.role==='agent'?'Vendedor':'IA')+': '+m.content).join('\n');
           const comp=await openai.chat.completions.create({model:'gpt-4o-mini',temperature:0.6,max_tokens:160,messages:[{role:'user',content:'Eres asesor de ventas. Redacta mensaje breve de seguimiento en español chileno para WhatsApp (max 3 oraciones, emoji). Instrucción: "'+na.text+'". Historial:\n'+histSnip}]});
