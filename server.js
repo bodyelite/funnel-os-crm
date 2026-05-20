@@ -253,7 +253,7 @@ RESPONDE SOLO JSON (sin markdown):
 }
 
 function parseJ(raw){if(!raw)return null;const a=raw.indexOf('{'),b=raw.lastIndexOf('}');if(a===-1||b===-1)return null;try{return JSON.parse(raw.slice(a,b+1));}catch{return null;}}
-function fueraH(txt){const m=(txt||'').match(/(\d{1,2})\s*(?::|\.)?\s*(\d{2})?\s*(am|pm|hrs?|h)?/i);if(!m)return false;let h=parseInt(m[1],10);const mer=(m[3]||'').toLowerCase();if(mer==='pm'&&h<12)h+=12;if(mer==='am'&&h===12)h=0;return h<9||h>=20;}
+function fueraH(txt){const m=(txt||'').match(/(\d{1,2})\s*(?::|\.)?\s*(\d{2})?\s*(am|pm|hrs?|h)?/i);if(!m)return false;let h=parseInt(m[1],10);const min=parseInt(m[2]||'0',10);const mer=(m[3]||'').toLowerCase();if(mer==='pm'&&h<12)h+=12;if(mer==='am'&&h===12)h=0;const total=h*60+min;return total<570||total>=1110;}
 
 async function marcela(tenant, history, msg, notes, assignedName) {
   try {
@@ -272,7 +272,7 @@ async function marcela(tenant, history, msg, notes, assignedName) {
     });
     let p = parseJ(completion.choices?.[0]?.message?.content || '');
     if (!p) p = { reply: '¡Perdona! Algo falló 😅 ¿Me repites?', intent_signal: 'NONE', intent_reason: 'fallback', schedule_detected: false, schedule_text: '' };
-    if (p.schedule_detected && fueraH(p.schedule_text)) { p.reply += '\n\n(Nuestro horario es 09:00-20:00 ⏰ ¿Te acomoda mañana a las 09:00?)'; p.intent_signal = 'YELLOW'; }
+    if (p.schedule_detected && fueraH(p.schedule_text)) { p.reply += '\n\n(Nuestro horario es 09:30-18:30 ⏰ ¿Te acomoda que te contactemos mañana a las 09:30?)'; p.intent_signal = 'YELLOW'; }
     return p;
   } catch(e) {
     console.error('Marcela:', e.message);
