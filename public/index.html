@@ -300,6 +300,8 @@ function renderCalendar(){
     html+='</tr>';
   });
   html+='</tbody></table></div>';
+  $('calG').className='';
+  $('calG').style.display='block';
   $('calG').innerHTML=html;
   $('calG').querySelectorAll('.ce[data-id]').forEach(el=>el.addEventListener('click',()=>openModal(+el.dataset.id)));
 }
