@@ -228,13 +228,29 @@ async function marcela(tenant, history, msg, notes, assignedName) {
   try {
     let invS = scrapeCache.data || await scrapeRMG();
     if (!invS) invS = '';
-    const botCfg = await tRead(F.bot, tenant, {});
-    const systemPrompt = (Array.isArray(botCfg) ? '' : botCfg.systemPrompt) || '';
-    let sysPromptProcessed = systemPrompt.replace(/{nombreIA}/g, assignedName || 'Marcela');
-    sysPromptProcessed += '\n\nINVENTARIO DISPONIBLE:\n' + invS;
-    if (notes && notes.length) {
-      sysPromptProcessed += `\nNOTAS INTERNAS:\n${notes.slice(-5).map(n => `- ${n.author}: ${n.content}`).join('\n')}`;
+
+    let botCfg = await tRead(F.bot, tenant, {});
+    if (!botCfg || typeof botCfg !== 'object' || Array.isArray(botCfg) || !botCfg.systemPrompt) {
+      try {
+        const seedBot = JSON.parse(fsSync.readFileSync(path.join(__dirname, 'data', 'bot.json'), 'utf8'));
+        if (seedBot && seedBot[tenant] && seedBot[tenant].systemPrompt) {
+          botCfg = Object.assign({}, botCfg, seedBot[tenant]);
+          await tWrite(F.bot, tenant, botCfg);
+          console.log('[marcela] systemPrompt restaurado desde data/bot.json para', tenant);
+        }
+      } catch(eSeed) {
+        console.error('[marcela] No se pudo cargar data/bot.json:', eSeed.message);
+      }
     }
+
+    const baseSysPrompt = (botCfg && botCfg.systemPrompt) || 'Eres Marcela, asesora de ventas de Automotora Andes. Responde de forma calida y profesional en espanol chileno.';
+    let sysPromptProcessed = baseSysPrompt.replace(/\{nombreIA\}/g, assignedName || 'Marcela');
+    sysPromptProcessed += '\n\nINVENTARIO DISPONIBLE:\n' + (invS || '(sin inventario disponible temporalmente)');
+    if (notes && notes.length) {
+      sysPromptProcessed += '\nNOTAS INTERNAS:\n' + notes.slice(-5).map(n => '- ' + n.author + ': ' + n.content).join('\n');
+    }
+    sysPromptProcessed += '\n\nRESPONDE SOLO EN FORMATO JSON (sin markdown, sin texto adicional):\n{"reply":"<texto con emojis>","intent_signal":"NONE"|"BLUE"|"YELLOW","intent_reason":"<nota corta>","schedule_detected":true|false,"schedule_text":"<hora si aplica>"}';
+
     const completion = await openai.chat.completions.create({
       model: 'gpt-4o-mini',
       temperature: 0.5,
@@ -246,12 +262,14 @@ async function marcela(tenant, history, msg, notes, assignedName) {
       ].flat()
     });
     let p = parseJ(completion.choices?.[0]?.message?.content || '');
-    if (!p) p = { reply: '¡Perdona! Algo falló 😅 ¿Me repites?', intent_signal: 'NONE', intent_reason: 'fallback', schedule_detected: false, schedule_text: '' };
-    if (p.schedule_detected && fueraH(p.schedule_text)) { p.reply += '\n\n(Nuestro horario es 09:30-18:30 ⏰ ¿Te acomoda que te contactemos mañana a las 09:30?)'; p.intent_signal = 'YELLOW'; }
+    if (!p) p = { reply: '\u00a1Perdona! Algo fall\u00f3 \ud83d\ude05 \u00bfMe repites?', intent_signal: 'NONE', intent_reason: 'fallback', schedule_detected: false, schedule_text: '' };
+    if (p.schedule_detected && fueraH(p.schedule_text)) { p.reply += '\n\n(Nuestro horario es 09:30-18:30 \u23f0 \u00bfTe acomoda que te contactemos ma\u00f1ana a las 09:30?)'; p.intent_signal = 'YELLOW'; }
     return p;
   } catch(e) {
-    console.error('Marcela error:', e.message);
-    return { reply: 'Tuve un problemita técnico 😅 ¿Puedes repetir?', intent_signal: 'NONE', intent_reason: 'error', schedule_detected: false, schedule_text: '' };
+    console.error('[Marcela ERROR]', e.message);
+    if (e.stack) console.error(e.stack.split('\n').slice(0,5).join('\n'));
+    if (e.response) console.error('[OpenAI status]', e.response.status, e.response.data);
+    return { reply: 'Tuve un problemita t\u00e9cnico \ud83d\ude05 \u00bfPuedes repetir?', intent_signal: 'NONE', intent_reason: 'error', schedule_detected: false, schedule_text: '' };
   }
 }
 
