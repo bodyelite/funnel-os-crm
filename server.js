@@ -49,39 +49,32 @@ async function scrapeRMG() {
 
   function cleanStr(s) {
     return (s||'').replace(/&amp;/g,'&').replace(/&nbsp;/g,' ').replace(/&#0*39;/g,"'").replace(/&[a-z]{1,6};/g,'').replace(/<[^>]+>/g,'').replace(/\s+/g,' ').trim();
-  }
   function parsePrice(s) {
     const m = (s||'').match(/(\d{1,3})[.,](\d{3})[.,](\d{3})/);
     if (m) return parseInt(m[1]+m[2]+m[3]);
     const m2 = (s||'').match(/(\d{2,3})[.,](\d{3})\b/);
     if (m2) { const v = parseInt(m2[1]+m2[2]); return v >= 500 ? v*1000 : 0; }
     return 0;
-  }
   function parseKm(s) {
     const m = (s||'').match(/(\d{1,3})[.,](\d{3})\s*(?:km|kms|kil)/i);
     if (m) return (parseInt(m[1])*1000+parseInt(m[2])).toLocaleString('es-CL')+' km';
     const m2 = (s||'').match(/\b(\d{4,6})\s*(?:km|kms)/i);
     if (m2) return parseInt(m2[1]).toLocaleString('es-CL')+' km';
     return '';
-  }
   function parseYear(s) {
     const m = (s||'').match(/\b(201[0-9]|202[0-5])\b/);
     return m ? m[1] : '';
-  }
   function isJunk(item) {
     if (!item || !item.model || item.model.length < 3) return true;
     if (/feed|rss|wp-|sitemap|page|categor|shop|cart|tag\b/i.test(item.model)) return true;
     if (item.price === 0 && !item.km) return true;
     return false;
-  }
   function slugParse(href) {
     return (href||'').replace(/.*\/usados\//,'').replace(/\/$/,'').replace(/-/g,' ').trim();
-  }
   function makeLine(i) {
     return '- '+i.model+(i.year?' '+i.year:'')+(i.km?' | '+i.km:'')+
       ' | '+pSign+(i.price ? i.price.toLocaleString('es-CL') : 'consultar')+
       (i.link?' | '+i.link:'');
-  }
 
   const items = [];
 
@@ -107,9 +100,6 @@ async function scrapeRMG() {
               link: p.link||'', highlights: parseKm(body)||'Ver ficha en rmgautos.cl'
             };
             if (title.length > 2 && !(/feed|rss|page/i.test(title))) items.push(item);
-          }
-        }
-      }
     } catch(_) {}
 
     // ESTRATEGIA 2: HTML con links /product/
@@ -149,7 +139,6 @@ async function scrapeRMG() {
         while ((kmMatch = kmRE.exec(seg)) !== null) {
           const val = parseInt(kmMatch[1].replace(/[.,]/g,''));
           if (val > 500 && val < 999999 && val.toString() !== anno) { km = val.toLocaleString('es-CL')+' km'; break; }
-        }
         const h6M = ctx.match(/<h6[^>]*>([^<]{2,40})<\/h6>/i);
         const modeloRaw = h6M ? cleanStr(h6M[1]) : '';
         const h2s = [...ctx.matchAll(/<h2[^>]*>([^<]{2,60})<\/h2>/gi)];
@@ -157,7 +146,6 @@ async function scrapeRMG() {
         for (const hm of h2s) {
           const t = cleanStr(hm[1]);
           if (!t.match(MARCAS) && !parsePrice(t) && !parseYear(t) && t !== '|' && t.length > 2) { version = t; break; }
-        }
         const fuelM = seg.match(/\b(GASOLINA|BENCINA|DIESEL|DI[EÉ]SEL|EL[EÉ]CTRICO|H[IÍ]BRIDO|GAS)\b/i);
         const fuel = fuelM ? fuelM[1] : '';
         const isVendido = /VENDIDO/i.test(seg);
@@ -171,7 +159,6 @@ async function scrapeRMG() {
         };
         if (item.model.length < 2 || /feed|rss|wp-|sitemap|categor/i.test(item.model)) continue;
         items.push(item);
-      }
 
       // Fallback: cualquier link /product/
       if (items.length === 0) {
@@ -193,11 +180,8 @@ async function scrapeRMG() {
           const modelo = marca + (h6M ? ' '+cleanStr(h6M[1]) : '') + (anno ? ' '+anno : '');
           if (!modelo || modelo.length < 2 || /feed|rss|sitemap/i.test(modelo)) continue;
           items.push({ id:'WEB-'+items.length, brand:marca, model:modelo, year:anno?parseInt(anno):null, price:precio, km:km, stock:1, link:href, highlights:km||'Ver en rmgautos.cl' });
-        }
-      }
 
       if (items.length === 0) throw new Error('0 autos extraidos del HTML');
-    }
 
     const unique = [...new Map(items.map(it => [it.link||it.model, it])).values()];
     const dataStr = unique.map(i =>
@@ -212,8 +196,6 @@ async function scrapeRMG() {
   } catch(e) {
     console.warn('[RMG-Scraper] Error:', e.message);
     return scrapeCache.data || '';
-  }
-}
 setInterval(async()=>{try{await scrapeRMG();}catch(e){}}, 30*60*1000);
 scrapeRMG().catch(()=>{});
 
@@ -250,7 +232,6 @@ REGLAS ESTRICTAS:
 
 RESPONDE SOLO JSON (sin markdown):
 {"reply":"<texto>","intent_signal":"NONE"|"BLUE"|"YELLOW","intent_reason":"<nota>","schedule_detected":true|false,"schedule_text":"<hora si aplica>"}`;
-}
 
 function parseJ(raw){if(!raw)return null;const a=raw.indexOf('{'),b=raw.lastIndexOf('}');if(a===-1||b===-1)return null;try{return JSON.parse(raw.slice(a,b+1));}catch{return null;}}
 function fueraH(txt){const m=(txt||'').match(/(\d{1,2})\s*(?::|\.)?\s*(\d{2})?\s*(am|pm|hrs?|h)?/i);if(!m)return false;let h=parseInt(m[1],10);const mer=(m[3]||'').toLowerCase();if(mer==='pm'&&h<12)h+=12;if(mer==='am'&&h===12)h=0;return h<9||h>=20;}
@@ -277,15 +258,12 @@ async function marcela(tenant, history, msg, notes, assignedName) {
   } catch(e) {
     console.error('Marcela:', e.message);
     return { reply: 'Tuve un problemita técnico 😅 ¿Puedes repetir?', intent_signal: 'NONE', intent_reason: 'error', schedule_detected: false, schedule_text: '' };
-  }
-}
 
 function esKeywordCalif(texto){
   if(!texto)return false;
   const t=texto.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'');
   return['credito','pie','seguro','retoma','parte de pago','financiamiento',
     'cuota','mensualidad','bono','leasing','credito automotriz'].some(k=>t.includes(k));
-}
 
 function applySignal(lead,p){
   if(p.intent_signal==='BLUE'||p.intent_signal==='YELLOW'){
@@ -293,14 +271,11 @@ function applySignal(lead,p){
     lead.scheduleText=p.schedule_text||'';
   } else if(!lead.intentSignal){
     lead.intentSignal='NONE';
-  }
-}
 
 async function sendWA(to,text){
   const token=process.env.WA_TOKEN,phoneId=process.env.WA_PHONE_ID;
   if(!token||!phoneId){console.log('⚠️ WA no config — para:',to,'msg:',text.slice(0,60));return;}
   try{const phone=String(to).replace(/\D/g,'');if(!phone)return;const res=await fetch(`https://graph.facebook.com/v17.0/${phoneId}/messages`,{method:'POST',headers:{'Authorization':'Bearer '+token,'Content-Type':'application/json'},body:JSON.stringify({messaging_product:'whatsapp',to:phone,type:'text',text:{body:text}})});if(!res.ok)console.error('WA error:',res.status);}catch(e){console.error('WA exc:',e.message);}
-}
 
 const SHIELD=['body elite','bodyelite','botox','lipo','lipoescultura','liposuccion','estetica','estética','masaje','masajes','doctora','tratamiento','acido hialuronico'];
 const SHIELD_R='¡Hola! Este número es de Automotora Andes 🚗 Para Body Elite ve a su Instagram. ¡Gracias!';
@@ -311,7 +286,6 @@ async function getSellers(tenant) {
   const rmgNames = ['daniela','carlos'];
   const fromDB = allUsers.filter(u => rmgNames.includes(u.username) && u.role === 'vendedor' && (!u.status || u.status === 'Activo'));
   return fromDB.length >= 2 ? fromDB : RMG_VENDORS;
-}
 async function rrNext(tenant,exclude=null){const sl=await getSellers(tenant);if(!sl.length)return null;const pool=exclude?sl.filter(s=>s.username!==exclude):sl;const list=pool.length?pool:sl;const rr=await read(F.rr);const idx=(rr[tenant]||0)%list.length;rr[tenant]=(idx+1)%list.length;await write(F.rr,rr);return list[idx];}
 
 function calcAlert(lead){
@@ -321,7 +295,6 @@ function calcAlert(lead){
     if(!ref)return'none';
     const hrs=(Date.now()-new Date(ref).getTime())/3600000;
     return hrs>72?'critical':hrs>48?'risk':'fresh';
-  }
   const applies=lead.status==='Nuevo'||lead.unread===true;
   if(!applies)return'none';
   const ref=lead.lastClientTs||lead.lastInteraction;
@@ -329,7 +302,6 @@ function calcAlert(lead){
   const m=(Date.now()-new Date(ref).getTime())/60000;
   if(m>SLA_GREEN)return'risk';
   return'fresh';
-}
 
 async function applySlaRules(tenant){
   const leads=await tRead(F.leads,tenant);
@@ -348,8 +320,6 @@ async function applySlaRules(tenant){
         const msg='🔴 RESERVA VENCIDA (+72h): '+lead.name+'. La reserva lleva más de 3 días. Acción inmediata requerida.';
         if(admin?.phone)sendWA(admin.phone,msg).catch(()=>{});
         if(assignedUser?.phone)sendWA(assignedUser.phone,msg).catch(()=>{});
-      }
-    }
     if(lead.status==='Nuevo'){
       const ref=lead.lastClientTs||lead.lastInteraction;
       const mins=ref?(Date.now()-new Date(ref).getTime())/60000:0;
@@ -360,7 +330,6 @@ async function applySlaRules(tenant){
           lead.assignedTo=nextObj.username;lead.reassigned=true;lead.reassignedAt=new Date().toISOString();lead.adminReassignAlertSent=false;changed=true;
           if(nextObj.phone)sendWA(nextObj.phone,'🚨 REASIGNACIÓN: Se te asignó el lead ['+lead.name+'].'+aiSumR+' ¡Atiéndelo ahora!').catch(()=>{});
         }else{lead.reassigned=true;lead.reassignedAt=new Date().toISOString();lead.adminReassignAlertSent=false;changed=true;}
-      }
       if(lead.reassigned&&lead.reassignedAt&&lead.unread&&lead.adminReassignAlertSent===false){
         const minsR=(Date.now()-new Date(lead.reassignedAt).getTime())/60000;
         if(minsR>20){
@@ -368,16 +337,11 @@ async function applySlaRules(tenant){
           const adminU=allUsers.find(u=>u.role==='admin');
           const aiSumG=lead.ai_summary?' Resumen: '+lead.ai_summary:'';
           if(adminU?.phone)sendWA(adminU.phone,'📢 ALERTA GERENTE: El lead ['+lead.name+'] fue reasignado hace 20 min y sigue sin atención.'+aiSumG).catch(()=>{});
-        }
-      }
-    }
     const lvl=calcAlert(lead);
     if(lvl!==prev){lead.alertLevel=lvl;changed=true;}
     if(lead.botActive===undefined){lead.botActive=true;changed=true;}
-  }
   if(changed)await tWrite(F.leads,tenant,leads);
   return leads;
-}
 
 function parseDateRange(start,end){let s=null,e=null;if(start){const d=new Date(start);if(!isNaN(d)){d.setHours(0,0,0,0);s=d.getTime();}}if(end){const d=new Date(end);if(!isNaN(d)){d.setHours(23,59,59,999);e=d.getTime();}}return{s,e};}
 function inRange(lead,s,e){if(s===null&&e===null)return true;const ts=new Date(lead.lastInteraction||0).getTime();return(s===null||ts>=s)&&(e===null||ts<=e);}
@@ -391,7 +355,6 @@ async function seed(){
     {username:'recepcion',password:'demo',name:'Daniela Ortiz',role:'secretaria',phone:'56912000004',status:'Activo'}
   ];}else{
     for(const v of RMG_VENDORS){if(!users.demo_automotora.find(u=>u.username===v.username))users.demo_automotora.push(v);}
-  }
   if(!users.demo_clinica)users.demo_clinica=[{username:'gerente',password:'demo',name:'Dr. Hernán Vidal',role:'admin',phone:'56912000010',status:'Activo'},{username:'vendedor1',password:'demo',name:'Karina Bravo',role:'vendedor',phone:'56912000011',status:'Activo'},{username:'recepcion',password:'demo',name:'Marcela Tapia',role:'secretaria',phone:'56912000012',status:'Activo'}];
   await write(F.users,users);
   const cfg=await read(F.config);
@@ -400,7 +363,6 @@ async function seed(){
     const ci=cfg.demo_automotora.stages.indexOf('Cerrado');
     if(ci!==-1)cfg.demo_automotora.stages.splice(ci,0,'Reservado');
     else cfg.demo_automotora.stages.push('Reservado');
-  }
   if(!cfg.demo_clinica)cfg.demo_clinica={businessName:'Clínica Vital',accentColor:'#0d9488',stages:['Nuevo','En Proceso','Contactado','Agendado','Calificado','Atendido','Seguimiento','Cerrado','Abandonado']};
   await write(F.config,cfg);
   const bot=await read(F.bot);
@@ -419,7 +381,6 @@ async function seed(){
   if(!leadsDB.demo_automotora)leadsDB.demo_automotora=[];
   if(!leadsDB.demo_clinica)leadsDB.demo_clinica=[];
   await write(F.leads,leadsDB);
-}
 
 const auth=(...roles)=>async(req,res,next)=>{
   const token=req.header('X-Auth-Token')||req.query.token;
@@ -488,7 +449,6 @@ app.post('/api/leads/:id/resumen',auth('admin','vendedor'),async(req,res)=>{
   }catch(e){
     console.error('[resumen-error]',e.message);
     res.status(500).json({error:e.message});
-  }
 });
 
 app.post('/api/leads/:id/bot',auth(),async(req,res)=>{const leads=await tRead(F.leads,req.tenant);const idx=leads.findIndex(x=>x.id==req.params.id);if(idx===-1)return res.status(404).json({error:'No encontrado'});if(req.user.role==='vendedor'&&leads[idx].assignedTo!==req.user.username)return res.status(403).json({error:'Sin permisos'});leads[idx].botActive=!!req.body.botActive;await tWrite(F.leads,req.tenant,leads);res.json(leads[idx]);});
@@ -543,8 +503,6 @@ app.post('/api/force-sla',auth('admin'),async(req,res)=>{
       l.lastClientTs=new Date(new Date(l.lastClientTs||Date.now()).getTime()-ms).toISOString();
       l.lastInteraction=new Date(new Date(l.lastInteraction||Date.now()).getTime()-ms).toISOString();
       l.alertLevel=calcAlert(l);count++;
-    }
-  }
   await tWrite(F.leads,req.tenant,leads);
   const updated=await applySlaRules(req.tenant);
   res.json({ok:true,count,leads:updated.filter(l=>l.status==='Nuevo')});
@@ -589,13 +547,10 @@ app.post('/api/chat',async(req,res)=>{
         console.error('[Resumen-Error /chat]', eIA);
         leads[idx].notes.push({content:'🧠 Cliente mencionó crédito/retoma/seguro. (OpenAI falló: '+eIA.message+')',author:'Resumen IA',ts:Date.now()});
         if(assignedUserChat?.phone)sendWA(assignedUserChat.phone,'✅ Lead Asignado: '+leads[idx].name+'. Lee el resumen en la bitácora del CRM.').catch(()=>{});
-      }
-    }
     if(p.reply&&p.reply.indexOf('rmgautos.cl')!==-1){leads[idx].nextAction={text:'¿Pudiste ver la ficha en el enlace? Fíjate en los detalles del equipamiento 👀 ¿Qué te pareció?',date:new Date(Date.now()+2*60000).toISOString(),createdAt:new Date().toISOString(),delegateToIA:true,iaCompleted:false};}
     leads[idx].alertLevel=calcAlert(leads[idx]);
     await tWrite(F.leads,tenant,leads);
     return res.json({reply:p.reply,sessionId,leadCaptured:captured,leadId,intentSignal:leads[idx].intentSignal,status:leads[idx].status});
-  }
   await tWrite(F.leads,tenant,leads);res.json({reply:null,sessionId,leadCaptured:captured,leadId,botPaused:true});
 });
 
@@ -613,7 +568,6 @@ app.post('/webhook',async(req,res)=>{
       const assignedObj=await rrNext(tenant)||{username:'vendedor1'};const n=new Date().toISOString();
       ld[tenant].unshift({id:Date.now(),name:contactName,phone:'+'+from,source:'WhatsApp',status:'Nuevo',lastInteraction:n,lastClientTs:n,interest:body.slice(0,80),assignedTo:assignedObj.username,botActive:true,alertLevel:'none',intentSignal:'NONE',unread:true,notes:[],chatHistory:[]});
       idx=0;if(assignedObj.phone)sendWA(assignedObj.phone,`🔔 NUEVO LEAD WA: ${contactName} — "${body.slice(0,60)}" — atiéndelo ahora.`).catch(()=>{});
-    }
     ld[tenant][idx].chatHistory=ld[tenant][idx].chatHistory||[];ld[tenant][idx].chatHistory.push({role:'user',content:body,ts:Date.now()});
     ld[tenant][idx].unread=true;
     if(ld[tenant][idx].botActive!==false){
@@ -638,10 +592,7 @@ app.post('/webhook',async(req,res)=>{
           console.error('[Resumen-Error /webhook]', eIAWH);
           ld[tenant][idx].notes.push({content:'🧠 Cliente mencionó crédito/retoma/seguro. (OpenAI falló: '+eIAWH.message+')',author:'Resumen IA',ts:Date.now()});
           if(assignedUserWH?.phone)sendWA(assignedUserWH.phone,'✅ Lead Asignado: '+ld[tenant][idx].name+'. Revisa la bitácora del CRM.').catch(()=>{});
-        }
-      }
       await sendWA(from,p.reply);
-    }
     ld[tenant][idx].lastInteraction=new Date().toISOString();ld[tenant][idx].alertLevel=calcAlert(ld[tenant][idx]);
     await write(F.leads,ld);
   }catch(e){console.error('Webhook:',e);}
@@ -696,10 +647,8 @@ setInterval(async()=>{
           lead.lastInteraction=new Date().toISOString();changed=true;
           console.log('[IA-Proactiva] Enviado a '+lead.name);
         }catch(eP){console.error('[IA-Proactiva]',lead.name,eP.message);}
-      }
       if(changed)await tWrite(F.leads,t,leads);
     }catch(eT){console.error('[IA-Proactiva-cron]',eT.message);}
-  }
 },60000);
 app.use(express.static(path.join(__dirname,'public')));
 app.get('*',(req,res)=>res.sendFile(path.join(__dirname,'public','index.html')));
@@ -715,8 +664,6 @@ setTimeout(async () => {
         usrs.forEach(u => u.password = 'demo');
         await tWrite(F.users, t, usrs);
         console.log('✅ Claves reseteadas a "demo".');
-      }
-    }
   } catch(e) { console.log('Error en parche', e); }
 }, 3000);
 
@@ -733,7 +680,5 @@ setTimeout(async () => {
       if (changed) {
         await tWrite(F.leads, 'demo_automotora', leads);
         console.log('✅ Leads asignados a Daniela y Carlos.');
-      }
-    }
   } catch(e) { console.log('Error en parche migración', e); }
 }, 4000);
