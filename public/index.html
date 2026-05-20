@@ -14,7 +14,7 @@
 /* ═══════════════════════════════════════════════════════════════
    MOBILE RESPONSIVE  —  max-width: 768px
    ═══════════════════════════════════════════════════════════════ */
-@media(max-width:768px),(hover:none) and (pointer:coarse){
+@media (max-width:768px){
   html,body{overflow-x:hidden;width:100%}
   .app{grid-template-columns:1fr!important;grid-template-rows:auto 1fr!important;min-height:100vh}
   .sb{flex-direction:row!important;align-items:center;justify-content:flex-start;padding:6px 10px!important;border-right:none!important;border-bottom:1px solid var(--bd);overflow-x:auto;gap:4px;position:sticky;top:0;z-index:100;-webkit-overflow-scrolling:touch;background:var(--p)}
@@ -56,7 +56,63 @@
   #agendaText,#agendaDate{width:100%!important;min-width:unset!important}
   .vw{padding:0!important}
 }
-@media(max-width:480px),(hover:none) and (pointer:coarse) and (max-width:600px){
+@media (hover:none) and (pointer:coarse){
+  html,body{overflow-x:hidden;width:100%}
+  .app{grid-template-columns:1fr!important;grid-template-rows:auto 1fr!important;min-height:100vh}
+  .sb{flex-direction:row!important;align-items:center;justify-content:flex-start;padding:6px 10px!important;border-right:none!important;border-bottom:1px solid var(--bd);overflow-x:auto;gap:4px;position:sticky;top:0;z-index:100;-webkit-overflow-scrolling:touch;background:var(--p)}
+  .sb h1{font-size:11.5px!important;white-space:nowrap;flex-shrink:0;margin:0 6px 0 0!important}
+  .sb .who{display:none!important}
+  .sb nav{display:flex!important;flex-direction:row!important;gap:2px!important;overflow-x:auto;flex-wrap:nowrap;-webkit-overflow-scrolling:touch;flex:1;min-width:0}
+  .sb nav button{width:auto!important;white-space:nowrap;padding:5px 8px!important;margin-bottom:0!important;font-size:11px!important;flex-shrink:0}
+  .sb .lout{margin-top:0!important;flex-shrink:0;padding:5px 8px!important;font-size:10.5px!important}
+  .mn{padding:8px!important;max-height:none;overflow-y:auto;overflow-x:hidden}
+  .st{font-size:14px!important;margin-bottom:8px!important}
+  .tb{padding:6px 8px!important;gap:5px;flex-wrap:wrap}
+  .tb .lbl{font-size:10px!important}
+  .tb input,.tb select,.tb button{font-size:11px!important;padding:4px 7px!important}
+  .qk button{padding:4px 7px!important;font-size:10.5px!important}
+  #rI{display:none!important}
+  .s4,.s3{grid-template-columns:1fr 1fr!important;gap:6px!important}
+  .sb2{padding:10px 12px!important}
+  .sb2 .sc{font-size:24px!important}
+  .fg{grid-template-columns:1fr!important;gap:8px}
+  .tw,.ct,.pt{overflow-x:auto;-webkit-overflow-scrolling:touch}
+  .tw .tr2{min-width:580px}
+  .ct .cr2{min-width:540px}
+  .pt .pr{min-width:520px}
+  .ut{display:block;overflow-x:auto;-webkit-overflow-scrolling:touch}
+  .kb{display:flex!important;flex-direction:row!important;grid-auto-flow:unset!important;grid-auto-columns:unset!important;overflow-x:auto;-webkit-overflow-scrolling:touch;scroll-snap-type:x mandatory;gap:8px;padding-bottom:12px}
+  .kbc{flex:0 0 85vw!important;max-width:320px!important;scroll-snap-align:start;max-height:calc(100vh - 220px)}
+  .cw{margin-top:12px}
+  .cg table{min-width:540px!important}
+  .cal-nav button{font-size:11px!important;padding:5px 10px!important}
+  #calLabel{font-size:11px!important;min-width:auto!important}
+  .mbg{align-items:stretch!important;padding:0!important;justify-content:stretch}
+  .mo{width:100%!important;max-width:100%!important;height:100vh!important;max-height:100vh!important;margin:0!important;border-radius:0!important;position:fixed!important;top:0;bottom:0;left:0;right:0;overflow:hidden;display:flex;flex-direction:column}
+  .mbd{grid-template-columns:1fr!important;padding:10px 12px!important;gap:12px;overflow-y:auto;flex:1}
+  .mh2{padding:10px 12px!important;flex-shrink:0}
+  .mht{font-size:13px!important}
+  .lcards{grid-template-columns:1fr!important}
+  .cfg{grid-template-columns:1fr!important}
+  .pt .pr{grid-template-columns:1.2fr repeat(4,1fr) !important}
+  #agendaText,#agendaDate{width:100%!important;min-width:unset!important}
+  .vw{padding:0!important}
+}
+@media (max-width:480px){
+  .sb h1{font-size:10.5px!important}
+  .sb nav button{font-size:10px!important;padding:4px 6px!important}
+  .s3,.s4{grid-template-columns:1fr 1fr!important}
+  .sb2{padding:9px 11px!important}
+  .sb2 .sc{font-size:22px!important}
+  .kbc{flex:0 0 90vw!important;max-width:90vw!important}
+  .mbd{padding:8px!important;gap:10px!important}
+  .cg table{min-width:480px!important;font-size:10px!important}
+  .tb{padding:5px 7px!important}
+  .tb input,.tb select,.tb button{font-size:10.5px!important}
+  .kn{font-size:11.5px!important}
+  .kt{font-size:10px!important}
+}
+@media (hover:none) and (pointer:coarse) and (max-width:600px){
   .sb h1{font-size:10.5px!important}
   .sb nav button{font-size:10px!important;padding:4px 6px!important}
   .s3,.s4{grid-template-columns:1fr 1fr!important}
