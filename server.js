@@ -380,7 +380,12 @@ async function seed(){
   if(!cfg.demo_clinica)cfg.demo_clinica={businessName:'Clínica Vital',accentColor:'#0d9488',stages:['Nuevo','En Proceso','Contactado','Agendado','Calificado','Atendido','Seguimiento','Cerrado','Abandonado']};
   await write(F.config,cfg);
   const bot=await read(F.bot);
-  if(!bot.demo_automotora)bot.demo_automotora={greeting:'¡Hola! Soy Marcela de Automotora Andes 🚗✨ ¿Qué auto estás buscando?'};
+  if(!bot.demo_automotora||!bot.demo_automotora.systemPrompt){
+    const _botSrc=await new Promise((res,rej)=>{
+      try{res(JSON.parse(require('fs').readFileSync(require('path').join(__dirname,'data','bot.json'),'utf8')));}catch(e){res({});}
+    });
+    bot.demo_automotora=_botSrc.demo_automotora||{greeting:'¡Hola! Soy Marcela de Automotora Andes 🚗✨ ¿Qué auto estás buscando?'};
+  }
   if(!bot.demo_clinica)bot.demo_clinica={greeting:'Hola 👋 Soy la asistente de Clínica Vital. ¿En qué te puedo ayudar?'};
   await write(F.bot,bot);
   const inv=await read(F.inventory);
