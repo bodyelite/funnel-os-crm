@@ -748,6 +748,47 @@ function renderModal(){const l=findLead(S.mid);if(!l){closeModal();return;}$('mT
     })();
     // ── Fin Sprint 4 tradeIn UI ───────────────────────────────────────────────
 
+
+    // ── SPRINT 4: UI de Tasación (Inyectada de forma segura) ─────────────────
+    (function renderTradeIn() {
+      const modalContenedor = document.querySelector('.ca2'); // Esta es la columna derecha real de tu modal
+      if (!modalContenedor || document.getElementById('tradein-section')) return;
+      
+      const lead = S.leads.find(x => x.id === S.mid);
+      if (!lead) return;
+      const ti = lead.tradeIn || {};
+      const isAdmin = S.user && S.user.role === 'admin';
+      const statusColor = ti.status === 'Evaluado' ? '#059669' : '#d97706';
+      
+      const html = `
+        <div id="tradein-section" style="margin-bottom:12px; border:1px solid var(--bd); border-radius:8px; padding:12px; background:var(--p2);">
+          <div style="display:flex; justify-content:space-between; margin-bottom:8px;">
+            <h4 style="margin:0; font-size:11px; color:var(--tm); text-transform:uppercase;">🚗 Detalles de Retoma</h4>
+            <span style="font-size:10px; background:${statusColor}22; color:${statusColor}; padding:2px 6px; border-radius:4px; font-weight:bold;">${ti.status||'Pendiente'}</span>
+          </div>
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:6px; margin-bottom:10px;">
+            <input id="ti-make" placeholder="Marca (Toyota)" value="${ti.make||''}" style="width:100%; padding:6px; background:var(--p3); border:1px solid var(--bd); border-radius:4px; font-size:11.5px; color:var(--tx);">
+            <input id="ti-model" placeholder="Modelo (Yaris)" value="${ti.model||''}" style="width:100%; padding:6px; background:var(--p3); border:1px solid var(--bd); border-radius:4px; font-size:11.5px; color:var(--tx);">
+            <input id="ti-year" placeholder="Año (2019)" value="${ti.year||''}" style="width:100%; padding:6px; background:var(--p3); border:1px solid var(--bd); border-radius:4px; font-size:11.5px; color:var(--tx);">
+            <input id="ti-color" placeholder="Color (Blanco)" value="${ti.color||''}" style="width:100%; padding:6px; background:var(--p3); border:1px solid var(--bd); border-radius:4px; font-size:11.5px; color:var(--tx);">
+          </div>
+          <div style="display:flex; gap:6px;">
+            <button onclick="saveTiFields('${lead.id}')" style="flex:1; background:var(--ac); color:#fff; border:none; padding:6px; border-radius:4px; cursor:pointer; font-size:11px; font-weight:bold;">💾 Guardar</button>
+            <button onclick="solicitarTasacion('${lead.id}')" style="flex:1.5; background:#8b5cf6; color:#fff; border:none; padding:6px; border-radius:4px; cursor:pointer; font-size:11px; font-weight:bold;">🔧 Solicitar Tasación</button>
+          </div>
+          ${isAdmin ? `
+          <div style="margin-top:10px; border-top:1px solid var(--bd); padding-top:10px; display:flex; gap:6px; align-items:center;">
+            <input type="number" id="offerInput" placeholder="Monto oferta ($)" style="flex:1; padding:6px; background:var(--p3); border:1px solid var(--bd); border-radius:4px; font-size:11.5px; color:var(--tx);">
+            <button onclick="registrarOferta('${lead.id}')" style="background:var(--ok); color:#fff; border:none; padding:6px 10px; border-radius:4px; cursor:pointer; font-size:11px; font-weight:bold;">✅ Confirmar</button>
+          </div>` : ''}
+        </div>
+      `;
+      
+      // Inyectarlo justo encima del botón de "Guardar cambios"
+      modalContenedor.insertAdjacentHTML('afterbegin', html);
+    })();
+    // ──────────────────────────────────────────────────────────────────────────
+
 }
 function renderModalCtx(l){const ctx=$('mCtx');if(!l.interest&&!l.ai_summary){ctx.style.display='none';return;}ctx.style.display='block';ctx.innerHTML=`${l.interest?`<div class="ctx-row"><span class="ctx-key">🚗 Interés</span><span class="ctx-val">${esc(l.interest)}</span></div>`:''}${l.source?`<div class="ctx-row"><span class="ctx-key">📡 Canal</span><span class="ctx-val">${cSrc(l.source)}</span></div>`:''}${l.lastClientTs?`<div class="ctx-row"><span class="ctx-key">📅 Origen</span><span class="ctx-val">${fDT(l.lastClientTs)}</span></div>`:''}${l.ai_summary?`<div class="ctx-row" style="margin-top:4px"><span class="ctx-key" style="color:var(--ac)">🧠 Nota IA</span><span class="ctx-note" style="color:var(--ts);font-style:normal">${esc(l.ai_summary)}</span></div>`:''}`;};;
 function renderModalChat(l){const h=Array.isArray(l.chatHistory)?l.chatHistory:[];if(!h.length){$('mChat').innerHTML='<div class="che">Sin historial aún.</div>';return;}$('mChat').innerHTML=h.map(m=>{const cls=m.role==='user'?'us':m.role==='agent'?'an':'bo';const tag=m.role==='agent'?`<span class="at">👤 ${esc(m.agentName||m.agent||'Agente')}</span>`:'';return`<div class="bb ${cls}">${tag}${esc(m.content)}${m.ts?`<span class="ts3">${fTM(m.ts)}</span>`:''}</div>`;}).join('');$('mChat').scrollTop=$('mChat').scrollHeight;}
@@ -786,127 +827,31 @@ document.querySelectorAll('.sb nav button').forEach(btn=>{btn.addEventListener('
 syncQ();updRI();
 if(S.token&&S.user)enterApp();else{$('av').style.display='none';$('lv').style.display='grid';}
 </script>
-</body>
-</html>
 
 <script>
-async function saveTiFields(leadId) {
-  const make = (document.getElementById('ti-make')||{}).value||'';
-  const model = (document.getElementById('ti-model')||{}).value||'';
-  const year = (document.getElementById('ti-year')||{}).value||'';
-  const color = (document.getElementById('ti-color')||{}).value||'';
-  await fetch('/api/leads/'+leadId+'/tradein', { method:'PATCH', headers:{'Content-Type':'application/json'}, body:JSON.stringify({make,model,year,color}) });
-  showToast('Datos guardados ✅');
-}
-async function solicitarTasacion(leadId) {
-  const r = await fetch('/api/tasacion/request', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({leadId}) });
-  const d = await r.json();
-  showToast(d.ok ? 'Tasación solicitada a taller 🔧' : 'Error: '+d.error);
-}
-async function registrarOferta(leadId) {
-  const offerAmount = parseFloat((document.getElementById('offerInput')||{}).value||'0');
-  if (!offerAmount) return showToast('Ingresa un monto válido');
-  const r = await fetch('/api/tasacion/offer', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({leadId, offerAmount}) });
-  if ((await r.json()).ok) { showToast('Oferta registrada ✅'); renderModal(leadId); }
-}
-
-setTimeout(() => {
-  if (typeof renderModal === 'function' && !window._patchedModal) {
-    window._patchedModal = true;
-    const originalRender = renderModal;
-    window.renderModal = async function(id) {
-      const res = await originalRender(id);
-      setTimeout(() => {
-        const lead = typeof S !== 'undefined' && S.leads ? S.leads.find(x => x.id == id) : null;
-        if (!lead || document.getElementById('tradein-section')) return;
-        const ti = lead.tradeIn || {};
-        const isAdmin = S.user && S.user.role === 'admin';
-        const html = `<div id="tradein-section" style="margin-top:18px;border:1px solid #334155;border-radius:10px;padding:14px;background:#0f172a;"><div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;"><span style="font-size:18px;">🔄</span><strong style="color:#e2e8f0;font-size:14px;">Detalles de Retoma</strong><span style="margin-left:auto;font-size:11px;background:#f59e0b22;color:#f59e0b;padding:2px 8px;border-radius:20px;">${ti.status||'Pendiente'}</span></div><div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;"><label style="color:#94a3b8;font-size:12px;">Marca<br><input id="ti-make" style="width:100%;background:#1e293b;border:1px solid #334155;color:#e2e8f0;border-radius:6px;padding:5px 8px;font-size:13px;" value="${ti.make||''}"></label><label style="color:#94a3b8;font-size:12px;">Modelo<br><input id="ti-model" style="width:100%;background:#1e293b;border:1px solid #334155;color:#e2e8f0;border-radius:6px;padding:5px 8px;font-size:13px;" value="${ti.model||''}"></label><label style="color:#94a3b8;font-size:12px;">Año<br><input id="ti-year" style="width:100%;background:#1e293b;border:1px solid #334155;color:#e2e8f0;border-radius:6px;padding:5px 8px;font-size:13px;" value="${ti.year||''}"></label><label style="color:#94a3b8;font-size:12px;">Color<br><input id="ti-color" style="width:100%;background:#1e293b;border:1px solid #334155;color:#e2e8f0;border-radius:6px;padding:5px 8px;font-size:13px;" value="${ti.color||''}"></label></div><div style="display:flex;gap:8px;flex-wrap:wrap;"><button onclick="saveTiFields('${lead.id}')" style="background:#3b82f6;color:#fff;border:none;border-radius:6px;padding:6px 12px;font-size:12px;cursor:pointer;">💾 Guardar</button><button onclick="solicitarTasacion('${lead.id}')" style="background:#7c3aed;color:#fff;border:none;border-radius:6px;padding:6px 14px;font-size:12px;cursor:pointer;">🔧 Solicitar Tasación a Taller</button></div>` + (isAdmin ? `<div style="margin-top:10px;border-top:1px solid #1e293b;padding-top:10px;"><span style="color:#94a3b8;font-size:12px;margin-right:8px;">Oferta ($)</span><input type="number" id="offerInput" style="background:#1e293b;border:1px solid #334155;color:#e2e8f0;border-radius:6px;padding:5px 10px;font-size:13px;width:120px;margin-right:8px;"><button onclick="registrarOferta('${lead.id}')" style="background:#22c55e;color:#fff;border:none;border-radius:6px;padding:6px 14px;font-size:12px;cursor:pointer;">✅ Registrar Oferta</button></div>` : '') + `</div>`;
-        
-        let anchor = document.querySelector('.modal-body') || document.querySelector('.modal-content');
-        if (!anchor) {
-          const btns = Array.from(document.querySelectorAll('button'));
-          const btnGuardar = btns.find(b => b.textContent.includes('Guardar cambios') || b.textContent.includes('Generar'));
-          if (btnGuardar) anchor = btnGuardar.parentElement.parentElement;
-        }
-        if (!anchor) anchor = document.body; // Fallback extremo para que aparezca sí o sí
-        if (anchor) anchor.insertAdjacentHTML('beforeend', html);
-
-      }, 300);
-      return res;
-    };
-  }
-}, 1500);
-</script>
-
-<script>
-// --- MOTOR DE TASACION INFALIBLE ---
 window.saveTiFields = async function(leadId) {
   const make = (document.getElementById('ti-make')||{}).value||'';
   const model = (document.getElementById('ti-model')||{}).value||'';
   const year = (document.getElementById('ti-year')||{}).value||'';
   const color = (document.getElementById('ti-color')||{}).value||'';
   await fetch('/api/leads/'+leadId+'/tradein', { method:'PATCH', headers:{'Content-Type':'application/json'}, body:JSON.stringify({make,model,year,color}) });
-  alert('Datos de retoma guardados ✅');
+  toast('Datos de retoma guardados ✓');
 };
-
 window.solicitarTasacion = async function(leadId) {
   const r = await fetch('/api/tasacion/request', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({leadId}) });
-  alert(r.ok ? 'Tasación solicitada a taller 🔧' : 'Error al solicitar');
+  toast(r.ok ? 'Tasación solicitada a taller 🔧' : 'Error al solicitar');
 };
-
 window.registrarOferta = async function(leadId) {
   const offerAmount = parseFloat((document.getElementById('offerInput')||{}).value||'0');
-  if (!offerAmount) return alert('Ingresa un monto válido');
+  if (!offerAmount) return toast('Ingresa un monto válido', true);
   const r = await fetch('/api/tasacion/offer', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({leadId, offerAmount}) });
-  if (r.ok) { alert('Oferta registrada ✅ Vendedor notificado'); location.reload(); }
+  if (r.ok) { toast('Oferta registrada ✓ Vendedor notificado'); closeModal(); refresh(); }
 };
-
-// Secuestro de la funcion renderModal
-if (typeof window.renderModal === 'function' && !window.modalSecuestrado) {
-  window.modalSecuestrado = true;
-  const renderOriginal = window.renderModal;
-  
-  window.renderModal = async function(leadId) {
-    // 1. Dejamos que el sistema original dibuje la ficha
-    const resultado = await renderOriginal(leadId);
-    
-    // 2. Esperamos medio segundo a que termine y disparamos nuestro panel
-    setTimeout(() => {
-      if (document.getElementById('tradein-section')) return; // Evitar duplicados
-      
-      const lead = (typeof S !== 'undefined' && S.leads) ? S.leads.find(l => l.id == leadId) : null;
-      if (!lead) return;
-      
-      const ti = lead.tradeIn || {};
-      const isAdmin = (typeof S !== 'undefined' && S.user && S.user.role === 'admin');
-      
-      const html = `<div id="tradein-section" style="margin-top:20px; padding:15px; background:#f8fafc; border:2px dashed #cbd5e1; border-radius:8px;">
-        <h4 style="margin:0 0 10px 0; color:#334155; font-size:14px;">🚗 Detalles de Retoma <span style="font-size:11px; background:#f59e0b22; color:#d97706; padding:2px 8px; border-radius:4px; margin-left:10px;">${ti.status||'Pendiente'}</span></h4>
-        <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:15px;">
-          <input id="ti-make" placeholder="Marca (ej. Toyota)" value="${ti.make||''}" style="padding:8px; border:1px solid #cbd5e1; border-radius:4px; font-size:12px; width:100%;">
-          <input id="ti-model" placeholder="Modelo (ej. Yaris)" value="${ti.model||''}" style="padding:8px; border:1px solid #cbd5e1; border-radius:4px; font-size:12px; width:100%;">
-          <input id="ti-year" placeholder="Año (ej. 2019)" value="${ti.year||''}" style="padding:8px; border:1px solid #cbd5e1; border-radius:4px; font-size:12px; width:100%;">
-          <input id="ti-color" placeholder="Color (ej. Blanco)" value="${ti.color||''}" style="padding:8px; border:1px solid #cbd5e1; border-radius:4px; font-size:12px; width:100%;">
-        </div>
-        <div style="display:flex; gap:10px; flex-wrap:wrap;">
-          <button onclick="saveTiFields('${leadId}')" style="background:#3b82f6; color:white; border:none; padding:8px 14px; border-radius:4px; cursor:pointer; font-weight:bold; font-size:12px;">💾 Guardar Datos</button>
-          <button onclick="solicitarTasacion('${leadId}')" style="background:#8b5cf6; color:white; border:none; padding:8px 14px; border-radius:4px; cursor:pointer; font-weight:bold; font-size:12px;">🔧 Solicitar Tasación</button>
-        </div>
-        ${isAdmin ? `<div style="margin-top:15px; border-top:1px solid #cbd5e1; padding-top:15px; display:flex; gap:10px; align-items:center;">
-          <span style="font-size:12px; color:#64748b; font-weight:bold;">Oferta ($)</span>
-          <input type="number" id="offerInput" placeholder="Ej: 4500000" style="padding:8px; border:1px solid #cbd5e1; border-radius:4px; width:140px; font-size:12px;">
-          <button onclick="registrarOferta('${leadId}')" style="background:#10b981; color:white; border:none; padding:8px 14px; border-radius:4px; cursor:pointer; font-weight:bold; font-size:12px;">✅ Registrar Oferta</button>
-        </div>` : ''}
-      </div>`;
-      
-      // Lo inyectamos al final del todo
-      const contenedor = document.querySelector('.modal-content') || document.querySelector('.modal-body') || document.body;
-      contenedor.insertAdjacentHTML('beforeend', html);
-      
-    }, 600); // 600ms de retraso táctico
-    
-    return resultado;
-  };
-}
 </script>
+
+</body>
+</html>
+
+
+
+
