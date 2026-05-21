@@ -568,7 +568,7 @@ app.post('/api/chat',async(req,res)=>{
   leads[idx].chatHistory=leads[idx].chatHistory||[];leads[idx].chatHistory.push({role:'user',content:message,ts:Date.now()});
   leads[idx].unread=true;
   if(leads[idx].botActive!==false){
-    if(message.trim().toLowerCase()==='/reset'){const _rn=new Date().toISOString();leads[idx].chatHistory=[];leads[idx].intentSignal='NONE';leads[idx].keywordAlertSent=false;leads[idx].status='Nuevo';leads[idx].alertLevel='none';leads[idx].unread=true;leads[idx].reassigned=false;leads[idx].reassignedAt=null;leads[idx].adminReassignAlertSent=false;leads[idx].nextAction=null;leads[idx].ai_summary='';leads[idx].lastInteraction=_rn;leads[idx].lastClientTs=_rn;leads[idx].notes=(leads[idx].notes||[]).concat({content:'🔄 Historial reseteado por comando',author:'Sistema',ts:Date.now()});await tWrite(F.leads,tenant,leads);return res.json({reply:'🔄 Memoria borrada. ¡Empecemos de cero! 🚗',status:'Nuevo',alertLevel:'none',lead:leads[idx]});}
+    if(message.trim().toLowerCase()==='/reset'){const _rn=new Date().toISOString();leads[idx].chatHistory=[];leads[idx].intentSignal='NONE';leads[idx].keywordAlertSent=false;leads[idx].status='Nuevo';leads[idx].alertLevel='none';leads[idx].unread=true;leads[idx].reassigned=false;leads[idx].reassignedAt=null;leads[idx].adminReassignAlertSent=false;leads[idx].riskAlertSent=false;leads[idx].followUpSent=false;leads[idx].nextAction=null;leads[idx].ai_summary='';leads[idx].lastInteraction=_rn;leads[idx].lastClientTs=_rn;leads[idx].notes=(leads[idx].notes||[]).concat({content:'🔄 Historial reseteado por comando',author:'Sistema',ts:Date.now()});await tWrite(F.leads,tenant,leads);return res.json({reply:'🔄 Memoria borrada. ¡Empecemos de cero! 🚗',status:'Nuevo',alertLevel:'none',lead:leads[idx]});}
     const assignedUserChat=allUsers.find(u=>u.username===leads[idx].assignedTo)||RMG_VENDORS.find(v=>v.username===leads[idx].assignedTo);
     const assignedNameChat=assignedUserChat?.name||null;
     const p=await marcela(tenant,leads[idx].chatHistory.slice(0,-1),message,leads[idx].notes,assignedNameChat);
@@ -616,7 +616,7 @@ app.post('/webhook',async(req,res)=>{
     ld[tenant][idx].chatHistory=ld[tenant][idx].chatHistory||[];ld[tenant][idx].chatHistory.push({role:'user',content:body,ts:Date.now()});
     ld[tenant][idx].unread=true;
     if(ld[tenant][idx].botActive!==false){
-      if(body.trim().toLowerCase()==='/reset'){const _rn=new Date().toISOString();ld[tenant][idx].chatHistory=[];ld[tenant][idx].intentSignal='NONE';ld[tenant][idx].keywordAlertSent=false;ld[tenant][idx].status='Nuevo';ld[tenant][idx].alertLevel='none';ld[tenant][idx].unread=true;ld[tenant][idx].reassigned=false;ld[tenant][idx].reassignedAt=null;ld[tenant][idx].adminReassignAlertSent=false;ld[tenant][idx].nextAction=null;ld[tenant][idx].ai_summary='';ld[tenant][idx].lastInteraction=_rn;ld[tenant][idx].lastClientTs=_rn;ld[tenant][idx].notes=(ld[tenant][idx].notes||[]).concat({content:'🔄 Historial reseteado por comando',author:'Sistema',ts:Date.now()});await tWrite(F.leads,tenant,ld[tenant]);await sendWA(from,'🔄 Memoria borrada. ¡Empecemos de cero! 🚗');return;}
+      if(body.trim().toLowerCase()==='/reset'){const _rn=new Date().toISOString();ld[tenant][idx].chatHistory=[];ld[tenant][idx].intentSignal='NONE';ld[tenant][idx].keywordAlertSent=false;ld[tenant][idx].status='Nuevo';ld[tenant][idx].alertLevel='none';ld[tenant][idx].unread=true;ld[tenant][idx].reassigned=false;ld[tenant][idx].reassignedAt=null;ld[tenant][idx].adminReassignAlertSent=false;ld[tenant][idx].riskAlertSent=false;ld[tenant][idx].followUpSent=false;ld[tenant][idx].nextAction=null;ld[tenant][idx].ai_summary='';ld[tenant][idx].lastInteraction=_rn;ld[tenant][idx].lastClientTs=_rn;ld[tenant][idx].notes=(ld[tenant][idx].notes||[]).concat({content:'🔄 Historial reseteado por comando',author:'Sistema',ts:Date.now()});await tWrite(F.leads,tenant,ld[tenant]);await sendWA(from,'🔄 Memoria borrada. ¡Empecemos de cero! 🚗');return;}
       const allUsersWH=await tRead(F.users,tenant);
       const assignedUserWH=allUsersWH.find(u=>u.username===ld[tenant][idx].assignedTo)||RMG_VENDORS.find(v=>v.username===ld[tenant][idx].assignedTo);
       const assignedNameWH=assignedUserWH?.name||null;
@@ -699,6 +699,80 @@ setInterval(async()=>{
     }catch(eT){console.error('[IA-Proactiva-cron]',eT.message);}
   }
 },60000);
+
+// ════════════════════════════════════════════════════════════════════════════
+// CRON Sprint 3 — Alertas SLA Riesgo (20m) + Retargeting Post-Link (2m)
+// Corre cada 30 segundos. Cada lead lleva flags para evitar repeticion.
+// ════════════════════════════════════════════════════════════════════════════
+setInterval(async () => {
+  for (const t of TENANTS) {
+    try {
+      const leads = await tRead(F.leads, t);
+      const users = await tRead(F.users, t);
+      let changed = false;
+
+      for (const lead of leads) {
+        if (FINAL_ST.has(lead.status)) continue;
+
+        // ─── TAREA 1: Alerta SLA riesgo a los 20 min sin atencion ──────────
+        if (lead.status === 'Nuevo' && !lead.reassigned && !lead.riskAlertSent) {
+          const ref = lead.lastClientTs || lead.lastInteraction;
+          if (ref) {
+            const minsSinAtencion = (Date.now() - new Date(ref).getTime()) / 60000;
+            if (minsSinAtencion >= 20 && minsSinAtencion < 30) {
+              const assigned = users.find(u => u.username === lead.assignedTo)
+                            || RMG_VENDORS.find(v => v.username === lead.assignedTo);
+              if (assigned && assigned.phone) {
+                const msg = '🚨 ALERTA: El lead [' + lead.name + '] lleva 20 min sin atención. '
+                          + 'Te quedan 10 min antes de que el sistema lo reasigne.';
+                sendWA(assigned.phone, msg).catch(() => {});
+                console.log('[SLA-Risk] Alerta 20m enviada a', assigned.username, 'por lead', lead.name);
+              }
+              lead.riskAlertSent = true;
+              changed = true;
+            }
+          }
+        }
+
+        // ─── TAREA 2: Retargeting Post-Link a los 2 min sin respuesta ──────
+        if (lead.botActive === true && !lead.followUpSent && Array.isArray(lead.chatHistory) && lead.chatHistory.length) {
+          // Buscar el ULTIMO mensaje del bot que contiene rmgautos.cl
+          let lastLinkTs = null;
+          for (let i = lead.chatHistory.length - 1; i >= 0; i--) {
+            const m = lead.chatHistory[i];
+            if ((m.role === 'bot' || m.role === 'ia_proactiva') && m.content && m.content.indexOf('rmgautos.cl') !== -1) {
+              lastLinkTs = m.ts || null;
+              break;
+            }
+            if (m.role === 'user') break; // si el ultimo es del user, no hay link sin respuesta
+          }
+          if (lastLinkTs) {
+            const last = lead.chatHistory[lead.chatHistory.length - 1];
+            const isLastFromBot = last.role === 'bot' || last.role === 'ia_proactiva';
+            const minsDesdeLink = (Date.now() - lastLinkTs) / 60000;
+            if (isLastFromBot && minsDesdeLink >= 2) {
+              const phone = (lead.phone || '').replace(/\D/g, '');
+              if (phone) {
+                const followUp = '¿Pudiste ver la ficha en el enlace? 👀 Fíjate en el equipamiento, ¡es lo que más preguntan! ¿Qué te pareció?';
+                sendWA(phone, followUp).catch(() => {});
+                lead.chatHistory.push({ role: 'ia_proactiva', content: followUp, ts: Date.now(), agentName: 'Retargeting Bot' });
+                lead.lastInteraction = new Date().toISOString();
+                lead.followUpSent = true;
+                changed = true;
+                console.log('[Retargeting] Follow-up enviado a', lead.name);
+              }
+            }
+          }
+        }
+      }
+
+      if (changed) await tWrite(F.leads, t, leads);
+    } catch (e) {
+      console.error('[Sprint3-Cron]', t, e.message);
+    }
+  }
+}, 30000);
+
 app.use(express.static(path.join(__dirname,'public')));
 app.get('*',(req,res)=>res.sendFile(path.join(__dirname,'public','index.html')));
 setInterval(async()=>{for(const t of TENANTS){try{await applySlaRules(t);}catch(e){console.error('SLA',t,e.message);}}},60000);
