@@ -1,5 +1,11 @@
 'use strict';
 const{OpenAI}=require('openai');
+const STAFF_TASACION = [
+  {name:'Valentina',   phone:'56955145504'},
+  {name:'Recepcion',   phone:'56983300262'},
+  {name:'Juan Carlos', phone:'56937648536'}
+];
+
 const openai=new OpenAI({apiKey:process.env.OPENAI_API_KEY});
 const express=require('express');
 const path=require('path');
@@ -776,6 +782,87 @@ setInterval(async () => {
 app.use(express.static(path.join(__dirname,'public')));
 app.get('*',(req,res)=>res.sendFile(path.join(__dirname,'public','index.html')));
 setInterval(async()=>{for(const t of TENANTS){try{await applySlaRules(t);}catch(e){console.error('SLA',t,e.message);}}},60000);
+
+// ── SPRINT 4: Tasación Request ──────────────────────────────────────────────
+app.post('/api/tasacion/request', async (req, res) => {
+  try {
+    const { leadId, tenant = 'default' } = req.body;
+    const leads = await tRead(F.leads, tenant, []);
+    const lead = leads.find(l => l.id === leadId);
+    if (!lead) return res.status(404).json({ error: 'Lead no encontrado' });
+
+    const ti = lead.tradeIn || {};
+    const texto = `📋 SOLICITUD DE TASACIÓN:\nLead: ${lead.name}\n` +
+      `Vehículo en retoma: ${ti.make || '?'} ${ti.model || '?'} ${ti.year || '?'}\n` +
+      `Color: ${ti.color || '?'}\nPor favor evaluar y registrar oferta en el CRM.`;
+
+    for (const staff of STAFF_TASACION) {
+      await sendWA(staff.phone, texto);
+    }
+    res.json({ ok: true, notified: STAFF_TASACION.length });
+  } catch (err) {
+    console.error('/api/tasacion/request error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+
+// ── SPRINT 4: Tasación Offer ─────────────────────────────────────────────────
+app.post('/api/tasacion/offer', async (req, res) => {
+  try {
+    const { leadId, offerAmount, tenant = 'default' } = req.body;
+    const leads = await tRead(F.leads, tenant, []);
+    const lead = leads.find(l => l.id === leadId);
+    if (!lead) return res.status(404).json({ error: 'Lead no encontrado' });
+
+    if (!lead.tradeIn) lead.tradeIn = { make:'', model:'', year:'', color:'', status:'Pendiente', offer:0 };
+    lead.tradeIn.offer = Number(offerAmount);
+    lead.tradeIn.status = 'Evaluado';
+
+    await tWrite(F.leads, tenant, leads);
+
+    const fmt = new Intl.NumberFormat('es-CL', { style:'currency', currency:'CLP', maximumFractionDigits:0 }).format(lead.tradeIn.offer);
+    if (lead.assignedTo) {
+      const users = await tRead(F.users, tenant, []);
+      const vendedor = users.find(u => u.name === lead.assignedTo || u.id === lead.assignedTo);
+      if (vendedor && vendedor.phone) {
+        const msg = `✅ TASACIÓN LISTA\nLead: ${lead.name}\n` +
+          `Retoma: ${lead.tradeIn.make} ${lead.tradeIn.model} ${lead.tradeIn.year}\n` +
+          `Oferta taller: ${fmt}\nYa puedes cerrar la venta.`;
+        await sendWA(vendedor.phone, msg);
+      }
+    }
+    res.json({ ok: true, offer: lead.tradeIn.offer, status: lead.tradeIn.status });
+  } catch (err) {
+    console.error('/api/tasacion/offer error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+
+// ── SPRINT 4: PATCH tradeIn fields ──────────────────────────────────────────
+app.patch('/api/leads/:id/tradein', async (req, res) => {
+  try {
+    const { tenant = 'default' } = req.query;
+    const leads = await tRead(F.leads, tenant, []);
+    const lead = leads.find(l => l.id === req.params.id);
+    if (!lead) return res.status(404).json({ error: 'Lead no encontrado' });
+
+    if (!lead.tradeIn) lead.tradeIn = { make:'', model:'', year:'', color:'', status:'Pendiente', offer:0 };
+    const { make, model, year, color } = req.body;
+    if (make  !== undefined) lead.tradeIn.make  = make;
+    if (model !== undefined) lead.tradeIn.model = model;
+    if (year  !== undefined) lead.tradeIn.year  = year;
+    if (color !== undefined) lead.tradeIn.color = color;
+
+    await tWrite(F.leads, tenant, leads);
+    res.json({ ok: true, tradeIn: lead.tradeIn });
+  } catch (err) {
+    console.error('/api/leads/:id/tradein PATCH error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 app.listen(PORT,()=>{console.log(`🚀 FunnelOS :${PORT} | SLA_GREEN=${SLA_GREEN} SLA_REASSIGN=${SLA_REASSIGN} SLA_YELLOW=${SLA_YELLOW}`);seed().catch(console.error);});
 
 // --- PARCHE: AUTO-RESETEO DE CLAVES ---

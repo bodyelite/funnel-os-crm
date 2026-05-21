@@ -690,7 +690,65 @@ function closeModal(){S.mid=null;$('mbg').classList.remove('show');$('mNt').valu
 function refreshModalSilent(){const l=findLead(S.mid);if(!l)return;renderModalChat(l);renderModalNotes(l);renderModalCtx(l);}
 function renderModal(){const l=findLead(S.mid);if(!l){closeModal();return;}$('mTit').textContent=l.name+(l.phone?' · '+l.phone:'');const sla=l.alertLevel==='critical'?'<span style="color:var(--bd2);font-weight:700">🔴 > 60 min (Alerta)</span>':l.alertLevel==='risk'?'<span style="color:var(--wn);font-weight:700">🟡 20-30 min (Riesgo)</span>':l.alertLevel==='fresh'?'<span style="color:var(--ok)">🟢 < 20 min (Verde)</span>':'';$('mMet').innerHTML=`${cSrc(l.source)} ${cUsr(l.assignedTo)} <span style="color:var(--tm)">📅 ${fDT(l.lastClientTs||l.lastInteraction)}</span> ${sbdg(l.intentSignal||'NONE')} ${sla} ${l.unread?'<span style="color:var(--bd2);font-size:11px;font-weight:600">● Sin respuesta</span>':''}`;$('mSt').innerHTML=ALL_ST.map(s=>`<option value="${esc(s)}" ${s===l.status?'selected':''}>${esc(s)}</option>`).join('');const bOn=l.botActive!==false;$('bChk').checked=bOn;$('bTxt').textContent=bOn?'ON':'OFF';$('bTxt').className='bst '+(bOn?'on':'of');$('aMsg').value='';
   if(l.nextAction){const na=l.nextAction;$('agendaInfo').textContent='Tarea pendiente: '+esc(na.text||'')+(na.date?' — '+new Date(na.date).toLocaleString('es-CL',{dateStyle:'short',timeStyle:'short'}):'');$('agendaText').value=na.text||'';$('agendaDate').value=na.date?na.date.slice(0,16):'';}else{$('agendaInfo').textContent='';$('agendaText').value='';$('agendaDate').value='';}
-  renderModalCtx(l);renderModalChat(l);renderModalNotes(l);var _ab=$("mAssignBlock"),_ms=$("mAssign");if(_ab&&S.user&&S.user.role==="admin"){_ab.style.display="block";_ms.innerHTML=(S.users||[]).filter(function(u){return u.role==="vendedor";}).map(function(u){return'<option value="'+esc(u.username)+'"'+(u.username===l.assignedTo?' selected':'')+'>'+esc(u.name)+'</option>';}).join("");}else if(_ab){_ab.style.display="none";}}
+  renderModalCtx(l);renderModalChat(l);renderModalNotes(l);var _ab=$("mAssignBlock"),_ms=$("mAssign");if(_ab&&S.user&&S.user.role==="admin"){_ab.style.display="block";_ms.innerHTML=(S.users||[]).filter(function(u){return u.role==="vendedor";}).map(function(u){return'<option value="'+esc(u.username)+'"'+(u.username===l.assignedTo?' selected':'')+'>'+esc(u.name)+'</option>';}).join("");}else if(_ab){_ab.style.display="none";}
+    // ── SPRINT 4: Sección Retoma / Tasación ──────────────────────────────────
+    (function injectTradeInSection() {
+      const ti = lead.tradeIn || {};
+      const isAdmin = S.user && S.user.role === 'admin';
+      const statusColor = ti.status === 'Evaluado' ? '#22c55e' : '#f59e0b';
+      const offerFmt = ti.offer
+        ? new Intl.NumberFormat('es-CL',{style:'currency',currency:'CLP',maximumFractionDigits:0}).format(ti.offer)
+        : '—';
+
+      const html = `
+        <div id="tradein-section" style="margin-top:18px;border:1px solid #334155;border-radius:10px;padding:14px;background:#0f172a;">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
+            <span style="font-size:18px;">🔄</span>
+            <strong style="color:#e2e8f0;font-size:14px;">Detalles de Retoma</strong>
+            <span style="margin-left:auto;font-size:11px;color:${statusColor};background:${statusColor}22;padding:2px 8px;border-radius:20px;">${ti.status || 'Pendiente'}</span>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;">
+            <label style="color:#94a3b8;font-size:12px;">Marca<br>
+              <input id="ti-make" style="width:100%;background:#1e293b;border:1px solid #334155;color:#e2e8f0;border-radius:6px;padding:5px 8px;font-size:13px;" value="${ti.make||''}">
+            </label>
+            <label style="color:#94a3b8;font-size:12px;">Modelo<br>
+              <input id="ti-model" style="width:100%;background:#1e293b;border:1px solid #334155;color:#e2e8f0;border-radius:6px;padding:5px 8px;font-size:13px;" value="${ti.model||''}">
+            </label>
+            <label style="color:#94a3b8;font-size:12px;">Año<br>
+              <input id="ti-year" style="width:100%;background:#1e293b;border:1px solid #334155;color:#e2e8f0;border-radius:6px;padding:5px 8px;font-size:13px;" value="${ti.year||''}">
+            </label>
+            <label style="color:#94a3b8;font-size:12px;">Color<br>
+              <input id="ti-color" style="width:100%;background:#1e293b;border:1px solid #334155;color:#e2e8f0;border-radius:6px;padding:5px 8px;font-size:13px;" value="${ti.color||''}">
+            </label>
+          </div>
+          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+            <button onclick="saveTiFields('${lead.id}')" style="background:#3b82f6;color:#fff;border:none;border-radius:6px;padding:6px 12px;font-size:12px;cursor:pointer;">💾 Guardar Datos</button>
+            <button onclick="solicitarTasacion('${lead.id}')" style="background:#7c3aed;color:#fff;border:none;border-radius:6px;padding:6px 14px;font-size:12px;cursor:pointer;">🔧 Solicitar Tasación a Taller</button>
+            ${isAdmin ? `
+            <span style="color:#64748b;font-size:11px;margin-left:4px;">Oferta actual: <strong style="color:#22c55e;">${offerFmt}</strong></span>
+            ` : ''}
+          </div>
+          ${isAdmin ? `
+          <div style="margin-top:10px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;border-top:1px solid #1e293b;padding-top:10px;">
+            <span style="color:#94a3b8;font-size:12px;">Registrar Oferta Taller ($)</span>
+            <input type="number" id="offerInput" placeholder="ej: 4500000" style="background:#1e293b;border:1px solid #334155;color:#e2e8f0;border-radius:6px;padding:5px 10px;font-size:13px;width:160px;">
+            <button onclick="registrarOferta('${lead.id}')" style="background:#22c55e;color:#fff;border:none;border-radius:6px;padding:6px 14px;font-size:12px;cursor:pointer;">✅ Registrar Oferta ($)</button>
+          </div>
+          ` : ''}
+        </div>
+      `;
+
+      // Inject into modal — find the notes or actions section as anchor
+      const anchor = document.getElementById('modal-notes') || document.getElementById('modal-actions') || document.querySelector('.modal-body');
+      if (anchor) {
+        const div = document.createElement('div');
+        div.innerHTML = html;
+        anchor.parentNode && anchor.parentNode.insertBefore(div.firstElementChild, anchor.nextSibling);
+      }
+    })();
+    // ── Fin Sprint 4 tradeIn UI ───────────────────────────────────────────────
+
+}
 function renderModalCtx(l){const ctx=$('mCtx');if(!l.interest&&!l.ai_summary){ctx.style.display='none';return;}ctx.style.display='block';ctx.innerHTML=`${l.interest?`<div class="ctx-row"><span class="ctx-key">🚗 Interés</span><span class="ctx-val">${esc(l.interest)}</span></div>`:''}${l.source?`<div class="ctx-row"><span class="ctx-key">📡 Canal</span><span class="ctx-val">${cSrc(l.source)}</span></div>`:''}${l.lastClientTs?`<div class="ctx-row"><span class="ctx-key">📅 Origen</span><span class="ctx-val">${fDT(l.lastClientTs)}</span></div>`:''}${l.ai_summary?`<div class="ctx-row" style="margin-top:4px"><span class="ctx-key" style="color:var(--ac)">🧠 Nota IA</span><span class="ctx-note" style="color:var(--ts);font-style:normal">${esc(l.ai_summary)}</span></div>`:''}`;};;
 function renderModalChat(l){const h=Array.isArray(l.chatHistory)?l.chatHistory:[];if(!h.length){$('mChat').innerHTML='<div class="che">Sin historial aún.</div>';return;}$('mChat').innerHTML=h.map(m=>{const cls=m.role==='user'?'us':m.role==='agent'?'an':'bo';const tag=m.role==='agent'?`<span class="at">👤 ${esc(m.agentName||m.agent||'Agente')}</span>`:'';return`<div class="bb ${cls}">${tag}${esc(m.content)}${m.ts?`<span class="ts3">${fTM(m.ts)}</span>`:''}</div>`;}).join('');$('mChat').scrollTop=$('mChat').scrollHeight;}
 function renderModalNotes(l){const n=Array.isArray(l.notes)?l.notes:[];$('mNts').innerHTML=n.length?n.slice().reverse().map(x=>`<div class="ni">${esc(x.content)}<div class="nm">${esc(x.author||'—')} · ${fDT(x.ts)}</div></div>`).join(''):'<div class="nn">Sin notas.</div>';}
