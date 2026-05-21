@@ -693,7 +693,7 @@ function renderModal(){const l=findLead(S.mid);if(!l){closeModal();return;}$('mT
   renderModalCtx(l);renderModalChat(l);renderModalNotes(l);var _ab=$("mAssignBlock"),_ms=$("mAssign");if(_ab&&S.user&&S.user.role==="admin"){_ab.style.display="block";_ms.innerHTML=(S.users||[]).filter(function(u){return u.role==="vendedor";}).map(function(u){return'<option value="'+esc(u.username)+'"'+(u.username===l.assignedTo?' selected':'')+'>'+esc(u.name)+'</option>';}).join("");}else if(_ab){_ab.style.display="none";}
     // ── SPRINT 4: Sección Retoma / Tasación ──────────────────────────────────
     (function injectTradeInSection() {
-      const ti = lead.tradeIn || {};
+      const modalId = typeof id !== 'undefined' ? id : null; const lead = typeof l !== 'undefined' ? l : S.leads.find(x => x.id == modalId); if(!lead) return; const ti = lead.tradeIn || {};
       const isAdmin = S.user && S.user.role === 'admin';
       const statusColor = ti.status === 'Evaluado' ? '#22c55e' : '#f59e0b';
       const offerFmt = ti.offer
