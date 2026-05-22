@@ -642,6 +642,48 @@ app.post('/api/chat',async(req,res)=>{
 });
 
 app.get('/webhook',(req,res)=>{const vt=process.env.WA_VERIFY_TOKEN||'zara_token_123';if(req.query['hub.mode']==='subscribe'&&req.query['hub.verify_token']===vt)return res.status(200).send(req.query['hub.challenge']);res.sendStatus(403);});
+
+// --- PROXY DE MEDIA META ---
+app.get('/api/media/:mediaId', async (req, res) => {
+  try {
+    const mediaId = req.params.mediaId;
+    if (!mediaId || mediaId === 'undefined') return res.status(400).send('ID invalido');
+    const token = process.env.WA_TOKEN;
+    if (!token) return res.status(500).send('Error: Sin token WA_TOKEN configurado en el servidor');
+    
+    const uRes = await fetch(`https://graph.facebook.com/v19.0/${mediaId}`, { 
+        headers: { 'Authorization': `Bearer ${token}` } 
+    });
+    const uData = await uRes.json();
+    
+    if (!uData.url) {
+        console.error('Meta API Error:', uData);
+        return res.status(404).send('Error de Meta: ' + JSON.stringify(uData));
+    }
+    
+    const mRes = await fetch(uData.url, { 
+        headers: { 'Authorization': `Bearer ${token}` } 
+    });
+    
+    if (!mRes.ok) {
+        const errText = await mRes.text();
+        return res.status(mRes.status).send('Fallo al descargar archivo de Meta: ' + errText);
+    }
+
+    const buffer = await mRes.arrayBuffer();
+    const contentType = mRes.headers.get('content-type');
+    
+    res.setHeader('Content-Type', contentType || 'image/jpeg');
+    res.setHeader('Cache-Control', 'public, max-age=86400');
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.send(Buffer.from(buffer));
+  } catch (e) {
+    console.error('Error en Proxy Multimedia:', e);
+    res.status(500).send('Error interno en el servidor Node');
+  }
+});
+// --- FIN PROXY ---
+
 app.post('/webhook',async(req,res)=>{
   if(!req.body.object)return res.sendStatus(404);res.sendStatus(200);
   try{
@@ -961,48 +1003,7 @@ app.patch('/api/leads/:id/tradein', async (req, res) => {
 });
 
 
-// --- PROXY DE MEDIA META ---
-app.get('/api/media/:mediaId', async (req, res) => {
-  try {
-    const mediaId = req.params.mediaId;
-    if (!mediaId || mediaId === 'undefined') return res.status(400).send('ID invalido');
-    
-    const token = process.env.WA_TOKEN;
-    if (!token) return res.status(500).send('Error: Sin token WA_TOKEN configurado en el servidor');
-    
-    // Usamos v19.0 igual que en los audios
-    const uRes = await fetch(`https://graph.facebook.com/v19.0/${mediaId}`, { 
-        headers: { 'Authorization': `Bearer ${token}` } 
-    });
-    const uData = await uRes.json();
-    
-    if (!uData.url) {
-        console.error('Meta API Error:', uData);
-        return res.status(404).send('Error de Meta: ' + JSON.stringify(uData));
-    }
-    
-    const mRes = await fetch(uData.url, { 
-        headers: { 'Authorization': `Bearer ${token}` } 
-    });
-    
-    if (!mRes.ok) {
-        const errText = await mRes.text();
-        return res.status(mRes.status).send('Fallo al descargar archivo de Meta: ' + errText);
-    }
 
-    const buffer = await mRes.arrayBuffer();
-    const contentType = mRes.headers.get('content-type');
-    
-    res.setHeader('Content-Type', contentType || 'image/jpeg');
-    res.setHeader('Cache-Control', 'public, max-age=86400');
-    res.setHeader('Access-Control-Allow-Origin', '*');
-    res.send(Buffer.from(buffer));
-  } catch (e) {
-    console.error('Error en Proxy Multimedia:', e);
-    res.status(500).send('Error interno en el servidor Node');
-  }
-});
-// --- FIN PROXY ---
 app.listen(PORT,()=>{console.log(`🚀 FunnelOS :${PORT} | SLA_GREEN=${SLA_GREEN} SLA_REASSIGN=${SLA_REASSIGN} SLA_YELLOW=${SLA_YELLOW}`);seed().catch(console.error);});
 
 // --- PARCHE: AUTO-RESETEO DE CLAVES ---
