@@ -646,10 +646,13 @@ app.post('/webhook',async(req,res)=>{
   if(!req.body.object)return res.sendStatus(404);res.sendStatus(200);
   try{
     const val=req.body.entry?.[0]?.changes?.[0]?.value;const msg=val?.messages?.[0];if(!msg)return;
-    const from=msg.from;const body=msg.text?.body||msg.button?.text||null;
+    const from=msg.from;let body=msg.text?.body||msg.button?.text||null;
 
-    // --- MULTIMEDIA HANDLER ---
+    // --- MULTIMEDIA HANDLER V3 ---
     if (msg.type === 'image' || msg.type === 'audio') {
+      // Engañamos a Marcela dándole un texto artificial en vez del archivo
+      body = msg.type === 'image' ? '[FOTO RECIBIDA] El cliente acaba de enviar una foto o documento. Dile amablemente que la recibiste y que la agregarás a la evaluación.' : '[AUDIO RECIBIDO] El cliente acaba de enviar una nota de voz. Dile que la recibiste y que en un instante le respondes.';
+      
       const contactName = val.contacts?.[0]?.profile?.name || 'WhatsApp Lead';
       const tenant = 'demo_automotora';
       const ld = await read(F.leads);
@@ -661,30 +664,16 @@ app.post('/webhook',async(req,res)=>{
         const n = new Date().toISOString();
         ld[tenant].unshift({id: Date.now(), name: contactName, phone: '+' + from, source: 'WhatsApp', status: 'Nuevo', lastInteraction: n, lastClientTs: n, interest: msg.type === 'image' ? '[Foto Recibida]' : '[Audio Recibido]', assignedTo: assignedObj.username, botActive: true, alertLevel: 'none', intentSignal: 'NONE', unread: true, notes: [], chatHistory: [], media: []});
         idx = 0;
-        if (assignedObj.phone) sendWA(assignedObj.phone, `🔔 NUEVO LEAD WA: ${contactName} envió un ${msg.type === 'image' ? 'imagen' : 'audio'}`).catch(()=>{});
       }
 
       if (!ld[tenant][idx].media) ld[tenant][idx].media = [];
-      ld[tenant][idx].chatHistory = ld[tenant][idx].chatHistory || [];
-
-      if (msg.type === 'image' && msg.image) {
-        const mediaObj = { type: 'image', url: msg.image.id || msg.image.link || 'https://via.placeholder.com/150?text=Ver+Imagen', text: msg.image.caption || '', ts: Date.now() };
-        ld[tenant][idx].media.push(mediaObj);
-        ld[tenant][idx].chatHistory.push({ role: 'user', content: `[IMAGEN RECIBIDA] ${mediaObj.text ? '— ' + mediaObj.text : ''}`.trim(), ts: mediaObj.ts });
-      }
-
-      if (msg.type === 'audio' && msg.audio) {
-        const mediaObj = { type: 'audio', url: msg.audio.id || msg.audio.link || '', text: '[Audio Recibido]', ts: Date.now() };
-        ld[tenant][idx].media.push(mediaObj);
-        ld[tenant][idx].chatHistory.push({ role: 'user', content: `[AUDIO RECIBIDO]`, ts: mediaObj.ts });
-      }
-
-      ld[tenant][idx].unread = true;
-      ld[tenant][idx].lastClientTs = new Date().toISOString();
+      const mediaId = msg.type === 'image' ? msg.image.id : msg.audio.id;
+      ld[tenant][idx].media.push({ type: msg.type, url: mediaId, text: '', ts: Date.now() });
       await tWrite(F.leads, tenant, ld[tenant]);
-      return res.sendStatus(200); // Salimos temprano para no procesar como texto
+      
+      // ATENCIÓN: Al no poner "return" aquí, dejamos que el código siga hacia la IA
     }
-    // --- FIN MULTIMEDIA HANDLER ---
+    // --- FIN MULTIMEDIA HANDLER V3 ---
     
     if(!body)return;
     if(isShield(body)){await sendWA(from,SHIELD_R);return;}
@@ -937,6 +926,29 @@ app.patch('/api/leads/:id/tradein', async (req, res) => {
   } catch (err) {
     console.error('/api/leads/:id/tradein PATCH error:', err);
     res.status(500).json({ error: err.message });
+  }
+});
+
+
+// --- PROXY DE MEDIA META ---
+app.get('/api/media/:mediaId', async (req, res) => {
+  try {
+    const mediaId = req.params.mediaId;
+    if (!mediaId || mediaId === 'undefined') return res.status(400).send('ID invalido');
+    const token = process.env.WA_TOKEN;
+    if (!token) return res.status(500).send('Sin token WA_TOKEN configurado');
+    
+    const uRes = await fetch(`https://graph.facebook.com/v17.0/${mediaId}`, { headers: { 'Authorization': `Bearer ${token}` } });
+    const uData = await uRes.json();
+    if (!uData.url) return res.status(404).send('Media no encontrada en Meta');
+    
+    const mRes = await fetch(uData.url, { headers: { 'Authorization': `Bearer ${token}` } });
+    const buffer = await mRes.arrayBuffer();
+    res.set('Content-Type', mRes.headers.get('content-type'));
+    res.send(Buffer.from(buffer));
+  } catch (e) {
+    console.error('Error en Proxy:', e);
+    res.status(500).send('Error interno');
   }
 });
 

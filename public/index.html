@@ -868,10 +868,10 @@ function renderMediaGallery(lead) {
     if (item.type === 'image') {
       // Si la URL es un ID de Meta, normalmente requiere una llamada a la API, 
       // pero asumimos que el webhook provee un link temporal o manejamos la vista.
-      const imgUrl = item.url.startsWith('http') ? item.url : 'https://via.placeholder.com/150?text=Ver+Imagen';
+      const imgUrl = item.url.startsWith('http') ? item.url : '/api/media/' + item.url;
       html += `<a href="${imgUrl}" target="_blank" title="Clic para ampliar"><img src="${imgUrl}" style="width:70px;height:70px;object-fit:cover;border-radius:6px;border:1px solid #cbd5e1;cursor:pointer;transition:transform 0.2s" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'"></a>`;
     } else if (item.type === 'audio') {
-      const audioUrl = item.url.startsWith('http') ? item.url : '';
+      const audioUrl = item.url.startsWith('http') ? item.url : '/api/media/' + item.url;
       html += `<div style="background:#fff;border:1px solid #e2e8f0;border-radius:20px;padding:4px 10px;display:flex;align-items:center;gap:6px;"><span style="font-size:16px;">🎤</span><audio controls src="${audioUrl}" style="height:25px;width:160px;"></audio></div>`;
     }
   });
