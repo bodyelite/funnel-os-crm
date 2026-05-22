@@ -751,7 +751,7 @@ function renderModal(){const l=findLead(S.mid);if(!l){closeModal();return;}$('mT
 
     // ── SPRINT 4: UI de Tasación (Inyectada de forma segura) ─────────────────
     (function renderTradeIn() {
-      const modalContenedor = document.querySelector('.ca2'); // Esta es la columna derecha real de tu modal
+      const modalContenedor = document.querySelector('.cchat'); // Esta es la columna derecha real de tu modal
       if (!modalContenedor || document.getElementById('tradein-section')) return;
       
       const lead = S.leads.find(x => x.id === S.mid);
@@ -785,7 +785,7 @@ function renderModal(){const l=findLead(S.mid);if(!l){closeModal();return;}$('mT
       `;
       
       // Inyectarlo justo encima del botón de "Guardar cambios"
-      modalContenedor.insertAdjacentHTML('afterbegin', html);
+      modalContenedor.insertAdjacentHTML('beforeend', html);
     })();
     // ──────────────────────────────────────────────────────────────────────────
 
