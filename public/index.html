@@ -892,74 +892,88 @@ setInterval(() => {
 </script>
 
 
+
+
+
 <style id="zara-corporate-theme">
-  body, html { 
-    background-color: #f1f5f9 !important; 
-    color: #1e293b !important;
-    -webkit-font-smoothing: antialiased !important;
+  /* Redefinición de variables base */
+  :root {
+    --bg: #f1f5f9 !important;
+    --ac: #2563eb !important;
   }
   
-  .card, .modal-content, .panel, [class*="bg-white"], [style*="background: white"], [style*="background:#fff"], [style*="background-color: white"] {
-    background-color: #ffffff !important;
+  body, html { background-color: var(--bg) !important; }
+
+  /* Sidebar (.sb) - Estilo Dark Corporate SaaS */
+  .sb {
+    background: #0f172a !important;
+    border-right: 1px solid #1e293b !important;
+  }
+  .sb h1 { 
+    background: none !important; 
+    -webkit-text-fill-color: #f8fafc !important; 
+    color: #f8fafc !important; 
+  }
+  .sb .who { color: #94a3b8 !important; }
+  .sb nav button { color: #cbd5e1 !important; border-radius: 8px !important; }
+  .sb nav button:hover { background: #1e293b !important; color: #ffffff !important; }
+  .sb nav button.active { 
+    background: #2563eb !important; 
+    color: #ffffff !important; 
+    box-shadow: none !important; 
+  }
+  .sb .lout { color: #94a3b8 !important; border-color: #334155 !important; }
+  .sb .lout:hover { background: #1e293b !important; color: #fff !important; }
+
+  /* Tarjetas y Contenedores (.sb2, .fc, .tc, .tb, etc) */
+  .sb2, .fc, .tc, .cfs, .tb, .xe, .ct, .pt, .kbc, .inv-card, .kpi-card {
+    background: #ffffff !important;
     border: 1px solid #cbd5e1 !important;
     border-radius: 12px !important;
     box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03) !important;
   }
 
-  input[type="text"], input[type="number"], input[type="date"], textarea, select, .form-control {
+  /* Inputs, Selects, Textareas */
+  input:not([type="checkbox"]):not([type="radio"]):not([type="color"]):not([type="range"]), select, textarea {
     background-color: #f8fafc !important;
     border: 1px solid #cbd5e1 !important;
     border-radius: 8px !important;
-    color: #0f172a !important;
     transition: all 0.2s ease !important;
   }
-  input:focus, textarea:focus, select:focus, .form-control:focus {
+  input:focus, select:focus, textarea:focus {
     outline: none !important;
     border-color: #3b82f6 !important;
     box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2) !important;
     background-color: #ffffff !important;
   }
 
-  button, .btn {
-    border-radius: 8px !important;
-    transition: all 0.2s ease !important;
+  /* Botones de acción principal (.bp, .snb, .pm) */
+  .bp, .snb, .pm, button[style*="background:var(--ac)"] {
+    background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%) !important;
     border: none !important;
+    border-radius: 8px !important;
+    color: #ffffff !important;
+    box-shadow: 0 4px 6px -1px rgba(37,99,235,0.2) !important;
+    transition: transform 0.2s, box-shadow 0.2s !important;
   }
-  button:hover, .btn:hover { 
-    transform: translateY(-1px) !important; 
-    box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1) !important; 
+  .bp:hover, .snb:hover, .pm:hover {
+    transform: translateY(-1px) !important;
+  }
+
+  /* Modal de Ficha (.mo) */
+  .mo {
+    border-radius: 16px !important;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25) !important;
+    border: 1px solid #cbd5e1 !important;
   }
   
-  button[style*="#20c997"], .btn-success, button[style*="background: #20c997"] {
-    background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%) !important;
-    color: #ffffff !important;
-  }
-  button[style*="#17a2b8"], .btn-info {
-    background: linear-gradient(135deg, #0f172a 0%, #334155 100%) !important;
-    color: #ffffff !important;
-  }
-  button[style*="#8b5cf6"] {
-    background: linear-gradient(135deg, #6d28d9 0%, #8b5cf6 100%) !important;
-    color: #ffffff !important;
-  }
-
-  .sidebar, [style*="background: #343a40"], [style*="background:#343a40"], .bg-dark {
-    background-color: #0f172a !important;
-    border-right: 1px solid #1e293b !important;
-  }
-  .sidebar a, .sidebar div, .bg-dark a { color: #f8fafc !important; }
-
-  #tradein-section, #media-gallery-section, .cchat {
+  /* Cajas de Chat y Paneles Internos */
+  .cchat, #tradein-section, #media-gallery-section, .ca2 > div {
+    background: #ffffff !important;
     border-radius: 12px !important;
     border: 1px solid #e2e8f0 !important;
-    background: #ffffff !important;
   }
-  .cchat { background: #f8fafc !important; }
-
-  ::-webkit-scrollbar { width: 6px; height: 6px; }
-  ::-webkit-scrollbar-track { background: transparent; }
-  ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
-  ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+  .cbx { background: #f8fafc !important; border-color: #e2e8f0 !important; }
 </style>
 
 </body>
