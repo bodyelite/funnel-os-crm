@@ -968,35 +968,38 @@ app.get('/api/media/:mediaId', async (req, res) => {
     if (!mediaId || mediaId === 'undefined') return res.status(400).send('ID invalido');
     
     const token = process.env.WA_TOKEN;
-    if (!token) return res.status(500).send('Sin token WA_TOKEN configurado');
+    if (!token) return res.status(500).send('Error: Sin token WA_TOKEN configurado en el servidor');
     
-    // 1. Obtener URL temporal de descarga desde Meta
-    const uRes = await fetch(`https://graph.facebook.com/v17.0/${mediaId}`, { 
+    // Usamos v19.0 igual que en los audios
+    const uRes = await fetch(`https://graph.facebook.com/v19.0/${mediaId}`, { 
         headers: { 'Authorization': `Bearer ${token}` } 
     });
     const uData = await uRes.json();
-    if (!uData.url) return res.status(404).send('Media no encontrada en Meta');
     
-    // 2. Descargar el archivo real
+    if (!uData.url) {
+        console.error('Meta API Error:', uData);
+        return res.status(404).send('Error de Meta: ' + JSON.stringify(uData));
+    }
+    
     const mRes = await fetch(uData.url, { 
         headers: { 'Authorization': `Bearer ${token}` } 
     });
     
-    if (!mRes.ok) return res.status(mRes.status).send('Fallo al descargar de Meta');
+    if (!mRes.ok) {
+        const errText = await mRes.text();
+        return res.status(mRes.status).send('Fallo al descargar archivo de Meta: ' + errText);
+    }
 
     const buffer = await mRes.arrayBuffer();
     const contentType = mRes.headers.get('content-type');
     
-    // 3. Forzar headers para que el navegador sepa qué es
-    res.setHeader('Content-Type', contentType);
-    res.setHeader('Cache-Control', 'public, max-age=86400'); // Cachear por 24h
-    res.setHeader('Access-Control-Allow-Origin', '*'); // Evitar problemas de CORS
-    
-    // Enviar el buffer crudo
+    res.setHeader('Content-Type', contentType || 'image/jpeg');
+    res.setHeader('Cache-Control', 'public, max-age=86400');
+    res.setHeader('Access-Control-Allow-Origin', '*');
     res.send(Buffer.from(buffer));
   } catch (e) {
     console.error('Error en Proxy Multimedia:', e);
-    res.status(500).send('Error interno');
+    res.status(500).send('Error interno en el servidor Node');
   }
 });
 // --- FIN PROXY ---
