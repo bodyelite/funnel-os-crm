@@ -855,26 +855,31 @@ window.registrarOferta = async function(leadId) {
 function renderMediaGallery(lead) {
   const anchor = document.getElementById('tradein-section') || document.querySelector('.cchat');
   if (!anchor) return;
-  if (document.getElementById('media-gallery-section')) document.getElementById('media-gallery-section').remove();
-  
-  const items = lead.media || [];
+  const existing = document.getElementById('media-gallery-section');
+  if (existing) existing.remove();
+
+  const items = (lead.media || []).filter(function(item) { return item.type === 'image'; });
   if (!items.length) return;
 
   let html = '<div id="media-gallery-section" style="margin-top:12px;padding:14px;background:#f8fafc;border:2px dashed #cbd5e1;border-radius:8px;">';
-  html += '<strong style="font-size:12px;color:#334155;display:block;margin-bottom:10px;">📎 Archivos Adjuntos (Fotos / Audios)</strong>';
-  html += '<div style="display:flex;flex-wrap:wrap;gap:10px;">';
+  html += '<strong style="font-size:12px;color:#334155;display:block;margin-bottom:10px;">📷 Galería de Fotos</strong>';
+  html += '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(80px,1fr));gap:10px;">';
 
   items.forEach(function(item) {
-    if (item.type === 'image') {
-      // Si la URL es un ID de Meta, normalmente requiere una llamada a la API, 
-      // pero asumimos que el webhook provee un link temporal o manejamos la vista.
-      const imgUrl = item.url.startsWith('http') ? item.url : '/api/media/' + item.url;
-      html += `<a href="${imgUrl}" target="_blank" title="Clic para ampliar"><img src="${imgUrl}" style="width:70px;height:70px;object-fit:cover;border-radius:6px;border:1px solid #cbd5e1;cursor:pointer;transition:transform 0.2s" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'"></a>`;
-    } else if (item.type === 'audio') {
-      const audioUrl = item.url.startsWith('http') ? item.url : '/api/media/' + item.url;
-      html += `<div style="background:#fff;border:1px solid #e2e8f0;border-radius:20px;padding:4px 10px;display:flex;align-items:center;gap:6px;"><span style="font-size:16px;">🎤</span><audio controls src="${audioUrl}" style="height:25px;width:160px;"></audio></div>`;
+    const imgUrl = (item.url && item.url.startsWith('http')) ? item.url : '/api/media/' + item.url;
+    html += '<div style="position:relative;aspect-ratio:1/1;overflow:hidden;border-radius:6px;border:1px solid #cbd5e1;background:#fff;cursor:pointer;" onclick="window.open(\''+imgUrl+'\',\'_blank\')">';
+    html += '<img src="' + imgUrl + '" alt="Imagen" '
+         + 'style="width:100%;height:100%;object-fit:cover;display:block;transition:transform 0.2s" '
+         + 'onmouseover="this.style.transform=\'scale(1.1)\'" onmouseout="this.style.transform=\'scale(1)\'" '
+         + 'onerror="this.parentElement.style.display=\'none\'">';
+    if (item.text) {
+      html += '<div style="position:absolute;bottom:0;left:0;right:0;background:rgba(0,0,0,0.6);'
+           + 'color:#fff;font-size:9px;padding:3px 4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'
+           + item.text + '</div>';
     }
+    html += '</div>';
   });
+
   html += '</div></div>';
   anchor.insertAdjacentHTML('afterend', html);
 }

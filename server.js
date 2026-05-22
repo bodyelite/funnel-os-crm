@@ -648,11 +648,8 @@ app.post('/webhook',async(req,res)=>{
     const val=req.body.entry?.[0]?.changes?.[0]?.value;const msg=val?.messages?.[0];if(!msg)return;
     const from=msg.from;let body=msg.text?.body||msg.button?.text||null;
 
-    // --- MULTIMEDIA HANDLER V3 ---
+    // --- MULTIMEDIA HANDLER V4 ---
     if (msg.type === 'image' || msg.type === 'audio') {
-      // Engañamos a Marcela dándole un texto artificial en vez del archivo
-      body = msg.type === 'image' ? '[FOTO RECIBIDA] El cliente acaba de enviar una foto o documento. Dile amablemente que la recibiste y que la agregarás a la evaluación.' : '[AUDIO RECIBIDO] El cliente acaba de enviar una nota de voz. Dile que la recibiste y que en un instante le respondes.';
-      
       const contactName = val.contacts?.[0]?.profile?.name || 'WhatsApp Lead';
       const tenant = 'demo_automotora';
       const ld = await read(F.leads);
@@ -667,13 +664,47 @@ app.post('/webhook',async(req,res)=>{
       }
 
       if (!ld[tenant][idx].media) ld[tenant][idx].media = [];
-      const mediaId = msg.type === 'image' ? msg.image.id : msg.audio.id;
-      ld[tenant][idx].media.push({ type: msg.type, url: mediaId, text: '', ts: Date.now() });
-      await tWrite(F.leads, tenant, ld[tenant]);
       
-      // ATENCIÓN: Al no poner "return" aquí, dejamos que el código siga hacia la IA
+      if (msg.type === 'image') {
+        const mediaId = msg.image.id;
+        const caption = msg.image.caption || '';
+        ld[tenant][idx].media.push({ type: 'image', url: mediaId, text: caption, ts: Date.now() });
+        body = caption ? `[FOTO RECIBIDA]: ${caption}. Dile amablemente que la agregarás a la evaluación.` : '[FOTO RECIBIDA] El cliente envió una foto. Dile que la recibiste y la agregarás a la evaluación.';
+      }
+
+      if (msg.type === 'audio') {
+        try {
+          const audioId = msg.audio.id;
+          const metaUrlRes = await fetch(`https://graph.facebook.com/v19.0/${audioId}`, { headers: { Authorization: `Bearer ${process.env.WA_TOKEN}` } });
+          const metaUrlData = await metaUrlRes.json();
+          
+          if (metaUrlData.url) {
+            const audioRes = await fetch(metaUrlData.url, { headers: { Authorization: `Bearer ${process.env.WA_TOKEN}` } });
+            const arrayBuffer = await audioRes.arrayBuffer();
+            const audioBuffer = Buffer.from(arrayBuffer);
+            
+            const { Readable } = require('stream');
+            const readableStream = Readable.from(audioBuffer);
+            readableStream.path = 'audio.ogg';
+            
+            const transcriptionRes = await openai.audio.transcriptions.create({ file: readableStream, model: 'whisper-1' });
+            const transcription = transcriptionRes.text || '[Sin transcripción]';
+            
+            body = `[AUDIO TRANSCRITO]: "${transcription}". Responde al cliente considerando esto.`;
+            ld[tenant][idx].chatHistory.push({ role: 'user', content: `[AUDIO RECIBIDO] 🎤 "${transcription}"`, ts: Date.now() });
+          } else {
+            throw new Error('URL de audio no encontrada');
+          }
+        } catch (err) {
+          console.error('Error Whisper:', err.message);
+          body = '[AUDIO RECIBIDO] El cliente envió una nota de voz, dile que en un momento lo escuchas.';
+          ld[tenant][idx].chatHistory.push({ role: 'user', content: `[AUDIO RECIBIDO - Transcripción falló]`, ts: Date.now() });
+        }
+      }
+      
+      await tWrite(F.leads, tenant, ld[tenant]);
     }
-    // --- FIN MULTIMEDIA HANDLER V3 ---
+// --- FIN MULTIMEDIA HANDLER V4 ---
     
     if(!body)return;
     if(isShield(body)){await sendWA(from,SHIELD_R);return;}
