@@ -478,6 +478,43 @@ app.post('/api/leads/:id/resumen',auth('admin','vendedor'),async(req,res)=>{
   const idx=leads.findIndex(x=>x.id==req.params.id);
   if(idx===-1)return res.status(404).json({error:'No encontrado'});
   const lead=leads[idx];
+
+  // [SPRINT5-MULTIMEDIA-BACKEND]
+  (async () => {
+    try {
+      const message = req.body?.entry?.[0]?.changes?.[0]?.value?.messages?.[0];
+      if (message && lead) {
+        if (!lead.media) lead.media = [];
+        let changed = false;
+
+        if (message.type === 'image' && message.image) {
+          const mediaObj = {
+            type: 'image',
+            url: message.image.id || message.image.link || '',
+            text: message.image.caption || '',
+            ts: Date.now()
+          };
+          lead.media.push(mediaObj);
+          lead.chatHistory = lead.chatHistory || [];
+          lead.chatHistory.push({ role: 'user', content: `[IMAGEN RECIBIDA] ${mediaObj.text ? '— ' + mediaObj.text : ''}`.trim(), ts: mediaObj.ts });
+          changed = true;
+        }
+
+        if (message.type === 'audio' && message.audio) {
+          const mediaObj = {
+            type: 'audio',
+            url: message.audio.id || message.audio.link || '',
+            text: '[Audio Recibido]',
+            ts: Date.now()
+          };
+          lead.media.push(mediaObj);
+          lead.chatHistory = lead.chatHistory || [];
+          lead.chatHistory.push({ role: 'user', content: `[AUDIO RECIBIDO]`, ts: mediaObj.ts });
+          changed = true;
+        }
+      }
+    } catch (e) { console.error('Error procesando multimedia:', e); }
+  })();
   const histSnip=(lead.chatHistory||[]).slice(-14).map(m=>(m.role==='user'?'Cliente':m.role==='agent'?'Vendedor':'IA')+': '+m.content).join('\n');
   const notasSnip=(lead.notes||[]).filter(n=>n.author!=='Resumen IA').slice(-5).map(n=>n.author+': '+n.content).join('\n');
   if(!histSnip)return res.status(400).json({error:'Sin historial'});
