@@ -935,23 +935,40 @@ app.get('/api/media/:mediaId', async (req, res) => {
   try {
     const mediaId = req.params.mediaId;
     if (!mediaId || mediaId === 'undefined') return res.status(400).send('ID invalido');
+    
     const token = process.env.WA_TOKEN;
     if (!token) return res.status(500).send('Sin token WA_TOKEN configurado');
     
-    const uRes = await fetch(`https://graph.facebook.com/v17.0/${mediaId}`, { headers: { 'Authorization': `Bearer ${token}` } });
+    // 1. Obtener URL temporal de descarga desde Meta
+    const uRes = await fetch(`https://graph.facebook.com/v17.0/${mediaId}`, { 
+        headers: { 'Authorization': `Bearer ${token}` } 
+    });
     const uData = await uRes.json();
     if (!uData.url) return res.status(404).send('Media no encontrada en Meta');
     
-    const mRes = await fetch(uData.url, { headers: { 'Authorization': `Bearer ${token}` } });
+    // 2. Descargar el archivo real
+    const mRes = await fetch(uData.url, { 
+        headers: { 'Authorization': `Bearer ${token}` } 
+    });
+    
+    if (!mRes.ok) return res.status(mRes.status).send('Fallo al descargar de Meta');
+
     const buffer = await mRes.arrayBuffer();
-    res.set('Content-Type', mRes.headers.get('content-type'));
+    const contentType = mRes.headers.get('content-type');
+    
+    // 3. Forzar headers para que el navegador sepa qué es
+    res.setHeader('Content-Type', contentType);
+    res.setHeader('Cache-Control', 'public, max-age=86400'); // Cachear por 24h
+    res.setHeader('Access-Control-Allow-Origin', '*'); // Evitar problemas de CORS
+    
+    // Enviar el buffer crudo
     res.send(Buffer.from(buffer));
   } catch (e) {
-    console.error('Error en Proxy:', e);
+    console.error('Error en Proxy Multimedia:', e);
     res.status(500).send('Error interno');
   }
 });
-
+// --- FIN PROXY ---
 app.listen(PORT,()=>{console.log(`🚀 FunnelOS :${PORT} | SLA_GREEN=${SLA_GREEN} SLA_REASSIGN=${SLA_REASSIGN} SLA_YELLOW=${SLA_YELLOW}`);seed().catch(console.error);});
 
 // --- PARCHE: AUTO-RESETEO DE CLAVES ---
