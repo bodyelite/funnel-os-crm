@@ -50,85 +50,127 @@ async function scrapeRMG() {
   if (scrapeCache.data && (now - scrapeCache.ts) < 30 * 60 * 1000) return scrapeCache.data;
   try {
     const r = await fetch(RMG_SCRAPE_URL, {
-      signal: AbortSignal.timeout(12000),
-      headers: { 'User-Agent': 'Mozilla/5.0 (compatible; RMG-CRM-Bot/3.0)' }
+      signal: AbortSignal.timeout(15000),
+      headers: { 'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36' }
     });
     if (!r.ok) throw new Error('HTTP ' + r.status);
     const html = await r.text();
 
+    // Extraer links de fichas antes de procesar
     const linkMap = [];
-    const linkTagRE = /<a[^>]+href="(https:\/\/rmgautos\.cl\/product\/[^"]+)"[^>]*>/gi;
+    const linkTagRE = /href="(https:\/\/rmgautos\.cl\/product\/[^"]+)"/gi;
     let lm;
     while ((lm = linkTagRE.exec(html)) !== null) {
       const url = lm[1].replace(/\/$/, '');
       if (!linkMap.includes(url)) linkMap.push(url);
     }
 
-    const htmlFlat = html
-      .replace(/<\/h[1-6]>/gi, ' | ')
-      .replace(/<br[^>]*>/gi, ' ')
-      .replace(/<[^>]+>/g, ' ')
-      .replace(/&nbsp;/g, ' ')
-      .replace(/\s+/g, ' ');
+    // Extraer valores de headings con regex simple (una sola linea cada uno en el HTML real)
+    // Formato: <h2 class="...">VALOR</h2> o <h6 class="...">LABEL</h6>
+    const tokens = [];
+    const re2 = /<h2\b[^>]*>([^<]+)<\/h2>/gi;
+    const re6 = /<h6\b[^>]*>([^<]+)<\/h6>/gi;
 
-    const cards = htmlFlat.split(/(?=Precio Lista:)/i).slice(1);
+    // Combinar posiciones de h2 y h6 en orden de aparicion
+    const matches = [];
+    let m;
+    while ((m = re2.exec(html)) !== null) matches.push({ pos: m.index, level: 2, text: m[1].trim() });
+    while ((m = re6.exec(html)) !== null) matches.push({ pos: m.index, level: 6, text: m[1].trim() });
+    matches.sort((a, b) => a.pos - b.pos);
+    const toks = matches.filter(t => t.text.length > 0 && t.text.length < 200);
 
-    const parsePrecio = (str) => {
-      if (!str) return 0;
-      return parseInt(str.replace(/\./g, '').replace(',', '').replace(/[^\d]/g, ''), 10) || 0;
-    };
+    const parsePrecio = (s) => parseInt((s||'').replace(/\./g,'').replace(',','').replace(/[^\d]/g,''),10)||0;
 
     const structuredItems = [];
     const autos = [];
+    let autoIdx = 0;
+    let i = 0;
 
-    cards.forEach((card, i) => {
-      const listaM    = card.match(/Precio Lista:\s*\$?\s*([\d.,]+)/i);
-      const creditoM  = card.match(/Precio Cr[eé]dito:\s*\$?\s*([\d.,]+)/i);
-      const precioLista   = listaM   ? parsePrecio(listaM[1])   : 0;
-      const precioCredito = creditoM ? parsePrecio(creditoM[1]) : 0;
-      if (!precioLista && !precioCredito) return;
+    while (i < toks.length) {
+      // Inicio de auto: h6 "Precio Lista:"
+      if (toks[i].level !== 6 || !/precio lista/i.test(toks[i].text)) { i++; continue; }
 
-      const marcaM = card.match(MARCAS_RE);
-      if (!marcaM) return;
-      const marca = marcaM[0].toUpperCase();
+      let j = i + 1;
 
-      const afterMarca = card.slice(card.toUpperCase().indexOf(marca) + marca.length);
+      // Precio Lista: siguiente h2 con $
+      while (j < toks.length && !(toks[j].level === 2 && toks[j].text.includes('$'))) j++;
+      const precioLista = j < toks.length ? parsePrecio(toks[j].text) : 0;
+      j++;
 
-      const modeloM = afterMarca.match(/^\s*\|?\s*([A-Z0-9][A-Z0-9\s-]{1,20}?)\s*\|/);
-      const modelo  = modeloM ? modeloM[1].trim() : '';
+      // h6 "Precio Crédito:"
+      while (j < toks.length && !/precio cr/i.test(toks[j].text)) j++;
+      j++;
+      // h2 con $
+      while (j < toks.length && !(toks[j].level === 2 && toks[j].text.includes('$'))) j++;
+      const precioCredito = j < toks.length ? parsePrecio(toks[j].text) : 0;
+      j++;
 
-      const versionM = afterMarca.match(/\|\s*([A-Z0-9][A-Z0-9.\s]{3,40}?)\s*\|\s*(201|202)/i);
-      const version  = versionM ? versionM[1].trim() : '';
+      if (!precioLista && !precioCredito) { i = j; continue; }
 
-      const annoM = card.match(/\b(201[0-9]|202[0-6])\b/);
-      const anno  = annoM ? parseInt(annoM[0], 10) : null;
+      // Marca: siguiente h2 que matchee MARCAS_RE
+      while (j < toks.length && !toks[j].text.match(MARCAS_RE)) j++;
+      let marca = '';
+      if (j < toks.length) {
+        const mm = toks[j].text.match(MARCAS_RE);
+        marca = mm ? mm[0].toUpperCase() : toks[j].text.toUpperCase().trim();
+        j++;
+      }
 
-      const kmM   = afterMarca.match(/\b(201[0-9]|202[0-6])\b[^|]*\|\s*([\d.,]{3,8})\s*\|/);
-      const kmRaw = kmM ? kmM[2].replace(/[.,]/g, '') : '';
-      const km    = kmRaw ? parseInt(kmRaw, 10) : 0;
+      // Modelo: siguiente h6 (corto, ej: FOCUS, PARTNER)
+      while (j < toks.length && toks[j].level !== 6) j++;
+      const modelo = j < toks.length ? toks[j].text.trim() : '';
+      j++;
 
-      const fuelM = card.match(/\b(GASOLINA|DIESEL|DI[EÉ]SEL|H[IÍ]BRIDO|EL[EÉ]CTRICO|BENCINA|GAS|HYBRIDO)\b/i);
-      const fuel  = fuelM ? fuelM[0].toUpperCase() : '';
+      // Saltar "|"
+      while (j < toks.length && toks[j].text.trim() === '|') j++;
 
-      const transM = card.match(/\b(AUTOM[AÁ]TICO|MEC[AÁ]NICO|CVT|PDK|DSG|TIPTRONIC)\b/i);
-      const trans  = transM ? transM[0].toUpperCase() : '';
+      // Versión: h2 que NO sea solo 4 dígitos ni "|" ni $ 
+      let version = '';
+      if (j < toks.length && toks[j].level === 2 && !/^\d{4}$/.test(toks[j].text) && toks[j].text !== '|' && !toks[j].text.includes('$')) {
+        version = toks[j].text.trim();
+        j++;
+      }
 
-      const tipoM = card.match(/\b(SUV|HATCHBACK|SED[AÁ]N|FURG[OÓ]N|PICKUP|STATION WAGON|CAMIONETA|MINIVAN|COUPE)\b/i);
-      const tipo  = tipoM ? tipoM[0].toUpperCase() : '';
+      // Saltar "|"
+      while (j < toks.length && toks[j].text.trim() === '|') j++;
 
-      const cardLink = linkMap[i] || 'https://rmgautos.cl/usados/';
+      // Año: h2 con exactamente 4 dígitos
+      let anno = null;
+      if (j < toks.length && /^\d{4}$/.test(toks[j].text.trim())) {
+        anno = parseInt(toks[j].text.trim(), 10);
+        j++;
+      }
 
-      const modeloDisplay = modelo && modelo.toUpperCase() !== marca ? modelo : '';
-      const fullModel = [marca, modeloDisplay, version].filter(Boolean).join(' ');
+      // Saltar "|"
+      while (j < toks.length && toks[j].text.trim() === '|') j++;
 
-      const highlights = [
-        anno ? 'Año ' + anno : '',
-        km   ? km.toLocaleString('es-CL') + ' km' : '',
-        fuel, trans, tipo
-      ].filter(Boolean).join(' · ');
+      // Km: h2 con número puro (sin $, sin letras)
+      let km = 0;
+      if (j < toks.length && /^[\d.,]+$/.test(toks[j].text.trim()) && !toks[j].text.includes('$')) {
+        km = parseInt(toks[j].text.replace(/[.,]/g,''), 10);
+        j++;
+      }
+
+      // Saltar "|"
+      while (j < toks.length && toks[j].text.trim() === '|') j++;
+
+      // Combustible, transmisión, tipo — hasta próximo "Precio Lista" o fin
+      let fuel = '', trans = '', tipo = '';
+      while (j < toks.length && !/precio lista/i.test(toks[j].text)) {
+        const t = toks[j].text.trim();
+        if (/^(GASOLINA|DIESEL|DI.SEL|H.BRIDO|EL.CTRICO|BENCINA|HYBRIDO)/i.test(t) && !fuel) fuel = t.toUpperCase();
+        if (/^(AUTOM.TICO|MEC.NICO|CVT|DSG|TIPTRONIC)/i.test(t) && !trans) trans = t.toUpperCase();
+        if (/^(SUV|HATCHBACK|SED.N|FURG.N|PICKUP|STATION|MINIVAN|COUPE)/i.test(t) && !tipo) tipo = t.toUpperCase();
+        j++;
+      }
+
+      const cardLink   = linkMap[autoIdx] || 'https://rmgautos.cl/usados/';
+      const modeloDisp = (modelo && modelo.toUpperCase() !== marca) ? modelo : '';
+      const fullModel  = [marca, modeloDisp, version].filter(Boolean).join(' ');
+      const highlights = [anno?'Año '+anno:'', km?km.toLocaleString('es-CL')+' km':'', fuel, trans, tipo].filter(Boolean).join(' · ');
 
       structuredItems.push({
-        id:             'RMG-' + (i + 1),
+        id:             'RMG-' + (autoIdx + 1),
         brand:          marca,
         model:          fullModel,
         year:           anno,
@@ -137,23 +179,26 @@ async function scrapeRMG() {
         precio_lista:   precioLista,
         precio_credito: precioCredito,
         km:             km ? km.toLocaleString('es-CL') + ' km' : '',
-        fuel:           fuel,
-        version:        version,
-        tipo:           tipo,
+        fuel,
+        version,
+        tipo,
         transmision:    trans,
         link:           cardLink,
-        highlights:     highlights
+        highlights
       });
 
       autos.push(
-        `- ${fullModel}${anno ? ' ' + anno : ''} | ${km ? km.toLocaleString('es-CL') + ' km' : 'km n/d'} | Lista: $${precioLista.toLocaleString('es-CL')} | Credito: $${precioCredito.toLocaleString('es-CL')}${fuel ? ' | ' + fuel : ''}${trans ? ' | ' + trans : ''}`
+        `- ${fullModel}${anno?' '+anno:''} | ${km?km.toLocaleString('es-CL')+' km':'km n/d'} | Lista: $${precioLista.toLocaleString('es-CL')} | Credito: $${precioCredito.toLocaleString('es-CL')}${fuel?' | '+fuel:''}${trans?' | '+trans:''}`
       );
-    });
+
+      autoIdx++;
+      i = j;
+    }
 
     if (structuredItems.length === 0) throw new Error('0 autos encontrados en rmgautos.cl');
 
     scrapeCache = { ts: now, data: [...new Set(autos)].join('\n'), items: structuredItems };
-    console.log('[RMG-Scraper v3] ' + structuredItems.length + ' autos con datos completos');
+    console.log('[RMG-Scraper v4] ' + structuredItems.length + ' autos OK');
     return scrapeCache.data;
   } catch(e) {
     console.warn('[RMG-Scraper] Error:', e.message, '— usando cache o fallback');
