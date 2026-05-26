@@ -47,176 +47,81 @@ let scrapeCache = { ts: 0, data: '' };
 
 async function scrapeRMG() {
   const now = Date.now();
-  if (scrapeCache.items && scrapeCache.items.length && (now - scrapeCache.ts) < 30 * 60 * 1000) return scrapeCache.data;
-  const pSign = String.fromCharCode(36);
-  const base = 'https://rmgautos.cl';
-  const UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36';
-  const MARCAS = /Toyota|Peugeot|Kia|Volkswagen|Ford|Chevrolet|Hyundai|Nissan|Suzuki|Mazda|Honda|Mitsubishi|Jeep|Land Rover|BMW|Mercedes|Audi|Subaru|Volvo|Chery|MG|BAIC|Renault|Opel|Ram|Ssangyong|Karry|Alfa Romeo|Changan|Citroen|Fiat|Seat|Skoda|Haval|Geely|BYD/gi;
-
-  function cleanStr(s) {
-    return (s||'').replace(/&amp;/g,'&').replace(/&nbsp;/g,' ').replace(/&#0*39;/g,"'").replace(/&[a-z]{1,6};/g,'').replace(/<[^>]+>/g,'').replace(/\s+/g,' ').trim();
-  }
-  function parsePrice(s) {
-    const m = (s||'').match(/(\d{1,3})[.,](\d{3})[.,](\d{3})/);
-    if (m) return parseInt(m[1]+m[2]+m[3]);
-    const m2 = (s||'').match(/(\d{2,3})[.,](\d{3})\b/);
-    if (m2) { const v = parseInt(m2[1]+m2[2]); return v >= 500 ? v*1000 : 0; }
-    return 0;
-  }
-  function parseKm(s) {
-    const m = (s||'').match(/(\d{1,3})[.,](\d{3})\s*(?:km|kms|kil)/i);
-    if (m) return (parseInt(m[1])*1000+parseInt(m[2])).toLocaleString('es-CL')+' km';
-    const m2 = (s||'').match(/\b(\d{4,6})\s*(?:km|kms)/i);
-    if (m2) return parseInt(m2[1]).toLocaleString('es-CL')+' km';
-    return '';
-  }
-  function parseYear(s) {
-    const m = (s||'').match(/\b(201[0-9]|202[0-5])\b/);
-    return m ? m[1] : '';
-  }
-  function isJunk(item) {
-    if (!item || !item.model || item.model.length < 3) return true;
-    if (/feed|rss|wp-|sitemap|page|categor|shop|cart|tag\b/i.test(item.model)) return true;
-    if (item.price === 0 && !item.km) return true;
-    return false;
-  }
-  function slugParse(href) {
-    return (href||'').replace(/.*\/usados\//,'').replace(/\/$/,'').replace(/-/g,' ').trim();
-  }
-  function makeLine(i) {
-    return '- '+i.model+(i.year?' '+i.year:'')+(i.km?' | '+i.km:'')+
-      ' | '+pSign+(i.price ? i.price.toLocaleString('es-CL') : 'consultar')+
-      (i.link?' | '+i.link:'');
-  }
-
-  const items = [];
-
+  if (scrapeCache.data && (now - scrapeCache.ts) < 30 * 60 * 1000) return scrapeCache.data;
   try {
-    // ESTRATEGIA 1: WP REST API productos
-    try {
-      const wpR = await fetch(base+'/wp-json/wp/v2/product?per_page=100&status=publish&_fields=title,link,slug,excerpt,meta', {
-        signal: AbortSignal.timeout(8000), headers: { 'User-Agent': UA }
-      });
-      if (wpR.ok) {
-        const posts = await wpR.json();
-        if (Array.isArray(posts) && posts.length > 0) {
-          for (const p of posts) {
-            const title = cleanStr(p.title?.rendered||'');
-            const marcaM = title.match(MARCAS);
-            if (!marcaM) continue;
-            const body = cleanStr(p.excerpt?.rendered||'');
-            const price = parsePrice(body) || parsePrice(JSON.stringify(p.meta||{}));
-            const item = {
-              id: 'WEB-'+items.length, brand: marcaM[0],
-              model: title, year: parseYear(title+' '+body) ? parseInt(parseYear(title+' '+body)) : null,
-              price: price, km: parseKm(body), stock: 1,
-              link: p.link||'', highlights: parseKm(body)||'Ver ficha en rmgautos.cl'
-            };
-            if (title.length > 2 && !(/feed|rss|page/i.test(title))) items.push(item);
-          }
-        }
+    const r = await fetch(RMG_SCRAPE_URL, {
+      signal: AbortSignal.timeout(12000),
+      headers: { 'User-Agent': 'Mozilla/5.0 (compatible; RMG-CRM-Bot/2.0)' }
+    });
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    const html = await r.text();
+    const autos = [];
+
+    // Estrategia principal: extraer bloques entre etiquetas de precio lista y crédito
+    // La web usa el patrón: "Precio Lista:" ## $X.XXX.XXX "Precio Crédito:" ## $X.XXX.XXX
+    const bloqueCardRE = /Precio Lista:[\s\S]*?\$([\d.,]+)[\s\S]*?Precio Cr[eé]dito:[\s\S]*?\$([\d.,]+)[\s\S]*?(?=Precio Lista:|CONÓCEME|$)/gi;
+    let matchCard;
+    const htmlFlat = html.replace(/<[^>]+>/g, ' ').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ');
+
+    // Iterar cada bloque de auto detectando ambos precios secuencialmente
+    const cardSplitRE = /(?=Precio Lista:)/gi;
+    const cards = htmlFlat.split(cardSplitRE).slice(1);
+
+    cards.forEach(card => {
+      if (autos.length >= 50) return;
+
+      // Precio Lista (primer precio en el bloque)
+      const listaM = card.match(/Precio Lista:\s*\$?\s*([\d.,]+)/i);
+      // Precio Crédito (segundo precio en el bloque)
+      const creditoM = card.match(/Precio Cr[eé]dito:\s*\$?\s*([\d.,]+)/i);
+
+      const precioLista   = listaM   ? '$' + listaM[1].trim()   : '(consultar)';
+      const precioCredito = creditoM ? '$' + creditoM[1].trim() : '(consultar)';
+
+      // Marca
+      const marcaM = card.match(MARCAS_RE);
+      if (!marcaM) return;
+      const marca = marcaM[0].toUpperCase();
+
+      // Año
+      const annoM = card.match(/\b(201\d|202[0-5])\b/);
+      const anno = annoM ? annoM[0] : '';
+
+      // Kilometraje
+      const kmM = card.match(/(\d{1,3}[.,]\d{3})\s*(?:km|kms)/i) || card.match(/(\d{4,6})\s*(?:km|kms)/i);
+      const km = kmM ? kmM[1].replace(/\./g, '').replace(',', '.') + ' km' : '';
+
+      // Modelo: texto entre marca y año (máx 5 palabras)
+      const modRE = new RegExp(marca + '\\s+([A-Za-z0-9\\s]{2,35}?)(?:\\s+' + (anno || '\\d{4}') + '|\\s+\\$|Precio)', 'i');
+      const modM = card.match(modRE);
+      const modelo = modM ? modM[1].trim().split(/\s+/).slice(0, 5).join(' ') : '';
+
+      const linea = `- ${marca} ${modelo} ${anno} | ${km || 'km no indicado'} | Lista: ${precioLista} | Crédito: ${precioCredito}`;
+      autos.push(linea.replace(/\s{2,}/g, ' ').trim());
+    });
+
+    // Fallback si la estrategia principal no rinde resultados
+    if (autos.length < 3) {
+      console.warn('[RMG-Scraper] Fallback activado: extracción por pares de precio');
+      const pairRE = /\$([\d.,]{5,12})[\s\S]{0,200}?\$([\d.,]{5,12})/g;
+      let pair;
+      let pairIdx = 0;
+      while ((pair = pairRE.exec(htmlFlat)) !== null && autos.length < 30) {
+        const segment = htmlFlat.slice(Math.max(0, pair.index - 200), pair.index + 300);
+        const mM = segment.match(MARCAS_RE);
+        if (!mM) continue;
+        const aM = segment.match(/\b(201\d|202[0-5])\b/);
+        autos.push(`- ${mM[0].toUpperCase()} ${aM ? aM[0] : ''} | Lista: $${pair[1]} | Crédito: $${pair[2]}`.replace(/\s{2,}/g,' ').trim());
+        pairIdx++;
       }
-    } catch(_) {}
-
-    // ESTRATEGIA 2: HTML con links /product/
-    if (items.length === 0) {
-      const res = await fetch(RMG_SCRAPE_URL, {
-        signal: AbortSignal.timeout(15000),
-        headers: { 'User-Agent': UA, 'Accept': 'text/html,*/*;q=0.8', 'Accept-Language': 'es-CL,es;q=0.9' }
-      });
-      if (!res.ok) throw new Error('HTTP '+res.status);
-      const html = await res.text();
-
-      let zone = html
-        .replace(/<head[\s\S]*?<\/head>/i, '')
-        .replace(/<header[\s\S]*?<\/header>/gi, '')
-        .replace(/<footer[\s\S]*?<\/footer>/gi, '')
-        .replace(/<nav[\s\S]*?<\/nav>/gi, '')
-        .replace(/<script[\s\S]*?<\/script>/gi, '')
-        .replace(/<style[\s\S]*?<\/style>/gi, '');
-
-      const seen = new Set();
-      const conocemeRE = /href=["']((?:https?:\/\/rmgautos\.cl)?\/product\/[^"'#?]{3,80}\/?)"[^>]*>\s*(?:CON[OÓ]CEME|VER|DETALLE)/gi;
-      let lm;
-      while ((lm = conocemeRE.exec(zone)) !== null && items.length < 60) {
-        const href = lm[1].startsWith('http') ? lm[1] : base+lm[1];
-        if (seen.has(href)) continue;
-        seen.add(href);
-        const ctx = zone.slice(Math.max(0, lm.index - 4000), lm.index + 50);
-        const seg = ctx.replace(/<[^>]+>/g,' ').replace(/\s+/g,' ');
-        const marcaM = seg.match(MARCAS);
-        if (!marcaM) continue;
-        const marca = marcaM[0].toUpperCase();
-        const precio = parsePrice(seg);
-        const anno = parseYear(seg);
-        const kmRE = /\b(\d{1,3}[.,]\d{3})\b/g;
-        let km = '';
-        let kmMatch;
-        while ((kmMatch = kmRE.exec(seg)) !== null) {
-          const val = parseInt(kmMatch[1].replace(/[.,]/g,''));
-          if (val > 500 && val < 999999 && val.toString() !== anno) { km = val.toLocaleString('es-CL')+' km'; break; }
-        }
-        const h6M = ctx.match(/<h6[^>]*>([^<]{2,40})<\/h6>/i);
-        const modeloRaw = h6M ? cleanStr(h6M[1]) : '';
-        const h2s = [...ctx.matchAll(/<h2[^>]*>([^<]{2,60})<\/h2>/gi)];
-        let version = '';
-        for (const hm of h2s) {
-          const t = cleanStr(hm[1]);
-          if (!t.match(MARCAS) && !parsePrice(t) && !parseYear(t) && t !== '|' && t.length > 2) { version = t; break; }
-        }
-        const fuelM = seg.match(/\b(GASOLINA|BENCINA|DIESEL|DI[EÉ]SEL|EL[EÉ]CTRICO|H[IÍ]BRIDO|GAS)\b/i);
-        const fuel = fuelM ? fuelM[1] : '';
-        const isVendido = /VENDIDO/i.test(seg);
-        const modelo = [marca, modeloRaw, version].filter(Boolean).join(' ').trim();
-        const item = {
-          id: 'WEB-'+items.length, brand: marca,
-          model: modelo.length > 2 ? modelo : marca,
-          year: anno ? parseInt(anno) : null,
-          price: isVendido ? 0 : precio, km: km, stock: isVendido ? 0 : 1, link: href,
-          highlights: [fuel, km, anno, isVendido ? 'VENDIDO' : ''].filter(Boolean).join(' | ')
-        };
-        if (item.model.length < 2 || /feed|rss|wp-|sitemap|categor/i.test(item.model)) continue;
-        items.push(item);
-      }
-
-      // Fallback: cualquier link /product/
-      if (items.length === 0) {
-        const prodRE = /href=["']((?:https?:\/\/rmgautos\.cl)?\/product\/[^"'#?]{3,80}\/?)["']/gi;
-        while ((lm = prodRE.exec(zone)) !== null && items.length < 60) {
-          const href = lm[1].startsWith('http') ? lm[1] : base+lm[1];
-          if (seen.has(href)) continue;
-          seen.add(href);
-          const ctx = zone.slice(Math.max(0, lm.index-100), lm.index+3000);
-          const seg = ctx.replace(/<[^>]+>/g,' ').replace(/\s+/g,' ');
-          const marcaM = seg.match(MARCAS);
-          if (!marcaM) continue;
-          const marca = marcaM[0];
-          const anno = parseYear(seg);
-          const precio = parsePrice(seg);
-          const kmM = seg.match(/\b(\d{1,3}[.,]\d{3})\b/);
-          const km = kmM ? parseInt(kmM[1].replace(/[.,]/g,'')) > 500 ? parseInt(kmM[1].replace(/[.,]/g,'')).toLocaleString('es-CL')+' km' : '' : '';
-          const h6M = ctx.match(/<h6[^>]*>([^<]{2,40})<\/h6>/i);
-          const modelo = marca + (h6M ? ' '+cleanStr(h6M[1]) : '') + (anno ? ' '+anno : '');
-          if (!modelo || modelo.length < 2 || /feed|rss|sitemap/i.test(modelo)) continue;
-          items.push({ id:'WEB-'+items.length, brand:marca, model:modelo, year:anno?parseInt(anno):null, price:precio, km:km, stock:1, link:href, highlights:km||'Ver en rmgautos.cl' });
-        }
-      }
-
-      if (items.length === 0) throw new Error('0 autos extraidos del HTML');
     }
 
-    const unique = [...new Map(items.map(it => [it.link||it.model, it])).values()];
-    const dataStr = unique.map(i =>
-      '- '+i.model+(i.year?' '+i.year:'')+(i.km?' | '+i.km:'')+
-      ' | '+(i.stock===0?'VENDIDO':pSign+(i.price?i.price.toLocaleString('es-CL'):'consultar'))+
-      (i.link?' | '+i.link:'')
-    ).join('\n');
-    scrapeCache = { ts: now, data: dataStr, items: unique };
-    console.log('[RMG-Scraper] '+unique.length+' autos capturados');
+    if (autos.length === 0) throw new Error('0 autos encontrados en rmgautos.cl');
+    scrapeCache = { ts: now, data: [...new Set(autos)].join('\n') };
+    console.log('[RMG-Scraper] ' + autos.length + ' autos capturados con Precio Lista + Crédito');
     return scrapeCache.data;
-
   } catch(e) {
-    console.warn('[RMG-Scraper] Error:', e.message);
+    console.warn('[RMG-Scraper] Error:', e.message, '— usando caché o fallback');
     return scrapeCache.data || '';
   }
 }
