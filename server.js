@@ -117,8 +117,51 @@ async function scrapeRMG() {
     }
 
     if (autos.length === 0) throw new Error('0 autos encontrados en rmgautos.cl');
-    scrapeCache = { ts: now, data: [...new Set(autos)].join('\n') };
-    console.log('[RMG-Scraper] ' + autos.length + ' autos capturados con Precio Lista + Crédito');
+
+    const structuredItems = cards.map((card, i) => {
+      const listaM2    = card.match(/Precio Lista:\s*\$?\s*([\d.,]+)/i);
+      const creditoM2  = card.match(/Precio Cr[eé]dito:\s*\$?\s*([\d.,]+)/i);
+      const marcaM2    = card.match(MARCAS_RE);
+      const annoM2     = card.match(/\b(201\d|202[0-5])\b/);
+      const kmM2       = card.match(/(\d{1,3}[.,]\d{3})\s*(?:km|kms)/i) || card.match(/(\d{4,6})\s*(?:km|kms)/i);
+      const linkM2     = card.match(/(https:\/\/rmgautos\.cl\/product\/[^\s"]+)/i);
+
+      const parsePrecio = (str) => {
+        if (!str) return 0;
+        return parseInt(str.replace(/\./g, '').replace(',', '').replace(/[^\d]/g, ''), 10) || 0;
+      };
+
+      const precioLista    = listaM2   ? parsePrecio(listaM2[1])   : 0;
+      const precioCredito  = creditoM2 ? parsePrecio(creditoM2[1]) : 0;
+      const marca          = marcaM2   ? marcaM2[0].toUpperCase()  : 'OTRO';
+      const anno           = annoM2    ? parseInt(annoM2[0], 10)   : null;
+      const kmRaw          = kmM2      ? kmM2[1].replace(/\./g, '').replace(',', '') : '';
+      const km             = kmRaw     ? parseInt(kmRaw, 10) : 0;
+      const link           = linkM2    ? linkM2[1] : 'https://rmgautos.cl/usados/';
+
+      const modRE2 = new RegExp(marca + '\\s+([A-Za-z0-9\\s]{2,35}?)(?:\\s+' + (anno || '\\d{4}') + '|\\s+\\$|Precio)', 'i');
+      const modM2  = card.match(modRE2);
+      const modelo = modM2 ? modM2[1].trim().split(/\s+/).slice(0, 5).join(' ') : marca;
+
+      return {
+        id:             'RMG-' + (i + 1),
+        brand:          marca,
+        model:          marca + ' ' + modelo,
+        year:           anno,
+        stock:          1,
+        price:          precioCredito || precioLista,
+        precio_lista:   precioLista,
+        precio_credito: precioCredito,
+        km:             km ? km.toLocaleString('es-CL') + ' km' : '',
+        fuel:           '',
+        link:           link,
+        highlights:     anno ? 'Año ' + anno + (km ? ', ' + km.toLocaleString('es-CL') + ' km' : '') : ''
+      };
+    }).filter(item => item.precio_lista > 0 || item.precio_credito > 0);
+
+    const uniqueAutos = [...new Set(autos)];
+    scrapeCache = { ts: now, data: uniqueAutos.join('\n'), items: structuredItems };
+    console.log('[RMG-Scraper] ' + uniqueAutos.length + ' autos | ' + structuredItems.length + ' con precios estructurados');
     return scrapeCache.data;
   } catch(e) {
     console.warn('[RMG-Scraper] Error:', e.message, '— usando caché o fallback');
@@ -720,6 +763,9 @@ app.get('/api/inventory/scraper',auth('admin','vendedor'),async(req,res)=>{
   if(!Array.isArray(dbInv)) dbInv = [];
   const webItems = (scrapeCache.items && scrapeCache.items.length) ? scrapeCache.items : [];
   const finalInv = webItems.length > 0 ? webItems : dbInv;
+  if (webItems.length > 0) {
+    try { await tWrite(F.inventory, req.tenant, webItems); } catch(e) { console.error('[INV-SYNC]', e.message); }
+  }
   res.json({ts:scrapeCache.ts, raw:scrapeCache.data||'', structured: finalInv});
 });
 setInterval(async()=>{
