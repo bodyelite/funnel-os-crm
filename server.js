@@ -218,7 +218,22 @@ function fueraH(txt){const m=(txt||'').match(/(\d{1,2})\s*(?::|\.)?\s*(\d{2})?\s
 
 async function marcela(tenant, history, msg, notes, assignedName) {
   try {
-    let invS = scrapeCache.data || await scrapeRMG();
+    await scrapeRMG();
+    const invItems = (scrapeCache.items && scrapeCache.items.length) ? scrapeCache.items : [];
+    let invS = invItems.length
+      ? invItems.map(i => {
+          const pl = i.precio_lista ? '$' + i.precio_lista.toLocaleString('es-CL') : '';
+          const pc = i.precio_credito ? '$' + i.precio_credito.toLocaleString('es-CL') : '';
+          return `- [${i.id}] ${i.brand||''} ${i.model}${i.year?' '+i.year:''}`
+            + (i.km ? ` | ${i.km}` : '')
+            + (pl ? ` | Lista: ${pl}` : '')
+            + (pc ? ` | Crédito: ${pc}` : '')
+            + (i.fuel ? ` | ${i.fuel}` : '')
+            + (i.transmision ? ` | ${i.transmision}` : '')
+            + (i.tipo ? ` | ${i.tipo}` : '')
+            + (i.link ? ` | LINK_FICHA: ${i.link}` : '');
+        }).join('\n')
+      : (scrapeCache.data || '');
     if (!invS) invS = '';
 
     let botCfg = await tRead(F.bot, tenant, {});
