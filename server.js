@@ -237,17 +237,18 @@ async function marcela(tenant, history, msg, notes, assignedName) {
     if (!invS) invS = '';
 
     let botCfg = await tRead(F.bot, tenant, {});
-    if (!botCfg || typeof botCfg !== 'object' || Array.isArray(botCfg) || !botCfg.systemPrompt) {
-      try {
-        const seedBot = JSON.parse(fsSync.readFileSync(path.join(__dirname, 'data', 'bot.json'), 'utf8'));
-        if (seedBot && seedBot[tenant] && seedBot[tenant].systemPrompt) {
+    try {
+      const seedBot = JSON.parse(fsSync.readFileSync(path.join(__dirname, 'data', 'bot.json'), 'utf8'));
+      if (seedBot && seedBot[tenant] && seedBot[tenant].systemPrompt) {
+        const filePrompt = seedBot[tenant].systemPrompt;
+        if (!botCfg || !botCfg.systemPrompt || botCfg.systemPrompt !== filePrompt) {
           botCfg = Object.assign({}, botCfg, seedBot[tenant]);
           await tWrite(F.bot, tenant, botCfg);
-          console.log('[marcela] systemPrompt restaurado desde data/bot.json para', tenant);
+          console.log('[marcela] systemPrompt sincronizado desde data/bot.json para', tenant);
         }
-      } catch(eSeed) {
-        console.error('[marcela] No se pudo cargar data/bot.json:', eSeed.message);
       }
+    } catch(eSeed) {
+      console.error('[marcela] No se pudo sincronizar data/bot.json:', eSeed.message);
     }
 
     const baseSysPrompt = (botCfg && botCfg.systemPrompt) || 'Eres Marcela, asesora de ventas de Automotora Andes. Responde de forma calida y profesional en espanol chileno.';
