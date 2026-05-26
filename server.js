@@ -61,6 +61,16 @@ async function scrapeRMG() {
     // La web usa el patrón: "Precio Lista:" ## $X.XXX.XXX "Precio Crédito:" ## $X.XXX.XXX
     const bloqueCardRE = /Precio Lista:[\s\S]*?\$([\d.,]+)[\s\S]*?Precio Cr[eé]dito:[\s\S]*?\$([\d.,]+)[\s\S]*?(?=Precio Lista:|CONÓCEME|$)/gi;
     let matchCard;
+    // Extraer links de fichas ANTES de aplanar el HTML (se pierden al quitar tags)
+    const linkMap = {};
+    const linkRE = /href="(https:\/\/rmgautos\.cl\/product\/[^"]+)"/gi;
+    let lm;
+    while ((lm = linkRE.exec(html)) !== null) {
+      const slug = lm[1].replace(/\/$/, '').split('/').pop();
+      linkMap[slug] = lm[1];
+    }
+    const allLinks = Object.values(linkMap);
+
     const htmlFlat = html.replace(/<[^>]+>/g, ' ').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ');
 
     // Iterar cada bloque de auto detectando ambos precios secuencialmente
@@ -137,7 +147,7 @@ async function scrapeRMG() {
       const anno           = annoM2    ? parseInt(annoM2[0], 10)   : null;
       const kmRaw          = kmM2      ? kmM2[1].replace(/\./g, '').replace(',', '') : '';
       const km             = kmRaw     ? parseInt(kmRaw, 10) : 0;
-      const link           = linkM2    ? linkM2[1] : 'https://rmgautos.cl/usados/';
+      const cardLink       = (linkM2 && linkM2[1]) ? linkM2[1] : (allLinks[i] || 'https://rmgautos.cl/usados/');
 
       const modRE2 = new RegExp(marca + '\\s+([A-Za-z0-9\\s]{2,35}?)(?:\\s+' + (anno || '\\d{4}') + '|\\s+\\$|Precio)', 'i');
       const modM2  = card.match(modRE2);
@@ -154,7 +164,7 @@ async function scrapeRMG() {
         precio_credito: precioCredito,
         km:             km ? km.toLocaleString('es-CL') + ' km' : '',
         fuel:           '',
-        link:           link,
+        link:           cardLink,
         highlights:     anno ? 'Año ' + anno + (km ? ', ' + km.toLocaleString('es-CL') + ' km' : '') : ''
       };
     }).filter(item => item.precio_lista > 0 || item.precio_credito > 0);
