@@ -645,35 +645,47 @@ app.post('/api/chat',async(req,res)=>{
 
 app.post('/api/leads/inbound', async (req, res) => {
   try {
-    const { tenant='demo_automotora', name, phone, source='Chileautos', interest='', status='esperando_respuesta_chileautos', botActive=false } = req.body;
-    if (!phone) return res.status(400).json({ error: 'phone requerido' });
-    const clean = phone.replace(/\D/g,'');
+    const { tenant='demo_automotora', name, phone='Pendiente', source='Chileautos', interest='', status='esperando_respuesta_chileautos', botActive=false, externalId=null, notes:extraNotes=[] } = req.body;
     const n = new Date().toISOString();
     const leads = await tRead(F.leads, tenant);
-    const exists = leads.find(l => l.phone && l.phone.replace(/\D/g,'').includes(clean));
+
+    // Deduplicar por externalId (leadId de Chileautos) o por teléfono si no es Pendiente
+    let exists = null;
+    if (externalId) {
+      exists = leads.find(l => l.externalId === externalId);
+    } else if (phone && phone !== 'Pendiente') {
+      const clean2 = phone.replace(/\D/g,'');
+      exists = leads.find(l => l.phone && l.phone.replace(/\D/g,'').includes(clean2));
+    }
     if (exists) return res.json({ ok: true, leadId: exists.id, skipped: true });
+
+    const clean = phone !== 'Pendiente' ? phone.replace(/\D/g,'') : '';
     const assignedObj = await rrNext(tenant) || { username: 'vendedor1' };
+    const initNotes = [{ content: `Lead recibido desde ${source}. En sala de espera.`, author: 'Bot', ts: Date.now() }];
+    const allNotes = [...initNotes, ...extraNotes];
     const lead = {
       id: Date.now(),
+      externalId,
       name: name || 'Lead Chileautos',
-      phone: '+' + clean,
+      phone: clean ? '+' + clean : 'Pendiente',
       source,
       interest,
       status,
       botActive,
       alertLevel: 'none',
       intentSignal: 'NONE',
-      unread: false,
+      unread: true,
       assignedTo: assignedObj.username,
       lastInteraction: n,
       lastClientTs: n,
-      notes: [{ content: `Lead recibido desde ${source}. En sala de espera.`, author: 'Bot', ts: Date.now() }],
+      notes: allNotes,
       chatHistory: [],
       media: []
     };
     leads.unshift(lead);
     await tWrite(F.leads, tenant, leads);
-    console.log('[INBOUND] Lead creado:', name, '+' + clean, status);
+    if (assignedObj.phone) sendWA(assignedObj.phone, `🔔 NUEVO LEAD CHILEAUTOS asignado a ti. Entra a FunnelOS → Chileautos para verlo.`).catch(()=>{});
+    console.log('[INBOUND] Lead creado:', name, phone, status, externalId || '');
     res.json({ ok: true, leadId: lead.id });
   } catch(e) {
     console.error('[INBOUND]', e.message);
