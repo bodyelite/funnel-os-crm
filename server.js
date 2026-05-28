@@ -324,7 +324,7 @@ function calcAlert(lead){
   }
   const applies=lead.status==='Nuevo'||lead.unread===true;
   if(!applies)return'none';
-  const ref=lead.lastClientTs||lead.lastInteraction;
+  const ref=(lead.status==='esperando_respuesta_chileautos')?lead.lastInteraction:(lead.lastClientTs||lead.lastInteraction);
   if(!ref)return'none';
   const m=(Date.now()-new Date(ref).getTime())/60000;
   if(m>SLA_YELLOW)return'critical';
@@ -352,7 +352,7 @@ async function applySlaRules(tenant){
       }
     }
     if(lead.status==='Nuevo'){
-      const ref=lead.lastClientTs||lead.lastInteraction;
+      const ref=(lead.status==='esperando_respuesta_chileautos')?lead.lastInteraction:(lead.lastClientTs||lead.lastInteraction);
       const mins=ref?(Date.now()-new Date(ref).getTime())/60000:0;
       if(mins>SLA_REASSIGN&&!lead.reassigned){
         const nextObj=await rrNext(tenant,lead.assignedTo);
@@ -612,7 +612,7 @@ app.post('/api/chat',async(req,res)=>{
   leads[idx].chatHistory=leads[idx].chatHistory||[];leads[idx].chatHistory.push({role:'user',content:message,ts:Date.now()});
   leads[idx].unread=true;
   if(leads[idx].botActive!==false){
-    if(message.trim().toLowerCase()==='/reset'){const _rn=new Date().toISOString();leads[idx].chatHistory=[];leads[idx].intentSignal='NONE';leads[idx].keywordAlertSent=false;leads[idx].alertLevel='none';leads[idx].unread=false;leads[idx].reassigned=false;leads[idx].reassignedAt=null;leads[idx].adminReassignAlertSent=false;leads[idx].riskAlertSent=false;leads[idx].followUpSent=false;leads[idx].nextAction=null;leads[idx].ai_summary='';leads[idx].isMulticotizante=false;leads[idx].externalId=null;leads[idx].lastClientTs=new Date(0).toISOString();leads[idx].lastInteraction=_rn;leads[idx].media=[];leads[idx].notes=[];leads[idx].history=[];await tWrite(F.leads,tenant,leads);return res.json({reply:'🔄 Ficha limpiada. Lista para nuevo ingreso.',status:leads[idx].status,alertLevel:'none',lead:leads[idx]});}
+    if(message.trim().toLowerCase()==='/reset'){leads.splice(idx,1);await tWrite(F.leads,tenant,leads);return res.json({reply:'🔄 Lead eliminado. Listo para nuevo ingreso desde Chileautos.',status:'eliminado',alertLevel:'none'});}
     const assignedUserChat=allUsers.find(u=>u.username===leads[idx].assignedTo)||RMG_VENDORS.find(v=>v.username===leads[idx].assignedTo);
     const assignedNameChat=assignedUserChat?.name||null;
     const p=await marcela(tenant,leads[idx].chatHistory.slice(0,-1),message,leads[idx].notes,assignedNameChat);
@@ -722,14 +722,44 @@ app.post('/api/chileautos/webhook', async (req, res) => {
       return false;
     });
     if (existing !== -1) {
-      leads[existing].isMulticotizante = true;
+      const existingLead = leads[existing];
+      // Si ya está en sala de espera CA, es multicotizante real
+      if (existingLead.status === 'esperando_respuesta_chileautos') {
+        leads[existing].isMulticotizante = true;
+        leads[existing].interest = vehicleTitle;
+        leads[existing].history = leads[existing].history || [];
+        leads[existing].history.push({ ts: Date.now(), content: '[SISTEMA] Nueva cotización vía Chileautos: ' + vehicleTitle });
+        leads[existing].lastInteraction = n;
+        await tWrite(F.leads, tenant, leads);
+        console.log('[CA-WEBHOOK] Multicotizante en sala espera actualizado:', name, phone);
+        return;
+      }
+      // Si ya tiene conversación activa (no es sala de espera), registrar en historial
+      if (existingLead.chatHistory && existingLead.chatHistory.length > 0) {
+        leads[existing].isMulticotizante = true;
+        leads[existing].interest = vehicleTitle;
+        leads[existing].history = leads[existing].history || [];
+        leads[existing].history.push({ ts: Date.now(), content: '[SISTEMA] Nueva cotización vía Chileautos: ' + vehicleTitle });
+        leads[existing].lastInteraction = n;
+        await tWrite(F.leads, tenant, leads);
+        console.log('[CA-WEBHOOK] Multicotizante con chat activo:', name, phone);
+        return;
+      }
+      // Lead existe pero sin conversación → moverlo a sala de espera CA
+      leads[existing].status = 'esperando_respuesta_chileautos';
       leads[existing].interest = vehicleTitle;
-      leads[existing].history  = leads[existing].history || [];
-      leads[existing].history.push({ ts: Date.now(), content: '[SISTEMA] Nueva cotización vía Chileautos: ' + vehicleTitle });
+      leads[existing].source = 'Chileautos';
+      leads[existing].externalId = externalId;
+      leads[existing].isMulticotizante = false;
+      leads[existing].botActive = false;
       leads[existing].lastInteraction = n;
+      leads[existing].lastClientTs = new Date(0).toISOString();
+      leads[existing].history = [{ ts: Date.now(), content: 'Lead recibido desde Chileautos: ' + vehicleTitle }];
+      leads[existing].notes = [{ content: 'Lead recibido desde Chileautos. Vehículo: ' + vehicleTitle, author: 'Bot', ts: Date.now() }];
+      leads[existing].chatHistory = [];
       await tWrite(F.leads, tenant, leads);
-      console.log('[CA-WEBHOOK] Multicotizante actualizado:', name, phone);
-      return;
+      console.log('[CA-WEBHOOK] Lead existente movido a sala espera CA:', name, phone);
+      // Disparar WA igualmente para este lead
     }
     const assignedObj = await rrNext(tenant) || { username: 'vendedor1' };
     const newLead = {
@@ -915,7 +945,7 @@ app.post('/webhook',async(req,res)=>{
     ld[tenant][idx].chatHistory=ld[tenant][idx].chatHistory||[];ld[tenant][idx].chatHistory.push({role:'user',content:body,ts:Date.now()});
     ld[tenant][idx].unread=true;
     if(ld[tenant][idx].botActive!==false){
-      if(body.trim().toLowerCase()==='/reset'){const _rn=new Date().toISOString();ld[tenant][idx].chatHistory=[];ld[tenant][idx].intentSignal='NONE';ld[tenant][idx].keywordAlertSent=false;ld[tenant][idx].alertLevel='none';ld[tenant][idx].unread=false;ld[tenant][idx].reassigned=false;ld[tenant][idx].reassignedAt=null;ld[tenant][idx].adminReassignAlertSent=false;ld[tenant][idx].riskAlertSent=false;ld[tenant][idx].followUpSent=false;ld[tenant][idx].nextAction=null;ld[tenant][idx].ai_summary='';ld[tenant][idx].isMulticotizante=false;ld[tenant][idx].externalId=null;ld[tenant][idx].lastInteraction=_rn;ld[tenant][idx].lastClientTs=new Date(0).toISOString();ld[tenant][idx].media=[];ld[tenant][idx].notes=[];ld[tenant][idx].history=[];await tWrite(F.leads,tenant,ld[tenant]);console.log('[RESET] Ficha limpiada para',from,'— sin respuesta WA');return;}
+      if(body.trim().toLowerCase()==='/reset'){ld[tenant].splice(idx,1);await tWrite(F.leads,tenant,ld[tenant]);console.log('[RESET] Lead eliminado para',from,'— listo para nuevo ingreso');return;}
       const allUsersWH=await tRead(F.users,tenant);
       const assignedUserWH=allUsersWH.find(u=>u.username===ld[tenant][idx].assignedTo)||RMG_VENDORS.find(v=>v.username===ld[tenant][idx].assignedTo);
       const assignedNameWH=assignedUserWH?.name||null;
