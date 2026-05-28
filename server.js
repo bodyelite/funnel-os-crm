@@ -777,71 +777,37 @@ app.post('/api/chileautos/webhook', async (req, res) => {
     const token = process.env.WA_TOKEN, phoneId = process.env.WA_PHONE_ID;
     if (token && phoneId && phone !== 'Pendiente') {
       try {
-        // ── Detectar ventana de 24h activa ──────────────────────────────────
-        // Si el lead ya tuvo conversación en las últimas 24h, usar texto libre.
-        // Si es lead nuevo sin historial, usar plantilla aprobada por Meta.
-        const allLeadsNow = await tRead(F.leads, tenant);
-        const leadNow = allLeadsNow.find(l =>
-          l.externalId === externalId ||
-          (phone !== 'Pendiente' && l.phone && l.phone.replace(/\D/g,'').includes(phoneClean))
-        );
-        const lastClientTs = leadNow?.lastClientTs;
-        const has24hWindow = lastClientTs &&
-          new Date(lastClientTs).getTime() > 0 &&
-          (Date.now() - new Date(lastClientTs).getTime()) < 24 * 60 * 60 * 1000;
-
-        let msgSent = false;
-        let msgContent = '';
-
-        if (has24hWindow) {
-          // ── Ventana activa: mensaje de texto libre ───────────────────────
-          msgContent = `¡Hola ${firstName || name}! 👋 Soy Marcela de RMG Autos.\n\nVimos que consultaste en Chileautos por el *${vehicleTitle}*. ¿Te puedo ayudar con alguna pregunta sobre ese vehículo — precio, financiamiento o disponibilidad? 😊`;
-          await sendWA(phoneClean, msgContent);
-          msgSent = true;
-          console.log('[CA-WEBHOOK] ✅ Mensaje libre enviado (ventana 24h activa) a', phone);
-        } else {
-          // ── Sin ventana activa: intentar plantilla aprobada por Meta ────
-          const templateName = process.env.CA_WA_TEMPLATE || 'contacto_chileautos_v1';
-          const waRes = await fetch(`https://graph.facebook.com/v19.0/${phoneId}/messages`, {
-            method: 'POST',
-            headers: { Authorization: 'Bearer '+token, 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              messaging_product: 'whatsapp', to: phoneClean,
-              type: 'template',
-              template: { name: templateName, language: { code: 'es' },
-                components: [{ type: 'body', parameters: [
-                  { type: 'text', text: firstName || name },
-                  { type: 'text', text: vehicleTitle }
-                ]}]
-              }
-            })
-          });
-          const waJson = await waRes.json();
-          if (waRes.ok) {
-            msgSent = true;
-            msgContent = `[PLANTILLA WA] Hola ${firstName||name}, te contactamos desde RMG Autos sobre el ${vehicleTitle} que consultaste en Chileautos.`;
-            console.log('[CA-WEBHOOK] ✅ Plantilla WA enviada a', phone, '| template:', templateName);
-          } else {
-            console.error('[CA-WEBHOOK] WA error plantilla:', JSON.stringify(waJson));
-          }
-        }
-
-        // ── Registrar en chatHistory lo que se envió ─────────────────────
-        if (msgSent) {
+        const templateName = process.env.CA_WA_TEMPLATE || 'contacto_chileautos_v1';
+        const waRes = await fetch(`https://graph.facebook.com/v19.0/${phoneId}/messages`, {
+          method: 'POST',
+          headers: { Authorization: 'Bearer '+token, 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            messaging_product: 'whatsapp', to: phoneClean,
+            type: 'template',
+            template: { name: templateName, language: { code: 'es' },
+              components: [{ type: 'body', parameters: [
+                { type: 'text', text: firstName || name },
+                { type: 'text', text: vehicleTitle }
+              ]}]
+            }
+          })
+        });
+        const waJson = await waRes.json();
+        if (waRes.ok) {
+          console.log('[CA-WEBHOOK] ✅ Plantilla WA enviada a', phone, '| template:', templateName);
           const leads2 = await tRead(F.leads, tenant);
-          const nIdx = leads2.findIndex(l =>
-            l.externalId === externalId ||
-            (phone !== 'Pendiente' && l.phone && l.phone.replace(/\D/g,'').includes(phoneClean))
-          );
+          const nIdx = leads2.findIndex(l => l.externalId === externalId || (phone !== 'Pendiente' && l.phone && l.phone.replace(/\D/g,'').includes(phoneClean)));
           if (nIdx !== -1) {
             leads2[nIdx].chatHistory = leads2[nIdx].chatHistory || [];
-            leads2[nIdx].chatHistory.push({ role: 'bot', content: msgContent, ts: Date.now() });
+            leads2[nIdx].chatHistory.push({ role: 'bot', content: `[PLANTILLA WA ENVIADA] Hola ${firstName||name}, te contactamos desde RMG Autos sobre el ${vehicleTitle} que consultaste en Chileautos.`, ts: Date.now() });
             await tWrite(F.leads, tenant, leads2);
           }
+        } else {
+          console.error('[CA-WEBHOOK] WA error:', JSON.stringify(waJson));
         }
       } catch(we) { console.error('[CA-WEBHOOK] WA exc:', we.message); }
     } else if (phone === 'Pendiente') {
-      console.log('[CA-WEBHOOK] Sin teléfono — WA no enviado');
+      console.log('[CA-WEBHOOK] Sin teléfono — plantilla WA no enviada');
     }
     if (assignedObj.phone) sendWA(assignedObj.phone, '🔔 NUEVO LEAD CHILEAUTOS: ' + name + ' interesado en ' + vehicleTitle).catch(()=>{});
     console.log('[CA-WEBHOOK] Lead creado:', name, phone, vehicleTitle);
@@ -964,8 +930,46 @@ app.post('/webhook',async(req,res)=>{
     let idx=ld[tenant].findIndex(l=>l.phone&&l.phone.replace(/\D/g,'').includes(from.replace(/\D/g,'')));
     if(idx===-1){
       const assignedObj=await rrNext(tenant)||{username:'vendedor1'};const n=new Date().toISOString();
-      ld[tenant].unshift({id:Date.now(),name:contactName,phone:'+'+from,source:'WhatsApp',status:'Nuevo',lastInteraction:n,lastClientTs:n,interest:body.slice(0,80),assignedTo:assignedObj.username,botActive:true,alertLevel:'none',intentSignal:'NONE',unread:true,notes:[],chatHistory:[]});
-      idx=0;if(assignedObj.phone)sendWA(assignedObj.phone,`🔔 NUEVO LEAD WA: ${contactName} — "${body.slice(0,60)}" — atiéndelo ahora.`).catch(()=>{});
+
+      // ── Detectar origen portal (Yapo, MercadoLibre, Chileautos WA directo) ──
+      let detectedSource = 'WhatsApp';
+      let detectedInterest = body.slice(0, 80);
+      let portalNote = null;
+
+      const yapoMatch = body.match(/Me interesa el anuncio\s*"([^"]+)"/i);
+      const mlMatch   = body.match(/publicaci[oó]n en Mercado Libre[^:\-]*[:\-]?\s*(.{0,60})/i);
+      const caMatch   = body.match(/auto en Chileautos[^:\-]*[:\-]?\s*(.{0,60})/i);
+
+      if (yapoMatch) {
+        detectedSource   = 'Yapo';
+        detectedInterest = yapoMatch[1].trim();
+        portalNote = `Lead ingresó desde Yapo. Vehículo consultado: ${detectedInterest}`;
+      } else if (mlMatch) {
+        detectedSource   = 'MercadoLibre';
+        detectedInterest = mlMatch[1].trim() || body.slice(0, 80);
+        portalNote = `Lead ingresó desde MercadoLibre. Interés: ${detectedInterest}`;
+      } else if (caMatch) {
+        detectedSource   = 'Chileautos';
+        detectedInterest = caMatch[1].trim() || body.slice(0, 80);
+        portalNote = `Lead ingresó desde Chileautos vía WA directo. Interés: ${detectedInterest}`;
+      }
+
+      const initNotes = portalNote
+        ? [{ content: portalNote, author: 'Sistema', ts: Date.now() }]
+        : [];
+
+      ld[tenant].unshift({
+        id: Date.now(), name: contactName, phone: '+'+from,
+        source: detectedSource, status: 'Nuevo',
+        lastInteraction: n, lastClientTs: n,
+        interest: detectedInterest,
+        assignedTo: assignedObj.username, botActive: true,
+        alertLevel: 'none', intentSignal: 'NONE', unread: true,
+        notes: initNotes, chatHistory: []
+      });
+      idx = 0;
+      const srcTag = detectedSource !== 'WhatsApp' ? ` [${detectedSource}]` : '';
+      if(assignedObj.phone) sendWA(assignedObj.phone, `🔔 NUEVO LEAD WA${srcTag}: ${contactName} — "${detectedInterest.slice(0,60)}" — atiéndelo ahora.`).catch(()=>{});
     }
     if(ld[tenant][idx].status==='esperando_respuesta_chileautos'){
       ld[tenant][idx].status='Nuevo';
