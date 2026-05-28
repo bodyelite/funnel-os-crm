@@ -693,6 +693,84 @@ app.post('/api/leads/inbound', async (req, res) => {
   }
 });
 
+app.post('/api/chileautos/webhook', async (req, res) => {
+  try {
+    res.sendStatus(200);
+    const payload = req.body;
+    const tenant = 'demo_automotora';
+    const prospect = payload.Prospect || payload.prospect || {};
+    const vehicle  = payload.Vehicle  || payload.vehicle  || {};
+    const firstName = prospect.FirstName || prospect.firstName || '';
+    const lastName  = prospect.LastName  || prospect.lastName  || '';
+    const name = (firstName + ' ' + lastName).trim() || 'Lead Chileautos';
+    const phones = prospect.PhoneNumbers || prospect.phoneNumbers || [];
+    let rawPhone = '';
+    if (Array.isArray(phones) && phones.length) {
+      const mob = phones.find(p => (p.Type||p.type||'').toLowerCase().includes('mobile')) || phones[0];
+      rawPhone = mob.Number || mob.number || mob.Value || mob.value || '';
+    }
+    const clean = rawPhone.replace(/\D/g,'');
+    const phone  = clean ? (clean.startsWith('56') ? '+'+clean : '+56'+clean) : 'Pendiente';
+    const vehicleTitle = vehicle.Title || vehicle.title || vehicle.Make && (vehicle.Make+' '+vehicle.Model+' '+(vehicle.Year||'')).trim() || 'Vehículo consultado';
+    const externalId = payload.LeadId || payload.leadId || payload.Id || null;
+    const n = new Date().toISOString();
+    const leads = await tRead(F.leads, tenant);
+    const phoneClean = phone.replace(/\D/g,'');
+    const existing = leads.findIndex(l => {
+      if (externalId && l.externalId === externalId) return true;
+      if (phone !== 'Pendiente' && l.phone && l.phone.replace(/\D/g,'').includes(phoneClean)) return true;
+      return false;
+    });
+    if (existing !== -1) {
+      leads[existing].isMulticotizante = true;
+      leads[existing].interest = vehicleTitle;
+      leads[existing].history  = leads[existing].history || [];
+      leads[existing].history.push({ ts: Date.now(), content: '[SISTEMA] Nueva cotización vía Chileautos: ' + vehicleTitle });
+      leads[existing].lastInteraction = n;
+      await tWrite(F.leads, tenant, leads);
+      console.log('[CA-WEBHOOK] Multicotizante actualizado:', name, phone);
+      return;
+    }
+    const assignedObj = await rrNext(tenant) || { username: 'vendedor1' };
+    const newLead = {
+      id: Date.now(), externalId, name, phone, source: 'Chileautos',
+      interest: vehicleTitle, status: 'esperando_respuesta_chileautos',
+      botActive: false, isMulticotizante: false, alertLevel: 'none',
+      intentSignal: 'NONE', unread: true, assignedTo: assignedObj.username,
+      lastInteraction: n, lastClientTs: n,
+      history: [{ ts: Date.now(), content: 'Lead recibido desde Chileautos: ' + vehicleTitle }],
+      notes: [{ content: 'Lead recibido desde Chileautos. Vehículo: ' + vehicleTitle, author: 'Bot', ts: Date.now() }],
+      chatHistory: [], media: []
+    };
+    leads.unshift(newLead);
+    await tWrite(F.leads, tenant, leads);
+    const token = process.env.WA_TOKEN, phoneId = process.env.WA_PHONE_ID;
+    if (token && phoneId && phone !== 'Pendiente') {
+      try {
+        await fetch(`https://graph.facebook.com/v19.0/${phoneId}/messages`, {
+          method: 'POST',
+          headers: { Authorization: 'Bearer '+token, 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            messaging_product: 'whatsapp', to: phoneClean,
+            type: 'template',
+            template: { name: 'contacto_chileautos_v1', language: { code: 'es' },
+              components: [{ type: 'body', parameters: [
+                { type: 'text', text: firstName || name },
+                { type: 'text', text: vehicleTitle }
+              ]}]
+            }
+          })
+        });
+        console.log('[CA-WEBHOOK] WhatsApp enviado a', phone);
+      } catch(we) { console.error('[CA-WEBHOOK] WA error:', we.message); }
+    }
+    if (assignedObj.phone) sendWA(assignedObj.phone, '🔔 NUEVO LEAD CHILEAUTOS: ' + name + ' interesado en ' + vehicleTitle).catch(()=>{});
+    console.log('[CA-WEBHOOK] Lead creado:', name, phone, vehicleTitle);
+  } catch(e) {
+    console.error('[CA-WEBHOOK]', e.message);
+  }
+});
+
 app.get('/webhook',(req,res)=>{const vt=process.env.WA_VERIFY_TOKEN||'zara_token_123';if(req.query['hub.mode']==='subscribe'&&req.query['hub.verify_token']===vt)return res.status(200).send(req.query['hub.challenge']);res.sendStatus(403);});
 
 // --- PROXY DE MEDIA META ---
