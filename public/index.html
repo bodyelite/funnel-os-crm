@@ -221,7 +221,8 @@
 <div class="mbg" id="mbg">
 <div class="mo">
 <div class="mh2"><div><div class="mht" id="mTit">—</div><div class="mhm" id="mMet"></div></div><button class="mcl" id="mCls">×</button></div>
-<div style="display:flex;border-bottom:2px solid var(--bd);padding:0 20px;background:var(--p)"><button id="mtabGestion" onclick="switchModalTab('gestion')" style="background:none;border:none;padding:10px 16px;font-size:13px;font-weight:600;color:var(--ac);cursor:pointer;border-bottom:3px solid var(--ac);margin-bottom:-2px">📋 Gestión</button><button id="mtabHistorial" onclick="switchModalTab('historial')" style="background:none;border:none;padding:10px 16px;font-size:13px;font-weight:600;color:var(--tm);cursor:pointer;border-bottom:3px solid transparent;margin-bottom:-2px">🕐 Historial</button></div><div class="mbd" id="mMainPane">
+<div style="display:flex;border-bottom:2px solid var(--bd);padding:0 20px;background:var(--p);flex-shrink:0"><button id="mtabGestion" onclick="switchModalTab('gestion')" style="background:none;border:none;padding:10px 16px;font-size:13px;font-weight:600;color:var(--ac);cursor:pointer;border-bottom:3px solid var(--ac);margin-bottom:-2px">📋 Gestión</button><button id="mtabHistorial" onclick="switchModalTab('historial')" style="background:none;border:none;padding:10px 16px;font-size:13px;font-weight:600;color:var(--tm);cursor:pointer;border-bottom:3px solid transparent;margin-bottom:-2px">🕐 Historial</button></div>
+<div class="mbd" id="mMainPane">
 <div class="cchat">
 <div id="mCtx" class="ctx" style="display:none"></div>
 <div><h4>Historial de chat</h4><div class="cbx" id="mChat"></div></div>
@@ -251,9 +252,8 @@
 <button class="pm" id="mSv">Guardar cambios</button>
 </div>
 </div>
+<div id="mHistPane" style="display:none;flex:1;overflow-y:auto;padding:16px 20px"></div>
 </div>
-</div>
-<div id="mHistPane" style="display:none;padding:16px 20px;flex:1;overflow-y:auto;min-height:200px"></div>
 </div>
 <div class="toast" id="tst"></div>
 <script>
@@ -710,7 +710,7 @@ $('nuCn').addEventListener('click',()=>{$('nuF').style.display='none';$('addUB')
 $('nuSv').addEventListener('click',async()=>{const btn=$('nuSv');btn.disabled=true;btn.textContent='…';try{const u=$('nuU').value.trim(),pw=$('nuPw').value.trim()||'demo',n=$('nuN').value.trim(),r=$('nuR').value,ph=$('nuPh').value.trim(),st=$('nuSt').value;if(!u||!n)throw new Error('Username y nombre requeridos');await api('POST','/api/users',{username:u,password:pw,name:n,role:r,phone:ph,status:st});toast(u+' creado ✓');[$('nuU'),$('nuPw'),$('nuN'),$('nuPh')].forEach(i=>i.value='');$('nuF').style.display='none';$('addUB').style.display='';await loadUsers();}catch(e){toast(e.message,true);}finally{btn.disabled=false;btn.textContent='Crear';}});
 const ALL_ST=['esperando_respuesta_chileautos','Nuevo','En Proceso','Contactado','Calificado','Negociación','Agendado','Reservado','Seguimiento','Cerrado','Abandonado'];
 function findLead(id){let l=S.leads.find(x=>x.id===id);if(l)return l;for(const v of S.team||[]){const f=(v.leads||[]).find(x=>x.id===id);if(f)return f;}return null;}
-function openModal(id){S.mid=id;renderModal();$('mbg').classList.add('show');(function(){var mp=document.getElementById('mMainPane'),hp=document.getElementById('mHistPane'),g=document.getElementById('mtabGestion'),h=document.getElementById('mtabHistorial');if(mp){mp.style.display='';if(hp)hp.style.display='none';if(g){g.style.color='var(--ac)';g.style.borderBottomColor='var(--ac)';}if(h){h.style.color='var(--tm)';h.style.borderBottomColor='transparent';}}})();
+function openModal(id){S.mid=id;renderModal();$('mbg').classList.add('show');(function(){var mp=document.getElementById('mMainPane'),hp=document.getElementById('mHistPane'),g=document.getElementById('mtabGestion'),h=document.getElementById('mtabHistorial');if(mp){mp.style.display='grid';if(hp)hp.style.display='none';if(g){g.style.color='var(--ac)';g.style.borderBottomColor='var(--ac)';}if(h){h.style.color='var(--tm)';h.style.borderBottomColor='transparent';}}})();
   const lead=findLead(id);
   if(lead&&(lead.chatHistory||[]).length>0){
     api('POST','/api/leads/'+id+'/resumen').then(r=>{
@@ -720,6 +720,36 @@ function openModal(id){S.mid=id;renderModal();$('mbg').classList.add('show');(fu
     }).catch(()=>{});
   }
 }
+function switchModalTab(tab){
+  var g=document.getElementById('mtabGestion'),h=document.getElementById('mtabHistorial');
+  var mp=document.getElementById('mMainPane'),hp=document.getElementById('mHistPane');
+  if(!g||!mp)return;
+  if(tab==='historial'){
+    g.style.color='var(--tm)';g.style.borderBottomColor='transparent';
+    h.style.color='var(--ac)';h.style.borderBottomColor='var(--ac)';
+    mp.style.display='none';
+    if(hp){hp.style.display='block';var l=findLead(S.mid);if(l)renderModalHistory(l);}
+  }else{
+    if(h){h.style.color='var(--tm)';h.style.borderBottomColor='transparent';}
+    g.style.color='var(--ac)';g.style.borderBottomColor='var(--ac)';
+    if(hp)hp.style.display='none';
+    mp.style.display='grid';
+  }
+}
+
+function renderModalHistory(l){
+  var p=document.getElementById('mHistPane');if(!p)return;
+  var hist=Array.isArray(l.history)?l.history:[];
+  if(!hist.length){p.innerHTML='<div style="color:var(--tm);font-size:13px;padding:20px 0">Sin historial de cotizaciones aún.</div>';return;}
+  p.innerHTML='<h4 style="font-size:10.5px;color:var(--tm);text-transform:uppercase;letter-spacing:.05em;font-weight:700;margin-bottom:16px">Historial de cotizaciones</h4>'+
+  hist.slice().reverse().map(function(h){
+    return '<div style="display:flex;gap:12px;margin-bottom:14px;align-items:flex-start">'
+      +'<div style="width:10px;height:10px;border-radius:50%;background:var(--ac);flex-shrink:0;margin-top:4px"></div>'
+      +'<div style="flex:1"><div style="font-size:13px;color:var(--tx)">'+esc(h.content||'')+'</div>'
+      +'<div style="font-size:11px;color:var(--tm);margin-top:3px">'+(h.ts?fDT(h.ts):'')+'</div></div></div>';
+  }).join('');
+}
+
 function closeModal(){S.mid=null;$('mbg').classList.remove('show');$('mNt').value='';$('aMsg').value='';}
 function refreshModalSilent(){const l=findLead(S.mid);if(!l)return;renderModalChat(l);renderModalNotes(l);renderModalCtx(l);}
 function renderModal(){const l=findLead(S.mid);if(!l){closeModal();return;}$('mTit').textContent=l.name+(l.phone?' · '+l.phone:'');const sla=l.alertLevel==='critical'?'<span style="color:var(--bd2);font-weight:700">🔴 > 60 min (Alerta)</span>':l.alertLevel==='risk'?'<span style="color:var(--wn);font-weight:700">🟡 20-30 min (Riesgo)</span>':l.alertLevel==='fresh'?'<span style="color:var(--ok)">🟢 < 20 min (Verde)</span>':'';$('mMet').innerHTML=`${cSrc(l.source)} ${cUsr(l.assignedTo)} <span style="color:var(--tm)">📅 ${fDT(l.lastClientTs||l.lastInteraction)}</span> ${sbdg(l.intentSignal||'NONE')} ${sla} ${l.unread?'<span style="color:var(--bd2);font-size:11px;font-weight:600">● Sin respuesta</span>':''}`;$('mSt').innerHTML=(l.status==='esperando_respuesta_chileautos'?['esperando_respuesta_chileautos',...ALL_ST.filter(x=>x!=='esperando_respuesta_chileautos')]:ALL_ST).map(s=>`<option value="${esc(s)}" ${s===l.status?'selected':''}>${s==='esperando_respuesta_chileautos'?'🏷 En Espera Chileautos':esc(s)}</option>`).join('');const bOn=l.botActive!==false;$('bChk').checked=bOn;$('bTxt').textContent=bOn?'ON':'OFF';$('bTxt').className='bst '+(bOn?'on':'of');$('aMsg').value='';
@@ -829,22 +859,7 @@ function renderModalCtx(l){const ctx=$('mCtx');if(!l.interest&&!l.ai_summary){ct
 function renderModalChat(l){const h=Array.isArray(l.chatHistory)?l.chatHistory:[];if(!h.length){$('mChat').innerHTML='<div class="che">Sin historial aún.</div>';return;}$('mChat').innerHTML=h.map(m=>{const cls=m.role==='user'?'us':m.role==='agent'?'an':'bo';const tag=m.role==='agent'?`<span class="at">👤 ${esc(m.agentName||m.agent||'Agente')}</span>`:'';return`<div class="bb ${cls}">${tag}${esc(m.content)}${m.ts?`<span class="ts3">${fTM(m.ts)}</span>`:''}</div>`;}).join('');$('mChat').scrollTop=$('mChat').scrollHeight;}
 function renderModalNotes(l){const n=Array.isArray(l.notes)?l.notes:[];$('mNts').innerHTML=n.length?n.slice().reverse().map(x=>`<div class="ni">${esc(x.content)}<div class="nm">${esc(x.author||'—')} · ${fDT(x.ts)}</div></div>`).join(''):'<div class="nn">Sin notas.</div>';}
 
-function switchModalTab(tab){
-  var gBtn=document.getElementById('mtabGestion'),hBtn=document.getElementById('mtabHistorial');
-  var mPane=document.getElementById('mMainPane'),hPane=document.getElementById('mHistPane');
-  if(!gBtn||!mPane)return;
-  if(tab==='historial'){
-    gBtn.style.color='var(--tm)';gBtn.style.borderBottomColor='transparent';
-    hBtn.style.color='var(--ac)';hBtn.style.borderBottomColor='var(--ac)';
-    mPane.style.display='none';if(hPane)hPane.style.display='block';
-    var l=window.S&&S.mid?S.leads.find(function(x){return x.id===S.mid;}):null;
-    if(l)renderModalHistory(l);
-  }else{
-    if(hBtn){hBtn.style.color='var(--tm)';hBtn.style.borderBottomColor='transparent';}
-    gBtn.style.color='var(--ac)';gBtn.style.borderBottomColor='var(--ac)';
-    if(hPane)hPane.style.display='none';mPane.style.display='block';
-  }
-}
+
 function renderModalHistory(l){
   var pane=document.getElementById('mHistPane');if(!pane)return;
   var hist=Array.isArray(l.history)?l.history:[];

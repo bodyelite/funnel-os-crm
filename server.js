@@ -744,6 +744,7 @@ app.post('/api/chileautos/webhook', async (req, res) => {
     };
     leads.unshift(newLead);
     await tWrite(F.leads, tenant, leads);
+    const templateMsg = `[PLANTILLA WA] Hola ${firstName||name}, te contactamos desde RMG Autos. Vimos que consultaste por el ${vehicleTitle} en Chileautos. ¿Podemos ayudarte?`;
     const token = process.env.WA_TOKEN, phoneId = process.env.WA_PHONE_ID;
     if (token && phoneId && phone !== 'Pendiente') {
       try {
@@ -763,21 +764,30 @@ app.post('/api/chileautos/webhook', async (req, res) => {
           })
         });
         const waJson = await waRes.json();
-        if (waRes.ok) {
-          console.log('[CA-WEBHOOK] ✅ Plantilla WA enviada a', phone, '| template:', templateName);
-          const leads2 = await tRead(F.leads, tenant);
+        const leads2 = await tRead(F.leads, tenant);
           const nIdx = leads2.findIndex(l => l.externalId === externalId || (phone !== 'Pendiente' && l.phone && l.phone.replace(/\D/g,'').includes(phoneClean)));
           if (nIdx !== -1) {
             leads2[nIdx].chatHistory = leads2[nIdx].chatHistory || [];
-            leads2[nIdx].chatHistory.push({ role: 'bot', content: `[PLANTILLA WA ENVIADA] Hola ${firstName||name}, te contactamos desde RMG Autos sobre el ${vehicleTitle} que consultaste en Chileautos.`, ts: Date.now() });
+            if (waRes.ok) {
+              leads2[nIdx].chatHistory.push({ role: 'bot', content: templateMsg, ts: Date.now() });
+              console.log('[CA-WEBHOOK] ✅ Plantilla WA enviada a', phone);
+            } else {
+              const waErr = JSON.stringify(waJson);
+              leads2[nIdx].chatHistory.push({ role: 'bot', content: '[BOT] Mensaje de bienvenida pendiente de envío. ' + templateMsg, ts: Date.now() });
+              console.error('[CA-WEBHOOK] WA error:', waErr);
+            }
             await tWrite(F.leads, tenant, leads2);
           }
-        } else {
-          console.error('[CA-WEBHOOK] WA error:', JSON.stringify(waJson));
-        }
       } catch(we) { console.error('[CA-WEBHOOK] WA exc:', we.message); }
     } else if (phone === 'Pendiente') {
       console.log('[CA-WEBHOOK] Sin teléfono — plantilla WA no enviada');
+      const leads3 = await tRead(F.leads, tenant);
+      const nIdx3 = leads3.findIndex(l => l.externalId === externalId);
+      if (nIdx3 !== -1) {
+        leads3[nIdx3].chatHistory = leads3[nIdx3].chatHistory || [];
+        leads3[nIdx3].chatHistory.push({ role: 'bot', content: '[BOT] Sin teléfono — contactar manualmente via panel Chileautos.', ts: Date.now() });
+        await tWrite(F.leads, tenant, leads3);
+      }
     }
     if (assignedObj.phone) sendWA(assignedObj.phone, '🔔 NUEVO LEAD CHILEAUTOS: ' + name + ' interesado en ' + vehicleTitle).catch(()=>{});
     console.log('[CA-WEBHOOK] Lead creado:', name, phone, vehicleTitle);
