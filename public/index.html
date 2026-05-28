@@ -845,6 +845,33 @@ function renderModal(){const l=findLead(S.mid);if(!l){closeModal();return;}$('mT
 function renderModalCtx(l){const ctx=$('mCtx');if(!l.interest&&!l.ai_summary){ctx.style.display='none';return;}ctx.style.display='block';ctx.innerHTML=`${l.interest?`<div class="ctx-row"><span class="ctx-key">🚗 Interés</span><span class="ctx-val">${esc(l.interest)}</span></div>`:''}${l.source?`<div class="ctx-row"><span class="ctx-key">📡 Canal</span><span class="ctx-val">${cSrc(l.source)}</span></div>`:''}${l.lastClientTs?`<div class="ctx-row"><span class="ctx-key">📅 Origen</span><span class="ctx-val">${fDT(l.lastClientTs)}</span></div>`:''}${l.ai_summary?`<div class="ctx-row" style="margin-top:4px"><span class="ctx-key" style="color:var(--ac)">🧠 Nota IA</span><span class="ctx-note" style="color:var(--ts);font-style:normal">${esc(l.ai_summary)}</span></div>`:''}`;};;
 function renderModalChat(l){const h=Array.isArray(l.chatHistory)?l.chatHistory:[];if(!h.length){$('mChat').innerHTML='<div class="che">Sin historial aún.</div>';return;}$('mChat').innerHTML=h.map(m=>{const cls=m.role==='user'?'us':m.role==='agent'?'an':'bo';const tag=m.role==='agent'?`<span class="at">👤 ${esc(m.agentName||m.agent||'Agente')}</span>`:'';return`<div class="bb ${cls}">${tag}${esc(m.content)}${m.ts?`<span class="ts3">${fTM(m.ts)}</span>`:''}</div>`;}).join('');$('mChat').scrollTop=$('mChat').scrollHeight;}
 function renderModalNotes(l){const n=Array.isArray(l.notes)?l.notes:[];$('mNts').innerHTML=n.length?n.slice().reverse().map(x=>`<div class="ni">${esc(x.content)}<div class="nm">${esc(x.author||'—')} · ${fDT(x.ts)}</div></div>`).join(''):'<div class="nn">Sin notas.</div>';}
+
+function switchModalTab(tab){
+  var gBtn=document.getElementById('mtabGestion'),hBtn=document.getElementById('mtabHistorial');
+  var mPane=document.getElementById('mMainPane'),hPane=document.getElementById('mHistPane');
+  if(!gBtn||!mPane)return;
+  if(tab==='historial'){
+    gBtn.style.color='var(--tm)';gBtn.style.borderBottomColor='transparent';
+    hBtn.style.color='var(--ac)';hBtn.style.borderBottomColor='var(--ac)';
+    mPane.style.display='none';if(hPane)hPane.style.display='block';
+    var l=window.S&&S.mid?S.leads.find(function(x){return x.id===S.mid;}):null;
+    if(l)renderModalHistory(l);
+  }else{
+    if(hBtn){hBtn.style.color='var(--tm)';hBtn.style.borderBottomColor='transparent';}
+    gBtn.style.color='var(--ac)';gBtn.style.borderBottomColor='var(--ac)';
+    if(hPane)hPane.style.display='none';mPane.style.display='block';
+  }
+}
+function renderModalHistory(l){
+  var pane=document.getElementById('mHistPane');if(!pane)return;
+  var hist=Array.isArray(l.history)?l.history:[];
+  if(!hist.length){pane.innerHTML='<div style="color:var(--tm);font-size:12px;padding:8px">Sin historial de cotizaciones aún.</div>';return;}
+  var esc=function(s){return String(s||'').replace(/[&<>"']/g,function(c){return({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]);});};
+  var fDT=function(ts){try{return new Date(ts).toLocaleString('es-CL',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});}catch(e){return'';}};
+  pane.innerHTML='<h4 style="font-size:10.5px;color:var(--tm);text-transform:uppercase;letter-spacing:.05em;font-weight:700;margin-bottom:12px">Historial de cotizaciones</h4>'+
+  hist.slice().reverse().map(function(h){return'<div style="display:flex;gap:10px;margin-bottom:10px;align-items:flex-start"><div style="width:10px;height:10px;border-radius:50%;background:var(--ac);flex-shrink:0;margin-top:4px"></div><div style="flex:1;font-size:12px;color:var(--ts)"><div>'+esc(h.content||'')+'</div><div style="font-size:10px;color:var(--tm);margin-top:2px">'+(h.ts?fDT(h.ts):'')+'</div></div></div>';}).join('');
+}
+
 $('bChk').addEventListener('change',async function(){if(!S.mid)return;const nv=this.checked;const txt=$('bTxt');this.disabled=true;try{await api('POST','/api/leads/'+S.mid+'/bot',{botActive:nv});txt.textContent=nv?'ON':'OFF';txt.className='bst '+(nv?'on':'of');toast('Marcela IA '+(nv?'activada ✓':'desactivada'));const idx=S.leads.findIndex(x=>x.id===S.mid);if(idx!==-1)S.leads[idx].botActive=nv;}catch(e){toast('Error: '+e.message,true);this.checked=!nv;txt.textContent=!nv?'ON':'OFF';txt.className='bst '+(!nv?'on':'of');}finally{this.disabled=false;}});
 $('aSnd').addEventListener('click',async()=>{const content=$('aMsg').value.trim();if(!content||!S.mid)return;const btn=$('aSnd');btn.disabled=true;btn.textContent='…';try{const updated=await api('POST','/api/leads/'+S.mid+'/message',{content});$('aMsg').value='';const idx=S.leads.findIndex(x=>x.id===S.mid);if(idx!==-1)S.leads[idx]={...S.leads[idx],...updated};const l=findLead(S.mid);if(l){l.chatHistory=updated.chatHistory||l.chatHistory;renderModalChat(l);}toast('Mensaje enviado → WhatsApp ✓');refresh();}catch(e){toast('Error: '+e.message,true);}finally{btn.disabled=false;btn.textContent='Enviar ➤';}});
 $('aMsg').addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();$('aSnd').click();}});
