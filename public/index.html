@@ -221,7 +221,7 @@
 <div class="mbg" id="mbg">
 <div class="mo">
 <div class="mh2"><div><div class="mht" id="mTit">—</div><div class="mhm" id="mMet"></div></div><button class="mcl" id="mCls">×</button></div>
-<div class="mbd">
+<div style="display:flex;border-bottom:2px solid var(--bd);padding:0 20px;background:var(--p)"><button id="mtabGestion" onclick="switchModalTab('gestion')" style="background:none;border:none;padding:10px 16px;font-size:13px;font-weight:600;color:var(--ac);cursor:pointer;border-bottom:3px solid var(--ac);margin-bottom:-2px">📋 Gestión</button><button id="mtabHistorial" onclick="switchModalTab('historial')" style="background:none;border:none;padding:10px 16px;font-size:13px;font-weight:600;color:var(--tm);cursor:pointer;border-bottom:3px solid transparent;margin-bottom:-2px">🕐 Historial</button></div><div class="mbd" id="mMainPane">
 <div class="cchat">
 <div id="mCtx" class="ctx" style="display:none"></div>
 <div><h4>Historial de chat</h4><div class="cbx" id="mChat"></div></div>
@@ -252,6 +252,8 @@
 </div>
 </div>
 </div>
+</div>
+<div id="mHistPane" style="display:none;padding:16px 20px;flex:1;overflow-y:auto;min-height:200px"></div>
 </div>
 <div class="toast" id="tst"></div>
 <script>
@@ -708,7 +710,7 @@ $('nuCn').addEventListener('click',()=>{$('nuF').style.display='none';$('addUB')
 $('nuSv').addEventListener('click',async()=>{const btn=$('nuSv');btn.disabled=true;btn.textContent='…';try{const u=$('nuU').value.trim(),pw=$('nuPw').value.trim()||'demo',n=$('nuN').value.trim(),r=$('nuR').value,ph=$('nuPh').value.trim(),st=$('nuSt').value;if(!u||!n)throw new Error('Username y nombre requeridos');await api('POST','/api/users',{username:u,password:pw,name:n,role:r,phone:ph,status:st});toast(u+' creado ✓');[$('nuU'),$('nuPw'),$('nuN'),$('nuPh')].forEach(i=>i.value='');$('nuF').style.display='none';$('addUB').style.display='';await loadUsers();}catch(e){toast(e.message,true);}finally{btn.disabled=false;btn.textContent='Crear';}});
 const ALL_ST=['esperando_respuesta_chileautos','Nuevo','En Proceso','Contactado','Calificado','Negociación','Agendado','Reservado','Seguimiento','Cerrado','Abandonado'];
 function findLead(id){let l=S.leads.find(x=>x.id===id);if(l)return l;for(const v of S.team||[]){const f=(v.leads||[]).find(x=>x.id===id);if(f)return f;}return null;}
-function openModal(id){S.mid=id;renderModal();$('mbg').classList.add('show');
+function openModal(id){S.mid=id;renderModal();$('mbg').classList.add('show');(function(){var mp=document.getElementById('mMainPane'),hp=document.getElementById('mHistPane'),g=document.getElementById('mtabGestion'),h=document.getElementById('mtabHistorial');if(mp){mp.style.display='';if(hp)hp.style.display='none';if(g){g.style.color='var(--ac)';g.style.borderBottomColor='var(--ac)';}if(h){h.style.color='var(--tm)';h.style.borderBottomColor='transparent';}}})();
   const lead=findLead(id);
   if(lead&&(lead.chatHistory||[]).length>0){
     api('POST','/api/leads/'+id+'/resumen').then(r=>{
@@ -723,25 +725,6 @@ function refreshModalSilent(){const l=findLead(S.mid);if(!l)return;renderModalCh
 function renderModal(){const l=findLead(S.mid);if(!l){closeModal();return;}$('mTit').textContent=l.name+(l.phone?' · '+l.phone:'');const sla=l.alertLevel==='critical'?'<span style="color:var(--bd2);font-weight:700">🔴 > 60 min (Alerta)</span>':l.alertLevel==='risk'?'<span style="color:var(--wn);font-weight:700">🟡 20-30 min (Riesgo)</span>':l.alertLevel==='fresh'?'<span style="color:var(--ok)">🟢 < 20 min (Verde)</span>':'';$('mMet').innerHTML=`${cSrc(l.source)} ${cUsr(l.assignedTo)} <span style="color:var(--tm)">📅 ${fDT(l.lastClientTs||l.lastInteraction)}</span> ${sbdg(l.intentSignal||'NONE')} ${sla} ${l.unread?'<span style="color:var(--bd2);font-size:11px;font-weight:600">● Sin respuesta</span>':''}`;$('mSt').innerHTML=(l.status==='esperando_respuesta_chileautos'?['esperando_respuesta_chileautos',...ALL_ST.filter(x=>x!=='esperando_respuesta_chileautos')]:ALL_ST).map(s=>`<option value="${esc(s)}" ${s===l.status?'selected':''}>${s==='esperando_respuesta_chileautos'?'🏷 En Espera Chileautos':esc(s)}</option>`).join('');const bOn=l.botActive!==false;$('bChk').checked=bOn;$('bTxt').textContent=bOn?'ON':'OFF';$('bTxt').className='bst '+(bOn?'on':'of');$('aMsg').value='';
   if(l.nextAction){const na=l.nextAction;$('agendaInfo').textContent='Tarea pendiente: '+esc(na.text||'')+(na.date?' — '+new Date(na.date).toLocaleString('es-CL',{dateStyle:'short',timeStyle:'short'}):'');$('agendaText').value=na.text||'';$('agendaDate').value=na.date?na.date.slice(0,16):'';}else{$('agendaInfo').textContent='';$('agendaText').value='';$('agendaDate').value='';}
   renderModalCtx(l);renderModalChat(l);renderModalNotes(l);
-  // Tabs
-  if(!$('mtabBar')){
-    const tabBar=document.createElement('div');
-    tabBar.id='mtabBar';tabBar.className='mtab-bar';
-    tabBar.innerHTML='<button class="mtab active" data-tab="gestion">📋 Gestión</button><button class="mtab" data-tab="historial">🕐 Historial</button>';
-    const mBody=$('mBody')||document.querySelector('.modal-body')||document.querySelector('#mbg .modal');
-    if(mBody){mBody.insertBefore(tabBar,mBody.firstChild);}
-    tabBar.querySelectorAll('.mtab').forEach(btn=>{btn.addEventListener('click',function(){
-      tabBar.querySelectorAll('.mtab').forEach(b=>b.classList.remove('active'));
-      this.classList.add('active');
-      const tab=this.dataset.tab;
-      const histPane=$('mHistPane');
-      const mainPane=$('mMainPane');
-      if(histPane&&mainPane){
-        if(tab==='historial'){histPane.style.display='block';mainPane.style.display='none';}
-        else{histPane.style.display='none';mainPane.style.display='block';}
-      }
-    });});
-  }
   renderModalHistory(l);var _ab=$("mAssignBlock"),_ms=$("mAssign");if(_ab&&S.user&&S.user.role==="admin"){_ab.style.display="block";_ms.innerHTML=(S.users||[]).filter(function(u){return u.role==="vendedor";}).map(function(u){return'<option value="'+esc(u.username)+'"'+(u.username===l.assignedTo?' selected':'')+'>'+esc(u.name)+'</option>';}).join("");}else if(_ab){_ab.style.display="none";}
     // ── SPRINT 4: Sección Retoma / Tasación ──────────────────────────────────
     (function injectTradeInSection() {
