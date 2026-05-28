@@ -195,7 +195,98 @@
 <div class="fg" id="fG"></div>
 <div class="xe" id="funX" style="margin-top:10px"><div class="xt" id="funXT">—</div><div class="xs" id="funXB"></div></div>
 </section>
-<section id="view-chileautos" class="view"><div class="st">🏷 Sala de Espera — Chileautos</div><div style="font-size:13px;color:var(--tm);margin-bottom:12px">Leads contactados por el bot. Cuando el cliente responda, pasan automáticamente a Leads.</div><div id="caTbl"></div></section><section id="view-leads" class="view"><div class="st">Leads</div><div class="tw" id="lTbl"></div></section>
+<section id="view-chileautos" class="view"><div class="st">🏷 Sala de Espera — Chileautos</div><div style="font-size:13px;color:var(--tm);margin-bottom:12px">Leads contactados por el bot. Cuando el cliente responda, pasan automáticamente a Leads.</div><div id="caTbl"></div></section><section id="view-leads" class="view">
+<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:14px">
+  <div class="st" style="margin-bottom:0">Leads</div>
+  <button id="btnNuevoLead" onclick="openNuevoLeadModal()" style="background:var(--ac);color:#fff;border:none;border-radius:8px;padding:8px 16px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:6px">＋ Nuevo Lead</button>
+</div>
+<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;background:var(--p);border:1px solid var(--bd);border-radius:var(--r);padding:10px 14px;margin-bottom:12px">
+  <span class="lbl">Canal</span>
+  <select id="filtCanal" onchange="renderLeads()" style="background:var(--p2);border:1px solid var(--bd);color:var(--tx);padding:5px 10px;border-radius:7px;font-family:inherit;font-size:12px">
+    <option value="">Todos</option>
+    <option value="WhatsApp">WhatsApp</option>
+    <option value="Chileautos">Chileautos</option>
+    <option value="Yapo">Yapo</option>
+    <option value="MercadoLibre">MercadoLibre</option>
+    <option value="Meta Ads">Meta Ads</option>
+    <option value="Referido">Referido</option>
+    <option value="Llamada">Llamada</option>
+    <option value="Otro">Otro</option>
+  </select>
+  <span class="lbl">Estado</span>
+  <select id="filtEstado" onchange="renderLeads()" style="background:var(--p2);border:1px solid var(--bd);color:var(--tx);padding:5px 10px;border-radius:7px;font-family:inherit;font-size:12px">
+    <option value="">Todos</option>
+    <option value="Nuevo">Nuevo</option>
+    <option value="En Proceso">En Proceso</option>
+    <option value="Contactado">Contactado</option>
+    <option value="Calificado">Calificado</option>
+    <option value="Negociación">Negociación</option>
+    <option value="Agendado">Agendado</option>
+    <option value="Reservado">Reservado</option>
+    <option value="Seguimiento">Seguimiento</option>
+    <option value="Cerrado">Cerrado</option>
+    <option value="Abandonado">Abandonado</option>
+    <option value="esperando_respuesta_chileautos">En Espera CA</option>
+    <option value="esperando_respuesta_general">En Espera General</option>
+  </select>
+  <button onclick="document.getElementById('filtCanal').value='';document.getElementById('filtEstado').value='';renderLeads();" style="background:transparent;border:1px solid var(--bd);color:var(--tm);padding:5px 10px;border-radius:6px;cursor:pointer;font-size:12px;font-family:inherit">Limpiar</button>
+  <span id="filtCount" style="margin-left:auto;font-size:11px;color:var(--tm)"></span>
+</div>
+<div class="tw" id="lTbl"></div>
+</section>
+
+<!-- MODAL NUEVO LEAD -->
+<div id="nlBg" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:2000;display:none;align-items:center;justify-content:center">
+<div style="background:var(--p);border:1px solid var(--bd);border-radius:14px;padding:28px;width:100%;max-width:460px;box-shadow:0 24px 64px rgba(0,0,0,.5);position:relative">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
+    <div style="font-size:16px;font-weight:700">＋ Nuevo Lead Manual</div>
+    <button onclick="closeNuevoLeadModal()" style="background:transparent;border:none;color:var(--tm);font-size:20px;cursor:pointer;line-height:1">×</button>
+  </div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+    <div style="grid-column:1/-1">
+      <label style="font-size:11.5px;color:var(--tm);display:block;margin-bottom:4px;font-weight:600">Nombre *</label>
+      <input id="nlNombre" type="text" placeholder="Nombre del cliente" style="width:100%;padding:9px 12px;background:var(--p2);border:1px solid var(--bd);color:var(--tx);border-radius:8px;font-family:inherit;font-size:13px">
+    </div>
+    <div>
+      <label style="font-size:11.5px;color:var(--tm);display:block;margin-bottom:4px;font-weight:600">Teléfono</label>
+      <input id="nlTel" type="text" placeholder="9XXXXXXXX" style="width:100%;padding:9px 12px;background:var(--p2);border:1px solid var(--bd);color:var(--tx);border-radius:8px;font-family:inherit;font-size:13px">
+    </div>
+    <div>
+      <label style="font-size:11.5px;color:var(--tm);display:block;margin-bottom:4px;font-weight:600">Canal de Origen *</label>
+      <select id="nlCanal" onchange="onNlCanalChange()" style="width:100%;padding:9px 12px;background:var(--p2);border:1px solid var(--bd);color:var(--tx);border-radius:8px;font-family:inherit;font-size:13px">
+        <option value="WhatsApp">WhatsApp</option>
+        <option value="Chileautos">Chileautos</option>
+        <option value="Yapo">Yapo</option>
+        <option value="MercadoLibre">MercadoLibre</option>
+        <option value="Meta Ads">Meta Ads</option>
+        <option value="Referido">Referido</option>
+        <option value="Llamada">Llamada</option>
+        <option value="Otro">Otro</option>
+      </select>
+    </div>
+    <div>
+      <label style="font-size:11.5px;color:var(--tm);display:block;margin-bottom:4px;font-weight:600">Asignado a</label>
+      <select id="nlAsignado" style="width:100%;padding:9px 12px;background:var(--p2);border:1px solid var(--bd);color:var(--tx);border-radius:8px;font-family:inherit;font-size:13px">
+      </select>
+    </div>
+    <div style="grid-column:1/-1">
+      <label style="font-size:11.5px;color:var(--tm);display:block;margin-bottom:4px;font-weight:600">Vehículo de Interés</label>
+      <input id="nlInteres" type="text" placeholder="Ej: 2024 Toyota Corolla" style="width:100%;padding:9px 12px;background:var(--p2);border:1px solid var(--bd);color:var(--tx);border-radius:8px;font-family:inherit;font-size:13px">
+    </div>
+    <div style="grid-column:1/-1">
+      <label style="font-size:11.5px;color:var(--tm);display:block;margin-bottom:4px;font-weight:600">Notas iniciales</label>
+      <textarea id="nlNota" rows="2" placeholder="Opcional..." style="width:100%;padding:9px 12px;background:var(--p2);border:1px solid var(--bd);color:var(--tx);border-radius:8px;font-family:inherit;font-size:13px;resize:none"></textarea>
+    </div>
+  </div>
+  <!-- Info dinámica según canal -->
+  <div id="nlCanalInfo" style="margin-top:12px;padding:10px 12px;border-radius:8px;font-size:12px;line-height:1.5"></div>
+  <div id="nlErr" style="color:var(--bd2);font-size:12px;margin-top:8px;min-height:16px"></div>
+  <div style="display:flex;gap:10px;margin-top:18px">
+    <button onclick="closeNuevoLeadModal()" style="flex:1;padding:10px;background:var(--p2);border:1px solid var(--bd);color:var(--ts);border-radius:8px;font-weight:600;cursor:pointer;font-family:inherit">Cancelar</button>
+    <button onclick="crearLeadManual()" id="nlSubmit" style="flex:2;padding:10px;background:var(--ac);border:none;color:#fff;border-radius:8px;font-weight:600;cursor:pointer;font-family:inherit">Crear Lead</button>
+  </div>
+</div>
+</div>
 <section id="view-pipeline" class="view"><div class="st">Pipeline Kanban</div><div class="kb" id="kbn"></div><div class="cw"><div class="bt" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">Agenda de la Semana<div class="cal-nav" style="display:flex;align-items:center;gap:6px"><button id="calPrev" style="background:var(--p2);border:1px solid var(--bd);color:var(--ts);padding:5px 11px;border-radius:7px;font-size:12px;cursor:pointer;font-family:inherit">&laquo; Anterior</button><button id="calHoy" style="background:var(--ac);color:#fff;border:none;padding:5px 11px;border-radius:7px;font-size:12px;cursor:pointer;font-family:inherit;font-weight:600">Hoy</button><button id="calNext" style="background:var(--p2);border:1px solid var(--bd);color:var(--ts);padding:5px 11px;border-radius:7px;font-size:12px;cursor:pointer;font-family:inherit">Siguiente &raquo;</button></div></div><div style="overflow-x:auto;width:100%"><div class="cg" id="calG" style="width:100%"></div></div></div></section>
 <section id="view-analytics" class="view"><div class="st">Analítica de Canales</div><div class="ct" id="chBx"></div></section>
 <section id="view-team" class="view"><div id="kpiDash"></div></section>
@@ -277,7 +368,7 @@ function cUsr(u){
 }
 function sdot(sig){const c=sig==='BLUE'?'b':sig==='YELLOW'?'y':'';return`<div class="sd ${c}"></div>`;}
 function sbdg(sig){if(sig==='BLUE')return'<span class="sb3 b">🔵 Agenda</span>';if(sig==='YELLOW')return'<span class="sb3 y">🟡 Tibio</span>';return'<span class="sb3 n">—</span>';}
-function stpl(st){if(st==='esperando_respuesta_chileautos')return'<span style="background:#fef3c7;color:#92400e;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:600">🏷 En Espera CA</span>';return`<span class="sp ${st==='Calificado'?'q':st==='Nuevo'?'nw':st==='Cerrado'?'cl':st==='Negociación'?'ng':st==='Reservado'?'rs':''}">${st==='Calificado'?'⭐ Calificado':st==='Reservado'?'🔒 Reservado':esc(st)}</span>`;}
+function stpl(st){if(st==='esperando_respuesta_chileautos')return'<span style="background:#fef3c7;color:#92400e;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:600">🏷 En Espera CA</span>';if(st==='esperando_respuesta_general')return'<span style="background:#ede9fe;color:#6d28d9;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:600">⏳ En Espera</span>';return`<span class="sp ${st==='Calificado'?'q':st==='Nuevo'?'nw':st==='Cerrado'?'cl':st==='Negociación'?'ng':st==='Reservado'?'rs':''}">${st==='Calificado'?'⭐ Calificado':st==='Reservado'?'🔒 Reservado':esc(st)}</span>`;}
 /* CSS a agregar: .sp.rs{background:var(--wns);color:var(--wn);} */
 function adot(lvl){const c={fresh:'fr',risk:'ri',critical:'cr'}[lvl]||'no';return`<div class="ad ${c}"></div>`;}
 async function api(m,p,b){const h={'Content-Type':'application/json'};if(S.token)h['X-Auth-Token']=S.token;const r=await fetch(p,{method:m,headers:h,body:b?JSON.stringify(b):undefined});if(r.status===401){logout();throw new Error('Sesión expirada');}const d=await r.json().catch(()=>({}));if(!r.ok)throw new Error(d.error||'Error '+r.status);return d;}
@@ -355,7 +446,20 @@ function renderPerfTable(){}
 function renderDash(){renderSlaCards();renderFunnel();renderPerfTable();}
 function renderXRows(items,timeFn){if(!items.length)return'<div class="xe2">Sin leads.</div>';const gc='grid-template-columns:10px 1fr 1fr 1fr 1fr auto';const hd=`<div class="xlr" style="${gc};cursor:default;background:var(--p2)"><div></div><div style="font-size:10px;font-weight:700;color:var(--tm);text-transform:uppercase">Nombre</div><div style="font-size:10px;font-weight:700;color:var(--tm);text-transform:uppercase">Canal</div><div style="font-size:10px;font-weight:700;color:var(--tm);text-transform:uppercase">Vendedor</div><div style="font-size:10px;font-weight:700;color:var(--tm);text-transform:uppercase">Estado</div><div style="font-size:10px;font-weight:700;color:var(--tm);text-transform:uppercase">Última</div></div>`;return hd+items.map(l=>`<div class="xlr" data-id="${l.id}" style="${gc}">${adot(l.alertLevel)}<div><div class="lrn">${esc(l.name)}</div><div class="lrs">${l.unread?'● Sin resp · ':''}${esc(l.phone||'')}</div></div><div>${cSrc(l.source)}</div><div>${cUsr(l.assignedTo)}</div><div>${stpl(l.status)}</div><div class="lrt" style="color:var(--tm)">${timeFn(l)}</div></div>`).join('');}
 function bindXRows(c){c.querySelectorAll('.xlr[data-id]').forEach(el=>el.addEventListener('click',()=>openModal(+el.dataset.id)));}
-function renderLeads(){const gc='grid-template-columns:8px 8px 11px 1.3fr .9fr 1.1fr .85fr .85fr 1.2fr .75fr';const hd=`<div class="tr2 hd" style="${gc}"><div></div><div></div><div></div><div>Nombre</div><div>Tel.</div><div>Interés</div><div>Canal</div><div>Asignado</div><div>Estado</div><div>Última</div></div>`;const rows=S.leads.length?S.leads.map(l=>`<div class="tr2" style="${gc}" data-id="${l.id}">${l.unread?'<div class="ud"></div>':'<div></div>'}${adot(l.alertLevel)}${sdot(l.intentSignal||'NONE')}<div><strong>${esc(l.name)}</strong></div><div style="font-size:11.5px;color:var(--tm)">${esc(l.phone||'—')}</div><div style="font-size:11.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(l.interest||'—')}</div><div>${cSrc(l.source)}</div><div>${cUsr(l.assignedTo)}</div><div>${stpl(l.status)}</div><div style="font-size:11px;color:var(--tm)">${fDT(l.lastClientTs||l.lastInteraction)}</div></div>`).join(''):'<div class="ke" style="padding:16px">Sin leads.</div>';$('lTbl').innerHTML=hd+rows;$('lTbl').querySelectorAll('.tr2[data-id]').forEach(el=>el.addEventListener('click',()=>openModal(+el.dataset.id)));}
+function renderLeads(){
+  const gc='grid-template-columns:8px 8px 11px 1.3fr .9fr 1.1fr .85fr .85fr 1.2fr .75fr';
+  const hd=`<div class="tr2 hd" style="${gc}"><div></div><div></div><div></div><div>Nombre</div><div>Tel.</div><div>Interés</div><div>Canal</div><div>Asignado</div><div>Estado</div><div>Última</div></div>`;
+  const filtCanal = document.getElementById('filtCanal')?.value || '';
+  const filtEstado = document.getElementById('filtEstado')?.value || '';
+  let leads = S.leads || [];
+  if(filtCanal) leads = leads.filter(l => (l.source||'') === filtCanal);
+  if(filtEstado) leads = leads.filter(l => (l.status||'') === filtEstado);
+  const countEl = document.getElementById('filtCount');
+  if(countEl) countEl.textContent = (filtCanal||filtEstado) ? `${leads.length} resultado${leads.length!==1?'s':''}` : `${leads.length} leads`;
+  const rows = leads.length ? leads.map(l=>`<div class="tr2" style="${gc}" data-id="${l.id}">${l.unread?'<div class="ud"></div>':'<div></div>'}${adot(l.alertLevel)}${sdot(l.intentSignal||'NONE')}<div><strong>${esc(l.name)}</strong></div><div style="font-size:11.5px;color:var(--tm)">${esc(l.phone||'—')}</div><div style="font-size:11.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(l.interest||'—')}</div><div>${cSrc(l.source)}</div><div>${cUsr(l.assignedTo)}</div><div>${stpl(l.status)}</div><div style="font-size:11px;color:var(--tm)">${fDT(l.lastClientTs||l.lastInteraction)}</div></div>`).join('') : '<div class="ke" style="padding:16px">Sin leads para este filtro.</div>';
+  $('lTbl').innerHTML=hd+rows;
+  $('lTbl').querySelectorAll('.tr2[data-id]').forEach(el=>el.addEventListener('click',()=>openModal(+el.dataset.id)));
+}
 function renderKanban(){const stages=S.config?.stages||[];const grp={};stages.forEach(s=>grp[s]=[]);S.leads.forEach(l=>{if(!grp[l.status])grp[l.status]=[];grp[l.status].push(l);});$('kbn').innerHTML=stages.map(st=>{const items=grp[st]||[];const isQ=st==='Calificado';const isR=st==='Reservado';return`<div class="kbc ${isQ?'ql':''}${isR?' rs-col':''}"><div class="kbh" style="${isR?'color:var(--wn)':''}">${isQ?'⭐ Calificado':isR?'🔒 Reservado':esc(st)}<span class="cnt">${items.length}</span>${isR&&items.some(l=>l.alertLevel==='critical')?'<span style="color:var(--bd2);font-size:11px;margin-left:6px">⚠️ vencidos</span>':''}</div><div class="kbs">${items.length?items.map(l=>`<div class="kc ${l.alertLevel||''}" data-id="${l.id}">${l.isMulticotizante?'<span style="background:#fee2e2;color:#991b1b;font-size:10px;font-weight:700;padding:1px 6px;border-radius:10px;float:right">🔥 Multicotizante</span>':''}${l.unread?'<div class="ud"></div>':''}<div style="flex:1;min-width:0"><div class="kn">${esc(l.name)}</div><div class="kt">${l.status==='Reservado'?'🔒 '+fMin(l.reservadoAt||l.lastInteraction):fMin(mAgo(l.lastClientTs||l.lastInteraction))}</div>${l.nextAction&&l.nextAction.date?'<div style="font-size:11px;color:#f59e0b;font-weight:bold;margin-top:4px">⏰ '+new Date(l.nextAction.date).toLocaleString('es-CL',{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'})+'</div>':''}</div></div>`).join(''):'<div class="ke">Vacío</div>'}</div></div>`;}).join('');$('kbn').querySelectorAll('.kc[data-id]').forEach(el=>el.addEventListener('click',()=>openModal(+el.dataset.id)));}
 function renderCalendar(){
   var today=new Date();today.setHours(0,0,0,0);
@@ -963,6 +1067,100 @@ setInterval(() => {
        }
    }
 }, 800);
+
+// ── NUEVO LEAD MANUAL ─────────────────────────────────────────────────────
+
+function openNuevoLeadModal(){
+  const modal = document.getElementById('nlBg');
+  modal.style.display = 'flex';
+  document.getElementById('nlNombre').value = '';
+  document.getElementById('nlTel').value = '';
+  document.getElementById('nlInteres').value = '';
+  document.getElementById('nlNota').value = '';
+  document.getElementById('nlErr').textContent = '';
+  document.getElementById('nlCanal').value = 'WhatsApp';
+  // Poblar vendedores
+  const sel = document.getElementById('nlAsignado');
+  sel.innerHTML = '';
+  (S.team||[]).filter(u=>u.role!=='admin'||true).forEach(u=>{
+    const o = document.createElement('option');
+    o.value = u.username; o.textContent = u.displayName||u.username;
+    sel.appendChild(o);
+  });
+  if(!sel.options.length){ const o=document.createElement('option'); o.value='vendedor1'; o.textContent='vendedor1'; sel.appendChild(o); }
+  onNlCanalChange();
+}
+
+function closeNuevoLeadModal(){
+  document.getElementById('nlBg').style.display = 'none';
+}
+
+function onNlCanalChange(){
+  const canal = document.getElementById('nlCanal').value;
+  const info = document.getElementById('nlCanalInfo');
+  if(canal === 'Chileautos'){
+    info.style.background = '#fef3c7'; info.style.color = '#92400e';
+    info.innerHTML = '🏷 <strong>Sala de Espera Chileautos:</strong> El lead ingresará a la sala de espera CA. El bot intentará enviarle la plantilla WA. Pasará al semáforo cuando el cliente responda.';
+  } else if(['Yapo','MercadoLibre','Referido','Llamada','Meta Ads','Otro'].includes(canal)){
+    info.style.background = '#ede9fe'; info.style.color = '#6d28d9';
+    info.innerHTML = '⏳ <strong>Sala de Espera General:</strong> El bot intentará enviar plantilla WA. El lead pasará al semáforo cuando el cliente responda.';
+  } else {
+    info.style.background = 'var(--p3)'; info.style.color = 'var(--tm)';
+    info.innerHTML = '💬 <strong>WhatsApp directo:</strong> Ingresa como lead Nuevo al semáforo. Solo usar si el cliente ya escribió primero.';
+  }
+}
+
+async function crearLeadManual(){
+  const nombre = document.getElementById('nlNombre').value.trim();
+  const tel    = document.getElementById('nlTel').value.trim();
+  const canal  = document.getElementById('nlCanal').value;
+  const asign  = document.getElementById('nlAsignado').value;
+  const interes= document.getElementById('nlInteres').value.trim();
+  const nota   = document.getElementById('nlNota').value.trim();
+  const errEl  = document.getElementById('nlErr');
+  const btn    = document.getElementById('nlSubmit');
+
+  if(!nombre){ errEl.textContent = 'El nombre es obligatorio.'; return; }
+  errEl.textContent = '';
+  btn.disabled = true; btn.textContent = 'Creando...';
+
+  // Determinar status según canal
+  let status = 'Nuevo';
+  if(canal === 'Chileautos') status = 'esperando_respuesta_chileautos';
+  else if(canal !== 'WhatsApp') status = 'esperando_respuesta_general';
+
+  const phone = tel ? (tel.startsWith('+') ? tel : (tel.startsWith('56') ? '+'+tel : '+56'+tel.replace(/\D/g,''))) : 'Pendiente';
+
+  const payload = { nombre, phone, canal, asignado: asign, interes, nota, status };
+
+  try {
+    const res = await fetch('/api/leads/manual', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json', 'x-token': S.token||''},
+      body: JSON.stringify(payload)
+    });
+    const data = await res.json();
+    if(res.ok && data.ok){
+      closeNuevoLeadModal();
+      await fetchData();
+      renderAll();
+      // Redirigir a donde quedó el lead
+      if(status === 'esperando_respuesta_chileautos') navTo('chileautos');
+      else if(status === 'esperando_respuesta_general') navTo('leads');
+      else navTo('leads');
+    } else {
+      errEl.textContent = data.error || 'Error al crear el lead.';
+    }
+  } catch(e){
+    errEl.textContent = 'Error de conexión.';
+  }
+  btn.disabled = false; btn.textContent = 'Crear Lead';
+}
+
+// Cerrar modal al click fuera
+document.getElementById('nlBg')?.addEventListener('click', function(e){
+  if(e.target === this) closeNuevoLeadModal();
+});
 </script>
 
 
