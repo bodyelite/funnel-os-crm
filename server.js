@@ -612,7 +612,7 @@ app.post('/api/chat',async(req,res)=>{
   leads[idx].chatHistory=leads[idx].chatHistory||[];leads[idx].chatHistory.push({role:'user',content:message,ts:Date.now()});
   leads[idx].unread=true;
   if(leads[idx].botActive!==false){
-    if(message.trim().toLowerCase()==='/reset'){const _rn=new Date().toISOString();leads[idx].chatHistory=[];leads[idx].intentSignal='NONE';leads[idx].keywordAlertSent=false;leads[idx].status='Nuevo';leads[idx].alertLevel='none';leads[idx].unread=true;leads[idx].reassigned=false;leads[idx].reassignedAt=null;leads[idx].adminReassignAlertSent=false;leads[idx].riskAlertSent=false;leads[idx].followUpSent=false;leads[idx].nextAction=null;leads[idx].ai_summary='';leads[idx].lastInteraction=_rn;leads[idx].lastClientTs=_rn;leads[idx].notes=(leads[idx].notes||[]).concat({content:'🔄 Historial reseteado por comando',author:'Sistema',ts:Date.now()});await tWrite(F.leads,tenant,leads);return res.json({reply:'🔄 Memoria borrada. ¡Empecemos de cero! 🚗',status:'Nuevo',alertLevel:'none',lead:leads[idx]});}
+    if(message.trim().toLowerCase()==='/reset'){const _rn=new Date().toISOString();leads[idx].chatHistory=[];leads[idx].intentSignal='NONE';leads[idx].keywordAlertSent=false;leads[idx].alertLevel='none';leads[idx].unread=false;leads[idx].reassigned=false;leads[idx].reassignedAt=null;leads[idx].adminReassignAlertSent=false;leads[idx].riskAlertSent=false;leads[idx].followUpSent=false;leads[idx].nextAction=null;leads[idx].ai_summary='';leads[idx].isMulticotizante=false;leads[idx].externalId=null;leads[idx].lastClientTs=new Date(0).toISOString();leads[idx].lastInteraction=_rn;leads[idx].media=[];leads[idx].notes=[];leads[idx].history=[];await tWrite(F.leads,tenant,leads);return res.json({reply:'🔄 Ficha limpiada. Lista para nuevo ingreso.',status:leads[idx].status,alertLevel:'none',lead:leads[idx]});}
     const assignedUserChat=allUsers.find(u=>u.username===leads[idx].assignedTo)||RMG_VENDORS.find(v=>v.username===leads[idx].assignedTo);
     const assignedNameChat=assignedUserChat?.name||null;
     const p=await marcela(tenant,leads[idx].chatHistory.slice(0,-1),message,leads[idx].notes,assignedNameChat);
@@ -744,7 +744,6 @@ app.post('/api/chileautos/webhook', async (req, res) => {
     };
     leads.unshift(newLead);
     await tWrite(F.leads, tenant, leads);
-    const templateMsg = `[PLANTILLA WA] Hola ${firstName||name}, te contactamos desde RMG Autos. Vimos que consultaste por el ${vehicleTitle} en Chileautos. ¿Podemos ayudarte?`;
     const token = process.env.WA_TOKEN, phoneId = process.env.WA_PHONE_ID;
     if (token && phoneId && phone !== 'Pendiente') {
       try {
@@ -764,30 +763,21 @@ app.post('/api/chileautos/webhook', async (req, res) => {
           })
         });
         const waJson = await waRes.json();
-        const leads2 = await tRead(F.leads, tenant);
+        if (waRes.ok) {
+          console.log('[CA-WEBHOOK] ✅ Plantilla WA enviada a', phone, '| template:', templateName);
+          const leads2 = await tRead(F.leads, tenant);
           const nIdx = leads2.findIndex(l => l.externalId === externalId || (phone !== 'Pendiente' && l.phone && l.phone.replace(/\D/g,'').includes(phoneClean)));
           if (nIdx !== -1) {
             leads2[nIdx].chatHistory = leads2[nIdx].chatHistory || [];
-            if (waRes.ok) {
-              leads2[nIdx].chatHistory.push({ role: 'bot', content: templateMsg, ts: Date.now() });
-              console.log('[CA-WEBHOOK] ✅ Plantilla WA enviada a', phone);
-            } else {
-              const waErr = JSON.stringify(waJson);
-              leads2[nIdx].chatHistory.push({ role: 'bot', content: '[BOT] Mensaje de bienvenida pendiente de envío. ' + templateMsg, ts: Date.now() });
-              console.error('[CA-WEBHOOK] WA error:', waErr);
-            }
+            leads2[nIdx].chatHistory.push({ role: 'bot', content: `[PLANTILLA WA ENVIADA] Hola ${firstName||name}, te contactamos desde RMG Autos sobre el ${vehicleTitle} que consultaste en Chileautos.`, ts: Date.now() });
             await tWrite(F.leads, tenant, leads2);
           }
+        } else {
+          console.error('[CA-WEBHOOK] WA error:', JSON.stringify(waJson));
+        }
       } catch(we) { console.error('[CA-WEBHOOK] WA exc:', we.message); }
     } else if (phone === 'Pendiente') {
       console.log('[CA-WEBHOOK] Sin teléfono — plantilla WA no enviada');
-      const leads3 = await tRead(F.leads, tenant);
-      const nIdx3 = leads3.findIndex(l => l.externalId === externalId);
-      if (nIdx3 !== -1) {
-        leads3[nIdx3].chatHistory = leads3[nIdx3].chatHistory || [];
-        leads3[nIdx3].chatHistory.push({ role: 'bot', content: '[BOT] Sin teléfono — contactar manualmente via panel Chileautos.', ts: Date.now() });
-        await tWrite(F.leads, tenant, leads3);
-      }
     }
     if (assignedObj.phone) sendWA(assignedObj.phone, '🔔 NUEVO LEAD CHILEAUTOS: ' + name + ' interesado en ' + vehicleTitle).catch(()=>{});
     console.log('[CA-WEBHOOK] Lead creado:', name, phone, vehicleTitle);
@@ -925,7 +915,7 @@ app.post('/webhook',async(req,res)=>{
     ld[tenant][idx].chatHistory=ld[tenant][idx].chatHistory||[];ld[tenant][idx].chatHistory.push({role:'user',content:body,ts:Date.now()});
     ld[tenant][idx].unread=true;
     if(ld[tenant][idx].botActive!==false){
-      if(body.trim().toLowerCase()==='/reset'){const _rn=new Date().toISOString();ld[tenant][idx].chatHistory=[];ld[tenant][idx].intentSignal='NONE';ld[tenant][idx].keywordAlertSent=false;ld[tenant][idx].status='Nuevo';ld[tenant][idx].alertLevel='none';ld[tenant][idx].unread=true;ld[tenant][idx].reassigned=false;ld[tenant][idx].reassignedAt=null;ld[tenant][idx].adminReassignAlertSent=false;ld[tenant][idx].riskAlertSent=false;ld[tenant][idx].followUpSent=false;ld[tenant][idx].nextAction=null;ld[tenant][idx].ai_summary='';ld[tenant][idx].lastInteraction=_rn;ld[tenant][idx].lastClientTs=_rn; ld[tenant][idx].media = [];ld[tenant][idx].notes = [{content:'🔄 Ficha limpia. Historial reseteado a cero.',author:'Sistema',ts:Date.now()}];await tWrite(F.leads,tenant,ld[tenant]);await sendWA(from,'🔄 Memoria borrada. ¡Empecemos de cero! 🚗');return;}
+      if(body.trim().toLowerCase()==='/reset'){const _rn=new Date().toISOString();ld[tenant][idx].chatHistory=[];ld[tenant][idx].intentSignal='NONE';ld[tenant][idx].keywordAlertSent=false;ld[tenant][idx].alertLevel='none';ld[tenant][idx].unread=false;ld[tenant][idx].reassigned=false;ld[tenant][idx].reassignedAt=null;ld[tenant][idx].adminReassignAlertSent=false;ld[tenant][idx].riskAlertSent=false;ld[tenant][idx].followUpSent=false;ld[tenant][idx].nextAction=null;ld[tenant][idx].ai_summary='';ld[tenant][idx].isMulticotizante=false;ld[tenant][idx].externalId=null;ld[tenant][idx].lastInteraction=_rn;ld[tenant][idx].lastClientTs=new Date(0).toISOString();ld[tenant][idx].media=[];ld[tenant][idx].notes=[];ld[tenant][idx].history=[];await tWrite(F.leads,tenant,ld[tenant]);console.log('[RESET] Ficha limpiada para',from,'— sin respuesta WA');return;}
       const allUsersWH=await tRead(F.users,tenant);
       const assignedUserWH=allUsersWH.find(u=>u.username===ld[tenant][idx].assignedTo)||RMG_VENDORS.find(v=>v.username===ld[tenant][idx].assignedTo);
       const assignedNameWH=assignedUserWH?.name||null;
