@@ -729,7 +729,7 @@ app.post('/api/leads/manual', auth('admin','vendedor'), async (req, res) => {
           headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' },
           body: JSON.stringify({
             messaging_product: 'whatsapp', to: phoneClean, type: 'template',
-            template: { name: templateName, language: { code: 'es_ES' },
+            template: { name: templateName, language: { code: 'es' },
               components: [{ type: 'body', parameters: [
                 { type: 'text', text: nombre },
                 { type: 'text', text: interes || 'vehiculo consultado' }
@@ -851,7 +851,7 @@ app.post('/api/chileautos/webhook', async (req, res) => {
           body: JSON.stringify({
             messaging_product: 'whatsapp', to: phoneClean,
             type: 'template',
-            template: { name: templateName, language: { code: 'es_ES' },
+            template: { name: templateName, language: { code: 'es' },
               components: [{ type: 'body', parameters: [
                 { type: 'text', text: firstName || name },
                 { type: 'text', text: vehicleTitle }
