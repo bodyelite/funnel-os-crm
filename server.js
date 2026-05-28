@@ -777,37 +777,65 @@ app.post('/api/chileautos/webhook', async (req, res) => {
     const token = process.env.WA_TOKEN, phoneId = process.env.WA_PHONE_ID;
     if (token && phoneId && phone !== 'Pendiente') {
       try {
-        const templateName = process.env.CA_WA_TEMPLATE || 'contacto_chileautos_v1';
-        const waRes = await fetch(`https://graph.facebook.com/v19.0/${phoneId}/messages`, {
-          method: 'POST',
-          headers: { Authorization: 'Bearer '+token, 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            messaging_product: 'whatsapp', to: phoneClean,
-            type: 'template',
-            template: { name: templateName, language: { code: 'es' },
-              components: [{ type: 'body', parameters: [
-                { type: 'text', text: firstName || name },
-                { type: 'text', text: vehicleTitle }
-              ]}]
-            }
-          })
-        });
-        const waJson = await waRes.json();
-        if (waRes.ok) {
-          console.log('[CA-WEBHOOK] ✅ Plantilla WA enviada a', phone, '| template:', templateName);
+        // Detectar ventana 24h activa
+        const allLeadsNow = await tRead(F.leads, tenant);
+        const leadNow = allLeadsNow.find(l =>
+          l.externalId === externalId ||
+          (phone !== 'Pendiente' && l.phone && l.phone.replace(/\D/g,'').includes(phoneClean))
+        );
+        const _lastTs = leadNow && leadNow.lastClientTs;
+        const has24h = _lastTs &&
+          new Date(_lastTs).getTime() > 0 &&
+          (Date.now() - new Date(_lastTs).getTime()) < 86400000;
+
+        let msgSent = false;
+        let msgContent = '';
+
+        if (has24h) {
+          msgContent = 'Hola ' + (firstName || name) + '! Soy Marcela de RMG Autos.\n\nVimos que consultaste en Chileautos por el ' + vehicleTitle + '. Te puedo ayudar con precio, financiamiento o disponibilidad?';
+          await sendWA(phoneClean, msgContent);
+          msgSent = true;
+          console.log('[CA-WEBHOOK] Mensaje libre (24h) enviado a', phone);
+        } else {
+          const templateName = process.env.CA_WA_TEMPLATE || 'contacto_chileautos_v1';
+          const waRes = await fetch(`https://graph.facebook.com/v19.0/${phoneId}/messages`, {
+            method: 'POST',
+            headers: { Authorization: 'Bearer '+token, 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              messaging_product: 'whatsapp', to: phoneClean,
+              type: 'template',
+              template: { name: templateName, language: { code: 'es' },
+                components: [{ type: 'body', parameters: [
+                  { type: 'text', text: firstName || name },
+                  { type: 'text', text: vehicleTitle }
+                ]}]
+              }
+            })
+          });
+          const waJson = await waRes.json();
+          if (waRes.ok) {
+            msgSent = true;
+            msgContent = '[PLANTILLA WA] Hola ' + (firstName||name) + ', RMG Autos te contacta por ' + vehicleTitle + ' de Chileautos.';
+            console.log('[CA-WEBHOOK] Plantilla WA enviada a', phone, '| template:', templateName);
+          } else {
+            console.error('[CA-WEBHOOK] WA error plantilla:', JSON.stringify(waJson));
+          }
+        }
+        if (msgSent) {
           const leads2 = await tRead(F.leads, tenant);
-          const nIdx = leads2.findIndex(l => l.externalId === externalId || (phone !== 'Pendiente' && l.phone && l.phone.replace(/\D/g,'').includes(phoneClean)));
+          const nIdx = leads2.findIndex(l =>
+            l.externalId === externalId ||
+            (phone !== 'Pendiente' && l.phone && l.phone.replace(/\D/g,'').includes(phoneClean))
+          );
           if (nIdx !== -1) {
             leads2[nIdx].chatHistory = leads2[nIdx].chatHistory || [];
-            leads2[nIdx].chatHistory.push({ role: 'bot', content: `[PLANTILLA WA ENVIADA] Hola ${firstName||name}, te contactamos desde RMG Autos sobre el ${vehicleTitle} que consultaste en Chileautos.`, ts: Date.now() });
+            leads2[nIdx].chatHistory.push({ role: 'bot', content: msgContent, ts: Date.now() });
             await tWrite(F.leads, tenant, leads2);
           }
-        } else {
-          console.error('[CA-WEBHOOK] WA error:', JSON.stringify(waJson));
         }
       } catch(we) { console.error('[CA-WEBHOOK] WA exc:', we.message); }
     } else if (phone === 'Pendiente') {
-      console.log('[CA-WEBHOOK] Sin teléfono — plantilla WA no enviada');
+      console.log('[CA-WEBHOOK] Sin telefono - WA no enviado');
     }
     if (assignedObj.phone) sendWA(assignedObj.phone, '🔔 NUEVO LEAD CHILEAUTOS: ' + name + ' interesado en ' + vehicleTitle).catch(()=>{});
     console.log('[CA-WEBHOOK] Lead creado:', name, phone, vehicleTitle);
