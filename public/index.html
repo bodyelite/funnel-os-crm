@@ -432,7 +432,10 @@ function renderChileautos(){
 function renderEsperaGeneral(){
   const leads=(S.leads||[]).filter(l=>l.status==='esperando_respuesta_general');
   const navEG = document.getElementById('navEG');
-  if(navEG) navEG.style.display = leads.length ? 'block' : 'none';
+  if(navEG) {
+    navEG.style.display = 'block';
+    navEG.textContent = leads.length ? '⏳ En Espera ('+leads.length+')' : '⏳ En Espera';
+  }
   const gc='grid-template-columns:10px 1.4fr .9fr 1.3fr .9fr .9fr .9fr';
   const hd=`<div class="tr2 hd" style="${gc}"><div></div><div>Nombre</div><div>Tel.</div><div>Vehículo</div><div>Asignado</div><div>Estado</div><div>Enviado</div></div>`;
   const rows=leads.length?leads.map(l=>`<div class="tr2" style="${gc}" data-id="${l.id}"><span class="sd b"></span><div><strong>${esc(l.name)}</strong></div><div style="font-size:11.5px;color:var(--tm)">${esc(l.phone||'Pendiente')}</div><div style="font-size:11.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(l.interest||'—')}</div><div>${cUsr(l.assignedTo)}</div><div><span style="background:#ede9fe;color:#6d28d9;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:600">⏳ En Espera</span></div><div style="font-size:11px;color:var(--tm)">${fDT(l.lastInteraction)}</div></div>`).join(''):'<div class="ke" style="padding:16px">Sin leads en espera.</div>';
@@ -1152,8 +1155,12 @@ async function crearLeadManual(){
     if(data.ok){
       closeNuevoLeadModal();
       await refresh();
-      if(status === 'esperando_respuesta_chileautos') navTo('chileautos');
-      else navTo('leads');
+      // Navegar a la vista correcta
+      let targetView = 'leads';
+      if(status === 'esperando_respuesta_chileautos') targetView = 'chileautos';
+      else if(status === 'esperando_respuesta_general') targetView = 'espera-general';
+      const targetBtn = document.querySelector('.sb nav button[data-view="'+targetView+'"]');
+      if(targetBtn) targetBtn.click();
     } else {
       errEl.textContent = data.error || 'Error al crear el lead.';
     }
