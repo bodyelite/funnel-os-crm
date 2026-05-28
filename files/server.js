@@ -237,18 +237,17 @@ async function marcela(tenant, history, msg, notes, assignedName) {
     if (!invS) invS = '';
 
     let botCfg = await tRead(F.bot, tenant, {});
-    try {
-      const seedBot = JSON.parse(fsSync.readFileSync(path.join(__dirname, 'data', 'bot.json'), 'utf8'));
-      if (seedBot && seedBot[tenant] && seedBot[tenant].systemPrompt) {
-        const filePrompt = seedBot[tenant].systemPrompt;
-        if (!botCfg || !botCfg.systemPrompt || botCfg.systemPrompt !== filePrompt) {
+    if (!botCfg || typeof botCfg !== 'object' || Array.isArray(botCfg) || !botCfg.systemPrompt) {
+      try {
+        const seedBot = JSON.parse(fsSync.readFileSync(path.join(__dirname, 'data', 'bot.json'), 'utf8'));
+        if (seedBot && seedBot[tenant] && seedBot[tenant].systemPrompt) {
           botCfg = Object.assign({}, botCfg, seedBot[tenant]);
           await tWrite(F.bot, tenant, botCfg);
-          console.log('[marcela] systemPrompt sincronizado desde data/bot.json para', tenant);
+          console.log('[marcela] systemPrompt restaurado desde data/bot.json para', tenant);
         }
+      } catch(eSeed) {
+        console.error('[marcela] No se pudo cargar data/bot.json:', eSeed.message);
       }
-    } catch(eSeed) {
-      console.error('[marcela] No se pudo sincronizar data/bot.json:', eSeed.message);
     }
 
     const baseSysPrompt = (botCfg && botCfg.systemPrompt) || 'Eres Marcela, asesora de ventas de Automotora Andes. Responde de forma calida y profesional en espanol chileno.';
@@ -643,6 +642,150 @@ app.post('/api/chat',async(req,res)=>{
   await tWrite(F.leads,tenant,leads);res.json({reply:null,sessionId,leadCaptured:captured,leadId,botPaused:true});
 });
 
+
+app.post('/api/leads/inbound', async (req, res) => {
+  try {
+    const { tenant='demo_automotora', name, phone='Pendiente', source='Chileautos', interest='', status='esperando_respuesta_chileautos', botActive=false, externalId=null, notes:extraNotes=[] } = req.body;
+    const n = new Date().toISOString();
+    const leads = await tRead(F.leads, tenant);
+
+    // Deduplicar por externalId (leadId de Chileautos) o por teléfono si no es Pendiente
+    let exists = null;
+    if (externalId) {
+      exists = leads.find(l => l.externalId === externalId);
+    } else if (phone && phone !== 'Pendiente') {
+      const clean2 = phone.replace(/\D/g,'');
+      exists = leads.find(l => l.phone && l.phone.replace(/\D/g,'').includes(clean2));
+    }
+    if (exists) return res.json({ ok: true, leadId: exists.id, skipped: true });
+
+    const clean = phone !== 'Pendiente' ? phone.replace(/\D/g,'') : '';
+    const assignedObj = await rrNext(tenant) || { username: 'vendedor1' };
+    const initNotes = [{ content: `Lead recibido desde ${source}. En sala de espera.`, author: 'Bot', ts: Date.now() }];
+    const allNotes = [...initNotes, ...extraNotes];
+    const lead = {
+      id: Date.now(),
+      externalId,
+      name: name || 'Lead Chileautos',
+      phone: clean ? '+' + clean : 'Pendiente',
+      source,
+      interest,
+      status,
+      botActive,
+      alertLevel: 'none',
+      intentSignal: 'NONE',
+      unread: true,
+      assignedTo: assignedObj.username,
+      lastInteraction: n,
+      lastClientTs: n,
+      notes: allNotes,
+      chatHistory: [],
+      media: []
+    };
+    leads.unshift(lead);
+    await tWrite(F.leads, tenant, leads);
+    if (assignedObj.phone) sendWA(assignedObj.phone, `🔔 NUEVO LEAD CHILEAUTOS asignado a ti. Entra a FunnelOS → Chileautos para verlo.`).catch(()=>{});
+    console.log('[INBOUND] Lead creado:', name, phone, status, externalId || '');
+    res.json({ ok: true, leadId: lead.id });
+  } catch(e) {
+    console.error('[INBOUND]', e.message);
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.post('/api/chileautos/webhook', async (req, res) => {
+  try {
+    res.sendStatus(200);
+    const payload = req.body;
+    const tenant = 'demo_automotora';
+    const prospect = payload.Prospect || payload.prospect || {};
+    const vehicle  = payload.Vehicle  || payload.vehicle  || {};
+    const firstName = prospect.FirstName || prospect.firstName || '';
+    const lastName  = prospect.LastName  || prospect.lastName  || '';
+    const name = (firstName + ' ' + lastName).trim() || 'Lead Chileautos';
+    const phones = prospect.PhoneNumbers || prospect.phoneNumbers || [];
+    let rawPhone = '';
+    if (Array.isArray(phones) && phones.length) {
+      const mob = phones.find(p => (p.Type||p.type||'').toLowerCase().includes('mobile')) || phones[0];
+      rawPhone = mob.Number || mob.number || mob.Value || mob.value || '';
+    }
+    const clean = rawPhone.replace(/\D/g,'');
+    const phone  = clean ? (clean.startsWith('56') ? '+'+clean : '+56'+clean) : 'Pendiente';
+    const vehicleTitle = vehicle.Title || vehicle.title || vehicle.Make && (vehicle.Make+' '+vehicle.Model+' '+(vehicle.Year||'')).trim() || 'Vehículo consultado';
+    const externalId = payload.LeadId || payload.leadId || payload.Id || null;
+    const n = new Date().toISOString();
+    const leads = await tRead(F.leads, tenant);
+    const phoneClean = phone.replace(/\D/g,'');
+    const existing = leads.findIndex(l => {
+      if (externalId && l.externalId === externalId) return true;
+      if (phone !== 'Pendiente' && l.phone && l.phone.replace(/\D/g,'').includes(phoneClean)) return true;
+      return false;
+    });
+    if (existing !== -1) {
+      leads[existing].isMulticotizante = true;
+      leads[existing].interest = vehicleTitle;
+      leads[existing].history  = leads[existing].history || [];
+      leads[existing].history.push({ ts: Date.now(), content: '[SISTEMA] Nueva cotización vía Chileautos: ' + vehicleTitle });
+      leads[existing].lastInteraction = n;
+      await tWrite(F.leads, tenant, leads);
+      console.log('[CA-WEBHOOK] Multicotizante actualizado:', name, phone);
+      return;
+    }
+    const assignedObj = await rrNext(tenant) || { username: 'vendedor1' };
+    const newLead = {
+      id: Date.now(), externalId, name, phone, source: 'Chileautos',
+      interest: vehicleTitle, status: 'esperando_respuesta_chileautos',
+      botActive: false, isMulticotizante: false, alertLevel: 'none',
+      intentSignal: 'NONE', unread: true, assignedTo: assignedObj.username,
+      lastInteraction: n, lastClientTs: n,
+      history: [{ ts: Date.now(), content: 'Lead recibido desde Chileautos: ' + vehicleTitle }],
+      notes: [{ content: 'Lead recibido desde Chileautos. Vehículo: ' + vehicleTitle, author: 'Bot', ts: Date.now() }],
+      chatHistory: [], media: []
+    };
+    leads.unshift(newLead);
+    await tWrite(F.leads, tenant, leads);
+    const token = process.env.WA_TOKEN, phoneId = process.env.WA_PHONE_ID;
+    if (token && phoneId && phone !== 'Pendiente') {
+      try {
+        const templateName = process.env.CA_WA_TEMPLATE || 'contacto_chileautos_v1';
+        const waRes = await fetch(`https://graph.facebook.com/v19.0/${phoneId}/messages`, {
+          method: 'POST',
+          headers: { Authorization: 'Bearer '+token, 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            messaging_product: 'whatsapp', to: phoneClean,
+            type: 'template',
+            template: { name: templateName, language: { code: 'es' },
+              components: [{ type: 'body', parameters: [
+                { type: 'text', text: firstName || name },
+                { type: 'text', text: vehicleTitle }
+              ]}]
+            }
+          })
+        });
+        const waJson = await waRes.json();
+        if (waRes.ok) {
+          console.log('[CA-WEBHOOK] ✅ Plantilla WA enviada a', phone, '| template:', templateName);
+          const leads2 = await tRead(F.leads, tenant);
+          const nIdx = leads2.findIndex(l => l.externalId === externalId || (phone !== 'Pendiente' && l.phone && l.phone.replace(/\D/g,'').includes(phoneClean)));
+          if (nIdx !== -1) {
+            leads2[nIdx].chatHistory = leads2[nIdx].chatHistory || [];
+            leads2[nIdx].chatHistory.push({ role: 'bot', content: `[PLANTILLA WA ENVIADA] Hola ${firstName||name}, te contactamos desde RMG Autos sobre el ${vehicleTitle} que consultaste en Chileautos.`, ts: Date.now() });
+            await tWrite(F.leads, tenant, leads2);
+          }
+        } else {
+          console.error('[CA-WEBHOOK] WA error:', JSON.stringify(waJson));
+        }
+      } catch(we) { console.error('[CA-WEBHOOK] WA exc:', we.message); }
+    } else if (phone === 'Pendiente') {
+      console.log('[CA-WEBHOOK] Sin teléfono — plantilla WA no enviada');
+    }
+    if (assignedObj.phone) sendWA(assignedObj.phone, '🔔 NUEVO LEAD CHILEAUTOS: ' + name + ' interesado en ' + vehicleTitle).catch(()=>{});
+    console.log('[CA-WEBHOOK] Lead creado:', name, phone, vehicleTitle);
+  } catch(e) {
+    console.error('[CA-WEBHOOK]', e.message);
+  }
+});
+
 app.get('/webhook',(req,res)=>{const vt=process.env.WA_VERIFY_TOKEN||'zara_token_123';if(req.query['hub.mode']==='subscribe'&&req.query['hub.verify_token']===vt)return res.status(200).send(req.query['hub.challenge']);res.sendStatus(403);});
 
 // --- PROXY DE MEDIA META ---
@@ -759,6 +902,15 @@ app.post('/webhook',async(req,res)=>{
       const assignedObj=await rrNext(tenant)||{username:'vendedor1'};const n=new Date().toISOString();
       ld[tenant].unshift({id:Date.now(),name:contactName,phone:'+'+from,source:'WhatsApp',status:'Nuevo',lastInteraction:n,lastClientTs:n,interest:body.slice(0,80),assignedTo:assignedObj.username,botActive:true,alertLevel:'none',intentSignal:'NONE',unread:true,notes:[],chatHistory:[]});
       idx=0;if(assignedObj.phone)sendWA(assignedObj.phone,`🔔 NUEVO LEAD WA: ${contactName} — "${body.slice(0,60)}" — atiéndelo ahora.`).catch(()=>{});
+    }
+    if(ld[tenant][idx].status==='esperando_respuesta_chileautos'){
+      ld[tenant][idx].status='Nuevo';
+      ld[tenant][idx].botActive=true;
+      ld[tenant][idx].unread=true;
+      ld[tenant][idx].notes=(ld[tenant][idx].notes||[]).concat({content:'✅ Cliente respondió desde Chileautos. Activado en embudo.',author:'Sistema',ts:Date.now()});
+      const _au=await tRead(F.users,tenant);
+      const _av=_au.find(u=>u.username===ld[tenant][idx].assignedTo)||RMG_VENDORS.find(v=>v.username===ld[tenant][idx].assignedTo);
+      if(_av?.phone)sendWA(_av.phone,`🔔 CHILEAUTOS: ${ld[tenant][idx].name} respondió! Ya está en tu embudo.`).catch(()=>{});
     }
     ld[tenant][idx].chatHistory=ld[tenant][idx].chatHistory||[];ld[tenant][idx].chatHistory.push({role:'user',content:body,ts:Date.now()});
     ld[tenant][idx].unread=true;

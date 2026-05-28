@@ -1,0 +1,16 @@
+{
+  "name": "contacto_chileautos_v1",
+  "language": "es",
+  "category": "UTILITY",
+  "components": [
+    {
+      "type": "BODY",
+      "text": "Hola {{1}} 👋 Somos RMG Autos.\n\nRecibimos tu consulta en Chileautos por el *{{2}}*.\n\nTe contactamos para ayudarte con cualquier pregunta sobre ese vehículo: precio, financiamiento, disponibilidad o una visita.\n\n¿En qué te podemos ayudar?",
+      "example": {
+        "body_text": [
+          ["Andres", "2024 Kia Sportage 1.6T AWD"]
+        ]
+      }
+    }
+  ]
+}
