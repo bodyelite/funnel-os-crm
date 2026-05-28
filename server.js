@@ -324,7 +324,7 @@ function calcAlert(lead){
   }
   const applies=lead.status==='Nuevo'||lead.unread===true;
   if(!applies)return'none';
-  const ref=(lead.status==='esperando_respuesta_chileautos')?lead.lastInteraction:(lead.lastClientTs||lead.lastInteraction);
+  const ref=(lead.status==='esperando_respuesta_chileautos'||lead.status==='esperando_respuesta_general')?lead.lastInteraction:(lead.lastClientTs||lead.lastInteraction);
   if(!ref)return'none';
   const m=(Date.now()-new Date(ref).getTime())/60000;
   if(m>SLA_YELLOW)return'critical';
@@ -352,7 +352,7 @@ async function applySlaRules(tenant){
       }
     }
     if(lead.status==='Nuevo'){
-      const ref=(lead.status==='esperando_respuesta_chileautos')?lead.lastInteraction:(lead.lastClientTs||lead.lastInteraction);
+      const ref=(lead.status==='esperando_respuesta_chileautos'||lead.status==='esperando_respuesta_general')?lead.lastInteraction:(lead.lastClientTs||lead.lastInteraction);
       const mins=ref?(Date.now()-new Date(ref).getTime())/60000:0;
       if(mins>SLA_REASSIGN&&!lead.reassigned){
         const nextObj=await rrNext(tenant,lead.assignedTo);
@@ -1038,14 +1038,15 @@ app.post('/webhook',async(req,res)=>{
       const srcTag = detectedSource !== 'WhatsApp' ? ` [${detectedSource}]` : '';
       if(assignedObj.phone) sendWA(assignedObj.phone, `🔔 NUEVO LEAD WA${srcTag}: ${contactName} — "${detectedInterest.slice(0,60)}" — atiéndelo ahora.`).catch(()=>{});
     }
-    if(ld[tenant][idx].status==='esperando_respuesta_chileautos'){
+    if(ld[tenant][idx].status==='esperando_respuesta_chileautos'||ld[tenant][idx].status==='esperando_respuesta_general'){
+      const prevSrc = ld[tenant][idx].status==='esperando_respuesta_chileautos' ? 'Chileautos' : (ld[tenant][idx].source||'Canal');
       ld[tenant][idx].status='Nuevo';
       ld[tenant][idx].botActive=true;
       ld[tenant][idx].unread=true;
-      ld[tenant][idx].notes=(ld[tenant][idx].notes||[]).concat({content:'✅ Cliente respondió desde Chileautos. Activado en embudo.',author:'Sistema',ts:Date.now()});
+      ld[tenant][idx].notes=(ld[tenant][idx].notes||[]).concat({content:'✅ Cliente respondió. Activado en embudo desde sala de espera ('+prevSrc+').',author:'Sistema',ts:Date.now()});
       const _au=await tRead(F.users,tenant);
       const _av=_au.find(u=>u.username===ld[tenant][idx].assignedTo)||RMG_VENDORS.find(v=>v.username===ld[tenant][idx].assignedTo);
-      if(_av?.phone)sendWA(_av.phone,`🔔 CHILEAUTOS: ${ld[tenant][idx].name} respondió! Ya está en tu embudo.`).catch(()=>{});
+      if(_av?.phone)sendWA(_av.phone,'\u{1F514} '+prevSrc+': '+ld[tenant][idx].name+' respondio! Ya esta en tu embudo.').catch(()=>{});
     }
     ld[tenant][idx].chatHistory=ld[tenant][idx].chatHistory||[];ld[tenant][idx].chatHistory.push({role:'user',content:body,ts:Date.now()});
     ld[tenant][idx].unread=true;
