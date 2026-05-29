@@ -3,726 +3,1072 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>FunnelOS — Ecosistema RMG Autos</title>
-<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<title>FunnelOS · RMG Autos</title>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@300;400;600;700;800&family=Barlow:wght@300;400;500&display=swap" rel="stylesheet">
 <style>
-:root {
-  --bg: #0a0e14;
-  --surface: #111722;
-  --surface2: #1a2234;
-  --border: rgba(255,255,255,0.07);
-  --border-bright: rgba(255,255,255,0.15);
-  --text: #e8edf5;
-  --muted: #6b7a99;
-  --amber: #f59e0b;
-  --amber-dim: rgba(245,158,11,0.12);
-  --amber-glow: rgba(245,158,11,0.25);
-  --teal: #14b8a6;
-  --teal-dim: rgba(20,184,166,0.12);
-  --purple: #8b5cf6;
-  --purple-dim: rgba(139,92,246,0.12);
-  --green: #10b981;
-  --green-dim: rgba(16,185,129,0.12);
-  --blue: #3b82f6;
-  --blue-dim: rgba(59,130,246,0.12);
-  --gray-dim: rgba(255,255,255,0.05);
-  --red: #ef4444;
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+
+body{
+  font-family:'Barlow',sans-serif;
+  background:#0f1923;
+  color:#e8edf5;
+  overflow-x:hidden;
 }
 
-* { box-sizing: border-box; margin: 0; padding: 0; }
-
-body {
-  font-family: 'DM Sans', sans-serif;
-  background: var(--bg);
-  color: var(--text);
-  min-height: 100vh;
-  overflow-x: hidden;
+/* ══ PANTALLA COMPLETA DE BIENVENIDA ══ */
+#screen-intro{
+  position:fixed;inset:0;z-index:1000;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  background:#0f1923;
+  transition:opacity .8s ease,transform .8s ease;
+  cursor:pointer;
 }
 
-/* BG GRID */
-body::before {
-  content: '';
-  position: fixed;
-  inset: 0;
-  background-image:
-    linear-gradient(rgba(255,255,255,0.025) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255,255,255,0.025) 1px, transparent 1px);
-  background-size: 48px 48px;
-  pointer-events: none;
-  z-index: 0;
+#screen-intro.hidden{opacity:0;transform:scale(1.05);pointer-events:none}
+
+.intro-bg{
+  position:absolute;inset:0;
+  background-image:url('https://images.unsplash.com/photo-1544636331-e26879cd4d9b?w=1800&q=80');
+  background-size:cover;background-position:center 30%;
+  filter:brightness(.22) saturate(.6);
 }
 
-.wrap {
-  position: relative;
-  z-index: 1;
-  max-width: 1100px;
-  margin: 0 auto;
-  padding: 48px 24px 80px;
+.intro-overlay{
+  position:absolute;inset:0;
+  background:linear-gradient(160deg,rgba(15,25,35,.7) 0%,rgba(15,25,35,.4) 50%,rgba(15,25,35,.9) 100%);
 }
 
-/* HEADER */
-header {
-  text-align: center;
-  margin-bottom: 56px;
+.intro-content{
+  position:relative;z-index:2;text-align:center;padding:40px;
+  max-width:800px;
 }
 
-.logo-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  background: var(--amber-dim);
-  border: 1px solid var(--amber);
-  border-radius: 999px;
-  padding: 4px 16px 4px 10px;
-  font-size: 12px;
-  font-weight: 500;
-  color: var(--amber);
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  margin-bottom: 20px;
+.intro-eyebrow{
+  font-family:'Barlow Condensed',sans-serif;
+  font-size:12px;font-weight:600;letter-spacing:.2em;
+  text-transform:uppercase;color:#c9a84c;margin-bottom:28px;
+  display:flex;align-items:center;justify-content:center;gap:12px;
 }
 
-.logo-dot {
-  width: 6px; height: 6px;
-  background: var(--amber);
-  border-radius: 50%;
-  animation: pulse 2s infinite;
+.intro-eyebrow::before,.intro-eyebrow::after{content:'';width:40px;height:1px;background:#c9a84c;opacity:.5}
+
+.intro-title{
+  font-family:'Barlow Condensed',sans-serif;
+  font-size:clamp(56px,10vw,110px);
+  font-weight:800;line-height:.9;letter-spacing:-.02em;
+  color:#fff;text-transform:uppercase;margin-bottom:24px;
 }
 
-@keyframes pulse {
-  0%,100% { opacity: 1; transform: scale(1); }
-  50% { opacity: 0.5; transform: scale(0.8); }
+.intro-title span{
+  display:block;
+  background:linear-gradient(90deg,#c9a84c,#e8c96a,#c9a84c);
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+  background-clip:text;font-style:italic;font-weight:300;
+  font-size:.45em;letter-spacing:.05em;text-transform:none;
+  font-family:'Barlow',sans-serif;margin-bottom:12px;
 }
 
-h1 {
-  font-size: clamp(28px, 4vw, 44px);
-  font-weight: 300;
-  letter-spacing: -0.03em;
-  line-height: 1.1;
-  color: var(--text);
-  margin-bottom: 12px;
+.intro-sub{
+  font-size:16px;color:rgba(255,255,255,.5);
+  font-weight:300;line-height:1.6;margin-bottom:48px;
 }
 
-h1 strong { font-weight: 600; color: #fff; }
-
-.subtitle {
-  font-size: 15px;
-  color: var(--muted);
-  max-width: 480px;
-  margin: 0 auto;
-  line-height: 1.6;
+.intro-cta{
+  display:inline-flex;align-items:center;gap:12px;
+  border:1px solid rgba(201,168,76,.5);
+  background:rgba(201,168,76,.08);
+  color:#e8c96a;font-family:'Barlow Condensed',sans-serif;
+  font-size:13px;font-weight:600;letter-spacing:.16em;text-transform:uppercase;
+  padding:14px 36px;border-radius:3px;cursor:pointer;
+  transition:all .25s;animation:pulseborder 2.5s infinite;
 }
 
-/* DIAGRAM */
-.diagram {
-  display: flex;
-  flex-direction: column;
-  gap: 0;
-  align-items: center;
+@keyframes pulseborder{
+  0%,100%{border-color:rgba(201,168,76,.4);box-shadow:0 0 0 0 rgba(201,168,76,0)}
+  50%{border-color:rgba(201,168,76,.8);box-shadow:0 0 20px rgba(201,168,76,.15)}
 }
 
-/* SECTION LABELS */
-.section-label {
-  font-family: 'DM Mono', monospace;
-  font-size: 10px;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: var(--muted);
-  text-align: center;
-  margin-bottom: 12px;
-  margin-top: 32px;
+.intro-cta:hover{background:rgba(201,168,76,.18);border-color:#c9a84c}
+
+.intro-scroll-hint{
+  position:absolute;bottom:36px;left:50%;transform:translateX(-50%);
+  display:flex;flex-direction:column;align-items:center;gap:8px;
+  color:rgba(255,255,255,.25);font-size:10px;letter-spacing:.14em;text-transform:uppercase;
+  animation:bob 2s infinite;
 }
 
-/* ROWS */
-.row {
-  display: flex;
-  gap: 12px;
-  justify-content: center;
-  width: 100%;
-  flex-wrap: wrap;
+@keyframes bob{0%,100%{transform:translateX(-50%) translateY(0)}50%{transform:translateX(-50%) translateY(8px)}}
+
+.intro-arrow{
+  width:1px;height:40px;
+  background:linear-gradient(to bottom,rgba(201,168,76,.6),transparent);
 }
 
-/* CONNECTOR */
-.connector {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  gap: 0;
-  width: 100%;
-  position: relative;
-  height: 40px;
+/* ══ MAIN CONTENT ══ */
+#main{opacity:0;transition:opacity 1s ease}
+#main.visible{opacity:1}
+
+/* ══ CADA MÓDULO = SECCIÓN FULL SCREEN ══ */
+.module{
+  min-height:100vh;
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  position:relative;
+  overflow:hidden;
 }
 
-.connector-line {
-  width: 1px;
-  height: 40px;
-  background: linear-gradient(to bottom, var(--border-bright), transparent);
-  position: relative;
+/* BG IMAGE */
+.mod-bg{
+  position:absolute;inset:0;
+  background-size:cover;background-position:center;
+  transition:transform 8s ease;
+  filter:brightness(.3) saturate(.7);
 }
 
-.connector-line::after {
-  content: '';
-  position: absolute;
-  bottom: 0;
-  left: 50%;
-  transform: translateX(-50%);
-  border-left: 4px solid transparent;
-  border-right: 4px solid transparent;
-  border-top: 6px solid var(--border-bright);
+.module:hover .mod-bg{transform:scale(1.06)}
+
+/* GRADIENT OVERLAY */
+.mod-overlay{
+  position:absolute;inset:0;
+  background:linear-gradient(90deg,rgba(15,25,35,.97) 45%,rgba(15,25,35,.4) 100%);
 }
 
-.connector-multi {
-  display: flex;
-  justify-content: space-around;
-  width: 100%;
-  height: 40px;
-  position: relative;
+/* Alternate layout */
+.module.alt .mod-overlay{
+  background:linear-gradient(270deg,rgba(15,25,35,.97) 45%,rgba(15,25,35,.4) 100%);
 }
 
-.connector-multi::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 12.5%;
-  right: 12.5%;
-  height: 1px;
-  background: var(--border-bright);
+/* LEFT/RIGHT PANES */
+.mod-left{
+  position:relative;z-index:2;
+  padding:80px 64px;
+  display:flex;flex-direction:column;justify-content:center;
 }
 
-.connector-multi .v-line {
-  width: 1px;
-  height: 40px;
-  background: linear-gradient(to bottom, var(--border-bright), rgba(255,255,255,0.04));
-  position: relative;
+.module.alt .mod-left{
+  order:2;padding:80px 64px 80px 40px;
 }
 
-.connector-multi .v-line::after {
-  content: '';
-  position: absolute;
-  bottom: 0;
-  left: 50%;
-  transform: translateX(-50%);
-  border-left: 4px solid transparent;
-  border-right: 4px solid transparent;
-  border-top: 6px solid rgba(255,255,255,0.12);
+.mod-right{
+  position:relative;z-index:2;
+  display:flex;align-items:center;justify-content:center;
+  padding:80px 40px;
 }
 
-/* NODES */
-.node {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  padding: 14px 20px;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  min-width: 160px;
-  text-align: center;
-  position: relative;
-  overflow: hidden;
+.module.alt .mod-right{order:1;padding:80px 40px 80px 64px;}
+
+/* NÚMERO */
+.mod-num{
+  font-family:'Barlow Condensed',sans-serif;
+  font-size:120px;font-weight:800;line-height:1;
+  color:rgba(255,255,255,.04);
+  position:absolute;top:40px;left:40px;
+  letter-spacing:-.04em;
+  user-select:none;
 }
 
-.node::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  opacity: 0;
-  transition: opacity 0.2s;
-  border-radius: inherit;
+.module.alt .mod-num{left:auto;right:40px}
+
+/* TAG */
+.mod-tag{
+  font-size:10px;font-weight:600;letter-spacing:.18em;
+  text-transform:uppercase;margin-bottom:20px;
+  display:inline-flex;align-items:center;gap:10px;
 }
 
-.node:hover { transform: translateY(-2px); }
-.node:hover::before { opacity: 1; }
-.node:active { transform: translateY(0); }
+.mod-tag::before{content:'';width:24px;height:1px;background:currentColor}
 
-.node.active {
-  transform: translateY(-2px);
+/* TITLE */
+.mod-title{
+  font-family:'Barlow Condensed',sans-serif;
+  font-size:clamp(36px,4vw,54px);
+  font-weight:800;line-height:1;
+  text-transform:uppercase;letter-spacing:-.01em;
+  color:#fff;margin-bottom:20px;
 }
 
-.node-title {
-  font-size: 13px;
-  font-weight: 600;
-  color: #fff;
-  margin-bottom: 3px;
+/* DESC */
+.mod-desc{
+  font-size:16px;color:rgba(255,255,255,.55);
+  font-weight:300;line-height:1.7;
+  max-width:480px;margin-bottom:40px;
 }
 
-.node-sub {
-  font-size: 11px;
-  color: var(--muted);
-  line-height: 1.4;
+/* CARDS DEL MÓDULO */
+.mod-cards{
+  display:grid;gap:10px;
 }
 
-/* COLORES */
-.amber { border-color: rgba(245,158,11,0.3); }
-.amber::before { background: var(--amber-dim); }
-.amber:hover { border-color: var(--amber); box-shadow: 0 0 24px var(--amber-glow); }
-.amber.active { border-color: var(--amber); box-shadow: 0 0 24px var(--amber-glow); background: var(--amber-dim); }
-.amber .node-title { color: var(--amber); }
-
-.teal { border-color: rgba(20,184,166,0.3); }
-.teal::before { background: var(--teal-dim); }
-.teal:hover { border-color: var(--teal); box-shadow: 0 0 24px rgba(20,184,166,0.25); }
-.teal.active { border-color: var(--teal); box-shadow: 0 0 24px rgba(20,184,166,0.25); background: var(--teal-dim); }
-.teal .node-title { color: var(--teal); }
-
-.purple { border-color: rgba(139,92,246,0.3); }
-.purple::before { background: var(--purple-dim); }
-.purple:hover { border-color: var(--purple); box-shadow: 0 0 24px rgba(139,92,246,0.25); }
-.purple.active { border-color: var(--purple); box-shadow: 0 0 24px rgba(139,92,246,0.25); background: var(--purple-dim); }
-.purple .node-title { color: var(--purple); }
-
-.green { border-color: rgba(16,185,129,0.3); }
-.green::before { background: var(--green-dim); }
-.green:hover { border-color: var(--green); box-shadow: 0 0 24px rgba(16,185,129,0.25); }
-.green.active { border-color: var(--green); box-shadow: 0 0 24px rgba(16,185,129,0.25); background: var(--green-dim); }
-.green .node-title { color: var(--green); }
-
-.blue { border-color: rgba(59,130,246,0.3); }
-.blue::before { background: var(--blue-dim); }
-.blue:hover { border-color: var(--blue); box-shadow: 0 0 24px rgba(59,130,246,0.25); }
-.blue.active { border-color: var(--blue); box-shadow: 0 0 24px rgba(59,130,246,0.25); background: var(--blue-dim); }
-.blue .node-title { color: var(--blue); }
-
-.gray { border-color: var(--border); }
-.gray::before { background: var(--gray-dim); }
-.gray:hover { border-color: var(--border-bright); }
-.gray.active { border-color: var(--border-bright); background: var(--gray-dim); }
-
-/* WIDE NODE */
-.node.wide { min-width: 320px; max-width: 680px; width: 100%; }
-.node.full { width: 100%; max-width: 760px; }
-
-/* SLA BAR */
-.sla-bar {
-  display: flex;
-  gap: 8px;
-  justify-content: center;
-  margin-top: 10px;
+.mc{
+  background:rgba(255,255,255,.04);
+  border:1px solid rgba(255,255,255,.08);
+  border-radius:10px;padding:18px 20px;
+  cursor:pointer;
+  transition:all .2s;
+  display:flex;gap:14px;align-items:flex-start;
 }
 
-.sla-pill {
-  font-size: 10px;
-  font-weight: 600;
-  padding: 3px 10px;
-  border-radius: 999px;
-  letter-spacing: 0.04em;
+.mc:hover{background:rgba(255,255,255,.08);border-color:rgba(255,255,255,.15);transform:translateX(4px)}
+.mc.active{background:rgba(201,168,76,.08);border-color:rgba(201,168,76,.4);transform:translateX(4px)}
+
+.mc-icon{font-size:22px;flex-shrink:0;margin-top:2px}
+.mc-title{font-size:14px;font-weight:600;color:#fff;margin-bottom:4px}
+.mc-text{font-size:13px;color:rgba(255,255,255,.45);line-height:1.55}
+.mc.active .mc-text{color:rgba(255,255,255,.65)}
+
+/* PANEL DERECHO - detalle expandido */
+.mod-detail{
+  background:rgba(255,255,255,.04);
+  border:1px solid rgba(255,255,255,.1);
+  border-radius:14px;
+  padding:36px;
+  width:100%;max-width:420px;
+  min-height:340px;
+  display:flex;flex-direction:column;justify-content:center;
 }
 
-.sla-green { background: rgba(16,185,129,0.15); color: var(--green); border: 1px solid rgba(16,185,129,0.3); }
-.sla-yellow { background: rgba(245,158,11,0.15); color: var(--amber); border: 1px solid rgba(245,158,11,0.3); }
-.sla-red { background: rgba(239,68,68,0.15); color: var(--red); border: 1px solid rgba(239,68,68,0.3); }
-
-/* PIPELINE ROW */
-.pipeline-stages {
-  display: flex;
-  gap: 0;
-  overflow-x: auto;
-  width: 100%;
-  max-width: 760px;
-  padding-bottom: 4px;
+.md-empty{
+  text-align:center;
+  color:rgba(255,255,255,.2);
+  font-size:14px;font-weight:300;
+  line-height:1.7;
 }
 
-.stage {
-  flex: 1;
-  min-width: 100px;
-  text-align: center;
-  padding: 10px 8px;
-  font-size: 11px;
-  font-weight: 500;
-  color: var(--muted);
-  border-right: 1px solid var(--border);
-  position: relative;
+.md-empty-icon{font-size:48px;margin-bottom:16px;opacity:.3}
+
+.md-content{display:none;animation:fadeUp .3s ease}
+.md-content.show{display:block}
+
+@keyframes fadeUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+
+.md-tag{
+  font-size:10px;font-weight:600;letter-spacing:.16em;
+  text-transform:uppercase;color:#c9a84c;margin-bottom:12px;
 }
 
-.stage:last-child { border-right: none; }
-.stage::after {
-  content: '→';
-  position: absolute;
-  right: -6px;
-  top: 50%;
-  transform: translateY(-50%);
-  color: var(--border-bright);
-  font-size: 10px;
-  z-index: 1;
-}
-.stage:last-child::after { display: none; }
-
-/* INFO PANEL */
-#info-panel {
-  position: fixed;
-  bottom: 0; left: 0; right: 0;
-  background: var(--surface);
-  border-top: 1px solid var(--border-bright);
-  padding: 20px 32px;
-  transform: translateY(100%);
-  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-  z-index: 100;
-  display: flex;
-  gap: 20px;
-  align-items: flex-start;
+.md-title{
+  font-family:'Barlow Condensed',sans-serif;
+  font-size:26px;font-weight:700;color:#fff;
+  text-transform:uppercase;line-height:1.1;margin-bottom:16px;
 }
 
-#info-panel.visible { transform: translateY(0); }
-
-.panel-icon {
-  font-size: 28px;
-  flex-shrink: 0;
-  margin-top: 2px;
+.md-desc{
+  font-size:14px;color:rgba(255,255,255,.55);
+  line-height:1.7;font-weight:300;margin-bottom:20px;
 }
 
-.panel-content { flex: 1; }
+.md-points{list-style:none;display:flex;flex-direction:column;gap:10px}
 
-.panel-title {
-  font-size: 14px;
-  font-weight: 600;
-  color: #fff;
-  margin-bottom: 6px;
+.md-points li{
+  display:flex;gap:10px;
+  font-size:13px;color:rgba(255,255,255,.5);
+  line-height:1.5;
 }
 
-.panel-text {
-  font-size: 13px;
-  color: var(--muted);
-  line-height: 1.6;
-  max-width: 720px;
+.md-points li::before{
+  content:'→';color:#c9a84c;flex-shrink:0;
+  font-size:12px;margin-top:2px;
 }
 
-.panel-close {
-  background: transparent;
-  border: 1px solid var(--border);
-  color: var(--muted);
-  width: 28px; height: 28px;
-  border-radius: 6px;
-  cursor: pointer;
-  font-size: 16px;
-  line-height: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  transition: all 0.15s;
+.md-points li strong{color:rgba(255,255,255,.85);font-weight:500}
+
+/* SLA VISUAL */
+.sla-row{display:flex;gap:8px;margin:16px 0}
+
+.sla-pill{
+  flex:1;border-radius:8px;padding:14px 10px;
+  text-align:center;
 }
 
-.panel-close:hover { border-color: var(--border-bright); color: var(--text); }
+.sla-pill .sp-icon{font-size:22px;margin-bottom:6px}
+.sla-pill .sp-label{font-size:11px;font-weight:700;display:block}
+.sla-pill .sp-desc{font-size:10px;opacity:.7;margin-top:2px}
+.sla-pill.g{background:rgba(16,185,129,.1);border:1px solid rgba(16,185,129,.3);color:#34d399}
+.sla-pill.y{background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.3);color:#fbbf24}
+.sla-pill.r{background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);color:#f87171}
 
-/* CLICK HINT */
-.hint {
-  text-align: center;
-  font-size: 12px;
-  color: var(--muted);
-  margin-top: 40px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
+/* PIPELINE */
+.pipeline{display:flex;flex-direction:column;gap:6px;margin:16px 0}
+
+.pipe-item{
+  display:flex;align-items:center;gap:12px;
+  background:rgba(255,255,255,.04);
+  border:1px solid rgba(255,255,255,.07);
+  border-radius:8px;padding:10px 14px;
+  font-size:12px;font-weight:500;color:rgba(255,255,255,.6);
+  transition:all .15s;
 }
 
-.hint-dot {
-  width: 6px; height: 6px;
-  border-radius: 50%;
-  background: var(--amber);
-  animation: pulse 2s infinite;
+.pipe-item:hover{background:rgba(201,168,76,.06);border-color:rgba(201,168,76,.2);color:#fff}
+.pipe-dot{width:6px;height:6px;border-radius:50%;background:#c9a84c;flex-shrink:0}
+
+/* ══ SEPARADOR GERENTE ══ */
+.mgmt-hero{
+  position:relative;
+  padding:100px 80px;
+  display:flex;align-items:center;gap:80px;
+  overflow:hidden;
 }
 
-/* FOOTER */
-footer {
-  text-align: center;
-  margin-top: 64px;
-  font-size: 11px;
-  color: var(--muted);
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
+.mgmt-hero-bg{
+  position:absolute;inset:0;
+  background-image:url('https://images.unsplash.com/photo-1520340356584-f9917d1eea6f?w=1800&q=80');
+  background-size:cover;background-position:center;
+  filter:brightness(.15) saturate(.5);
+}
+
+.mgmt-hero-overlay{
+  position:absolute;inset:0;
+  background:linear-gradient(90deg,rgba(15,25,35,.98) 50%,rgba(15,25,35,.6) 100%);
+}
+
+.mgmt-hero-content{position:relative;z-index:2;flex:1}
+
+.mgmt-hero-tag{
+  font-size:10px;font-weight:600;letter-spacing:.18em;
+  text-transform:uppercase;color:#c9a84c;margin-bottom:16px;
+}
+
+.mgmt-hero-title{
+  font-family:'Barlow Condensed',sans-serif;
+  font-size:clamp(36px,5vw,64px);font-weight:800;
+  text-transform:uppercase;color:#fff;line-height:.95;
+  margin-bottom:20px;
+}
+
+.mgmt-hero-desc{
+  font-size:15px;color:rgba(255,255,255,.45);font-weight:300;line-height:1.65;
+  max-width:480px;
+}
+
+/* MGMT GRID */
+.mgmt-grid-wrap{
+  background:#111d28;
+  padding:0 80px 80px;
+}
+
+.mgmt-grid{
+  display:grid;
+  grid-template-columns:repeat(2,1fr);
+  gap:2px;
+  border:1px solid rgba(255,255,255,.06);
+  border-radius:16px;overflow:hidden;
+}
+
+.mgmt-card{
+  background:#141f2d;
+  padding:40px;
+  cursor:pointer;
+  transition:background .2s;
+  position:relative;
+}
+
+.mgmt-card::after{
+  content:'';position:absolute;
+  bottom:0;right:0;left:0;height:1px;
+  background:rgba(255,255,255,.05);
+}
+
+.mgmt-card:hover{background:#182435}
+.mgmt-card.open{background:#192638;border-left:3px solid #c9a84c}
+
+.mc2-icon{font-size:36px;margin-bottom:18px}
+
+.mc2-title{
+  font-family:'Barlow Condensed',sans-serif;
+  font-size:22px;font-weight:700;text-transform:uppercase;
+  color:#fff;letter-spacing:.02em;margin-bottom:8px;
+}
+
+.mc2-sub{font-size:13px;color:rgba(255,255,255,.35);line-height:1.55;margin-bottom:0}
+
+.mc2-body{
+  display:none;margin-top:20px;
+  border-top:1px solid rgba(255,255,255,.07);
+  padding-top:20px;
+  animation:fadeUp .2s ease;
+}
+
+.mgmt-card.open .mc2-body{display:block}
+
+.mc2-list{list-style:none;display:flex;flex-direction:column;gap:10px}
+
+.mc2-list li{
+  font-size:13px;color:rgba(255,255,255,.45);
+  line-height:1.55;display:flex;gap:10px;align-items:flex-start;
+}
+
+.mc2-list li::before{content:'›';color:#c9a84c;font-size:14px;flex-shrink:0}
+.mc2-list li strong{color:rgba(255,255,255,.75);font-weight:500}
+
+/* ══ FOOTER ══ */
+.site-footer{
+  position:relative;height:280px;
+  display:flex;align-items:center;justify-content:center;overflow:hidden;
+}
+
+.footer-bg{
+  position:absolute;inset:0;
+  background-image:url('https://images.unsplash.com/photo-1503376780353-7e6692767b70?w=1800&q=80');
+  background-size:cover;background-position:center 55%;
+  filter:brightness(.2) saturate(.5);
+}
+
+.footer-ov{position:absolute;inset:0;background:rgba(15,25,35,.7)}
+
+.footer-inner{
+  position:relative;z-index:2;text-align:center;
+}
+
+.footer-logo{
+  font-family:'Barlow Condensed',sans-serif;
+  font-size:48px;font-weight:800;text-transform:uppercase;
+  color:#fff;letter-spacing:-.01em;margin-bottom:8px;
+}
+
+.footer-logo span{color:#c9a84c}
+
+.footer-line{
+  width:48px;height:2px;background:#c9a84c;
+  margin:16px auto;border-radius:1px;
+}
+
+.footer-sub{
+  font-size:11px;color:rgba(255,255,255,.3);
+  letter-spacing:.14em;text-transform:uppercase;
+}
+
+/* RESPONSIVE */
+@media(max-width:768px){
+  .module{grid-template-columns:1fr;min-height:auto}
+  .module.alt .mod-left,.module.alt .mod-right{order:unset}
+  .mod-right{display:none}
+  .mod-left,.module.alt .mod-left{padding:60px 28px}
+  .mgmt-hero{padding:60px 28px;flex-direction:column;gap:40px}
+  .mgmt-grid{grid-template-columns:1fr}
+  .mgmt-grid-wrap{padding:0 28px 60px}
+  .mgmt-card{padding:28px}
 }
 </style>
 </head>
 <body>
 
-<div class="wrap">
-  <header>
-    <div class="logo-badge"><span class="logo-dot"></span> Sistema activo en producción</div>
-    <h1>Ecosistema <strong>FunnelOS</strong></h1>
-    <p class="subtitle">Plataforma de gestión de leads con IA para RMG Autos — haz clic en cada módulo para conocer cómo funciona</p>
-  </header>
-
-  <div class="diagram">
-
-    <!-- CANALES DE ENTRADA -->
-    <div class="section-label">01 — Canales de entrada</div>
-    <div class="row">
-      <div class="node amber" onclick="show('chileautos')">
-        <div class="node-title">Chileautos</div>
-        <div class="node-sub">Webhook oficial CSN DTO</div>
-      </div>
-      <div class="node teal" onclick="show('yapo')">
-        <div class="node-title">Yapo / Portales</div>
-        <div class="node-sub">Botón WhatsApp</div>
-      </div>
-      <div class="node teal" onclick="show('wa-directo')">
-        <div class="node-title">WhatsApp directo</div>
-        <div class="node-sub">Cliente escribe primero</div>
-      </div>
-      <div class="node purple" onclick="show('lead-manual')">
-        <div class="node-title">Lead manual</div>
-        <div class="node-sub">Vendedor lo ingresa</div>
-      </div>
+<!-- ══ PANTALLA INTRO ══ -->
+<div id="screen-intro" onclick="enterSite()">
+  <div class="intro-bg"></div>
+  <div class="intro-overlay"></div>
+  <div class="intro-content">
+    <div style="margin-bottom:32px">
+      <img src="https://rmgautos.cl/wp-content/uploads/elementor/thumbs/logo-bco-qqmoac1tvdehx8ethw5ag4v2cfokxdxz6eu0phfzu2.png" 
+           alt="RMG Autos" style="height:56px;opacity:.9;filter:brightness(1.1)">
     </div>
-
-    <div class="connector">
-      <div class="connector-line"></div>
+    <div class="intro-eyebrow">Sistema FunnelOS · 2026</div>
+    <div class="intro-title">
+      <span>Plataforma de ventas con inteligencia artificial</span>
+      FunnelOS
     </div>
-
-    <!-- PROCESAMIENTO -->
-    <div class="section-label">02 — Procesamiento</div>
-    <div class="row">
-      <div class="node gray wide" onclick="show('server')">
-        <div class="node-title">server.js — Motor central</div>
-        <div class="node-sub">Recibe, deduplica, clasifica y enruta cada lead según su canal y estado</div>
-      </div>
-    </div>
-
-    <div class="connector">
-      <div class="connector-line"></div>
-    </div>
-
-    <!-- DECISIÓN VENTANA 24H -->
-    <div class="section-label">03 — Lógica de contacto</div>
-    <div class="row">
-      <div class="node amber" onclick="show('ventana24')">
-        <div class="node-title">¿Ventana 24h activa?</div>
-        <div class="node-sub">¿El cliente habló antes?</div>
-      </div>
-      <div class="node teal" onclick="show('canal-detect')">
-        <div class="node-title">Canal detectado</div>
-        <div class="node-sub">Yapo · ML · WA directo</div>
-      </div>
-    </div>
-
-    <div class="connector">
-      <div class="connector-line"></div>
-    </div>
-
-    <!-- ENVÍO WA -->
-    <div class="section-label">04 — Primer contacto automático</div>
-    <div class="row">
-      <div class="node green" onclick="show('texto-libre')">
-        <div class="node-title">Texto libre</div>
-        <div class="node-sub">Marcela saluda directo</div>
-      </div>
-      <div class="node amber" onclick="show('plantilla')">
-        <div class="node-title">Plantilla WA</div>
-        <div class="node-sub">contacto_chileautos_v1</div>
-      </div>
-    </div>
-
-    <div class="connector">
-      <div class="connector-line"></div>
-    </div>
-
-    <!-- SALAS DE ESPERA -->
-    <div class="section-label">05 — Salas de espera</div>
-    <div class="row">
-      <div class="node amber wide" onclick="show('sala-ca')">
-        <div class="node-title">Sala de Espera — Chileautos</div>
-        <div class="node-sub">Lead aguarda respuesta · bot contactó · SLA corre desde el ingreso</div>
-      </div>
-      <div class="node purple wide" onclick="show('sala-general')">
-        <div class="node-title">Sala de Espera — General</div>
-        <div class="node-sub">Yapo · Referidos · Manuales · plantilla enviada · SLA activo</div>
-      </div>
-    </div>
-
-    <div class="connector">
-      <div class="connector-line"></div>
-    </div>
-
-    <!-- SEMÁFORO SLA -->
-    <div class="section-label">06 — Semáforo SLA</div>
-    <div class="node full teal" onclick="show('semaforo')" style="max-width:760px">
-      <div class="node-title">Semáforo SLA — Lead activo en el embudo</div>
-      <div class="sla-bar">
-        <span class="sla-pill sla-green">Verde · &lt;20 min</span>
-        <span class="sla-pill sla-yellow">Riesgo · 20-30 min</span>
-        <span class="sla-pill sla-red">Alerta · &gt;60 min</span>
-      </div>
-      <div class="node-sub" style="margin-top:8px">Reasignación automática al superar el umbral</div>
-    </div>
-
-    <div class="connector">
-      <div class="connector-line"></div>
-    </div>
-
-    <!-- BOT + VENDEDOR -->
-    <div class="section-label">07 — Atención</div>
-    <div class="row">
-      <div class="node purple wide" onclick="show('bot-marcela')">
-        <div class="node-title">Bot Marcela IA</div>
-        <div class="node-sub">GPT-4 · inventario en tiempo real · tasación · crédito · cierre de visita</div>
-      </div>
-      <div class="node gray wide" onclick="show('vendedor')">
-        <div class="node-title">Vendedor</div>
-        <div class="node-sub">Notificado por WA · gestión en CRM · notas · retoma · tasación</div>
-      </div>
-    </div>
-
-    <div class="connector">
-      <div class="connector-line"></div>
-    </div>
-
-    <!-- PIPELINE -->
-    <div class="section-label">08 — Pipeline Kanban</div>
-    <div class="node full green" onclick="show('pipeline')" style="max-width:760px">
-      <div class="node-title" style="margin-bottom:12px">Pipeline de venta</div>
-      <div class="pipeline-stages">
-        <div class="stage">Nuevo</div>
-        <div class="stage">Contactado</div>
-        <div class="stage">Calificado</div>
-        <div class="stage">Negociación</div>
-        <div class="stage">Reservado</div>
-        <div class="stage">Cerrado</div>
-      </div>
-    </div>
-
-    <div class="connector">
-      <div class="connector-line"></div>
-    </div>
-
-    <!-- ANALÍTICA -->
-    <div class="section-label">09 — Analítica</div>
-    <div class="node full blue" onclick="show('analitica')" style="max-width:760px">
-      <div class="node-title">Analítica de canales</div>
-      <div class="node-sub">CPL · CPA · CAC · conversión por canal · rendimiento por vendedor · tiempo de respuesta</div>
-    </div>
-
+    <p class="intro-sub">
+      Así capturamos, atendemos y cerramos cada consulta — desde el primer mensaje hasta la venta.
+    </p>
+    <div class="intro-cta">Explorar el sistema &nbsp;→</div>
   </div>
-
-  <div class="hint">
-    <span class="hint-dot"></span>
-    Haz clic en cualquier módulo para ver cómo funciona
+  <div class="intro-scroll-hint">
+    <div class="intro-arrow"></div>
+    Toca para comenzar
   </div>
-
-  <footer>FunnelOS · RMG Autos · 2026</footer>
 </div>
 
-<!-- INFO PANEL -->
-<div id="info-panel">
-  <div class="panel-icon" id="panel-icon">⚙️</div>
-  <div class="panel-content">
-    <div class="panel-title" id="panel-title">Título</div>
-    <div class="panel-text" id="panel-text">Texto</div>
+<!-- ══ MAIN ══ -->
+<div id="main">
+
+<!-- ── MÓDULO 1: ENTRADA ── -->
+<div class="module" style="background:#0d1820">
+  <div class="mod-bg" style="background-image:url('https://images.unsplash.com/photo-1492144534655-ae79c964c9d7?w=1400&q=80')"></div>
+  <div class="mod-overlay"></div>
+  <div class="mod-num">01</div>
+
+  <div class="mod-left">
+    <div class="mod-tag" style="color:#5b9cf6">Canal de entrada</div>
+    <div class="mod-title">El cliente consulta.<br>Llegamos al instante.</div>
+    <div class="mod-desc">Sin importar por dónde llegue — el sistema lo recibe, lo organiza y lo asigna a un vendedor en segundos. Sin trabajo manual.</div>
+    <div class="mod-cards" id="cards-1">
+      <div class="mc" onclick="showDetail('d-chileautos','cards-1',this)">
+        <div class="mc-icon">🏷️</div>
+        <div><div class="mc-title">Chileautos</div><div class="mc-text">El cliente hace clic en "Contactar" y sus datos llegan solos</div></div>
+      </div>
+      <div class="mc" onclick="showDetail('d-yapo','cards-1',this)">
+        <div class="mc-icon">🔗</div>
+        <div><div class="mc-title">Yapo y otros portales</div><div class="mc-text">Pincha el botón WhatsApp del aviso — FunnelOS lo identifica</div></div>
+      </div>
+      <div class="mc" onclick="showDetail('d-wa','cards-1',this)">
+        <div class="mc-icon">💬</div>
+        <div><div class="mc-title">WhatsApp directo</div><div class="mc-text">Escribe al número de la tienda — respuesta en &lt;5 segundos</div></div>
+      </div>
+      <div class="mc" onclick="showDetail('d-manual','cards-1',this)">
+        <div class="mc-icon">✍️</div>
+        <div><div class="mc-title">Ingreso manual</div><div class="mc-text">Referidos, llamadas o visitas — el vendedor registra en 1 minuto</div></div>
+      </div>
+    </div>
   </div>
-  <button class="panel-close" onclick="closePanel()">×</button>
+
+  <div class="mod-right">
+    <div class="mod-detail" id="detail-1">
+      <div class="md-empty">
+        <div class="md-empty-icon">👈</div>
+        Selecciona un canal para ver cómo funciona
+      </div>
+      <div class="md-content" id="d-chileautos">
+        <div class="md-tag">Chileautos</div>
+        <div class="md-title">Datos que llegan solos</div>
+        <div class="md-desc">El cliente hace clic en "Contactar" y en segundos FunnelOS recibe su nombre, teléfono y el vehículo exacto que le interesa. Cero trabajo manual.</div>
+        <ul class="md-points">
+          <li><strong>Sin duplicados:</strong> si el mismo cliente consulta por otro auto, el sistema lo reconoce como multicotizante</li>
+          <li><strong>Marcela saluda de inmediato</strong> mencionando el vehículo exacto por WhatsApp</li>
+          <li><strong>Pasa a sala de espera</strong> hasta que el cliente responda — sin presión de tiempo</li>
+        </ul>
+      </div>
+      <div class="md-content" id="d-yapo">
+        <div class="md-tag">Yapo / Portales</div>
+        <div class="md-title">Directo al semáforo</div>
+        <div class="md-desc">El cliente pincha el botón WhatsApp del aviso y escribe primero. Como inició la conversación, FunnelOS puede responderle de inmediato sin restricciones.</div>
+        <ul class="md-points">
+          <li><strong>Detección automática del portal</strong> — Yapo, Mercado Libre u otro queda registrado para la analítica</li>
+          <li><strong>Va directo al semáforo</strong> — no pasa por sala de espera porque el cliente ya está activo</li>
+          <li><strong>Marcela responde en segundos</strong> con el vehículo que consultó</li>
+        </ul>
+      </div>
+      <div class="md-content" id="d-wa">
+        <div class="md-tag">WhatsApp Directo</div>
+        <div class="md-title">Respuesta en 5 segundos</div>
+        <div class="md-desc">Alguien escribe al número de RMG Autos desde Instagram, una valla o una tarjeta. Marcela lo atiende al instante — el vendedor recibe alerta en su propio WhatsApp.</div>
+        <ul class="md-points">
+          <li><strong>Atención inmediata</strong> a cualquier hora, incluidos fines de semana y noches</li>
+          <li><strong>Alerta al vendedor</strong> con nombre y vehículo de interés del cliente</li>
+          <li><strong>El vendedor puede tomar el control</strong> en cualquier momento con un clic</li>
+        </ul>
+      </div>
+      <div class="md-content" id="d-manual">
+        <div class="md-tag">Ingreso Manual</div>
+        <div class="md-title">Para referidos y llamadas</div>
+        <div class="md-desc">No todos los clientes llegan solos. El vendedor registra en un minuto y el sistema envía el primer contacto automáticamente.</div>
+        <ul class="md-points">
+          <li><strong>Registro rápido:</strong> nombre, teléfono, vehículo de interés y canal de origen</li>
+          <li><strong>Mensaje automático</strong> de presentación enviado por WhatsApp al instante</li>
+          <li><strong>Queda en sala de espera general</strong> hasta que el cliente responda</li>
+        </ul>
+      </div>
+    </div>
+  </div>
 </div>
+
+<!-- ── MÓDULO 2: MARCELA ── -->
+<div class="module alt" style="background:#0d1820">
+  <div class="mod-bg" style="background-image:url('https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=1400&q=80')"></div>
+  <div class="mod-overlay"></div>
+  <div class="mod-num">02</div>
+
+  <div class="mod-right">
+    <div class="mod-detail" id="detail-2">
+      <div class="md-empty">
+        <div class="md-empty-icon">🤖</div>
+        Selecciona una función de Marcela
+      </div>
+      <div class="md-content" id="d-saludo">
+        <div class="md-tag">Primer contacto</div>
+        <div class="md-title">El saludo que convierte</div>
+        <div class="md-desc">"¡Hola Andres! 👋 Soy Marcela de RMG Autos. Vi que te interesa el Toyota Corolla 2024. ¿Te ayudo con el precio o el financiamiento?"</div>
+        <ul class="md-points">
+          <li><strong>Nombre del cliente</strong> y vehículo exacto en el primer mensaje</li>
+          <li><strong>Tono cercano y natural</strong> — no suena a robot, suena a vendedora real</li>
+          <li><strong>Disponible a las 2am</strong> un domingo si el cliente consulta entonces</li>
+        </ul>
+      </div>
+      <div class="md-content" id="d-inventario">
+        <div class="md-tag">Conocimiento del stock</div>
+        <div class="md-title">El inventario en tiempo real</div>
+        <div class="md-desc">Marcela sabe exactamente qué autos están disponibles, precio lista y precio crédito. Si un vehículo se vende, lo sabe en la próxima hora.</div>
+        <ul class="md-points">
+          <li><strong>Actualización automática</strong> cada hora desde el sitio de RMG Autos</li>
+          <li><strong>Precio lista y crédito</strong> de cada vehículo disponible</li>
+          <li><strong>Si el auto no está:</strong> Marcela ofrece una alternativa similar con su ficha</li>
+        </ul>
+      </div>
+      <div class="md-content" id="d-financiamiento">
+        <div class="md-tag">Asesoría comercial</div>
+        <div class="md-title">Financiamiento explicado fácil</div>
+        <div class="md-desc">Pie mínimo sugerido, cuotas estimadas, partners financieros. Marcela guía al cliente por el proceso sin presionarlo.</div>
+        <ul class="md-points">
+          <li><strong>Partners exclusivos:</strong> Unidad Créditos, Global Autofin, BK Créditos</li>
+          <li><strong>Si tiene auto en retoma:</strong> calcula la diferencia a financiar aproximada</li>
+          <li><strong>Pie mínimo 20%</strong> — explicado de forma simple y directa</li>
+        </ul>
+      </div>
+      <div class="md-content" id="d-control">
+        <div class="md-tag">Trabajo en equipo</div>
+        <div class="md-title">El vendedor siempre manda</div>
+        <div class="md-desc">Marcela es el primer punto de contacto, pero el vendedor puede tomar el control en cualquier momento sin que el cliente lo note.</div>
+        <ul class="md-points">
+          <li><strong>Un clic apaga a Marcela</strong> — el vendedor responde directo por el mismo WhatsApp</li>
+          <li><strong>El cliente no nota diferencia</strong> — todo llega desde el mismo número</li>
+          <li><strong>Puede volver a encenderse</strong> cuando el vendedor quiera delegar de nuevo</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <div class="mod-left">
+    <div class="mod-tag" style="color:#34d399">Inteligencia artificial</div>
+    <div class="mod-title">Marcela.<br>La vendedora<br>que nunca duerme.</div>
+    <div class="mod-desc">Atiende al cliente en segundos, conoce el inventario en tiempo real y lo acompaña hasta agendar la visita — todo sin intervención humana.</div>
+    <div class="mod-cards" id="cards-2">
+      <div class="mc" onclick="showDetail('d-saludo','cards-2',this)">
+        <div class="mc-icon">👋</div>
+        <div><div class="mc-title">Saludo personalizado</div><div class="mc-text">Nombre del cliente + vehículo exacto en el primer mensaje</div></div>
+      </div>
+      <div class="mc" onclick="showDetail('d-inventario','cards-2',this)">
+        <div class="mc-icon">🚗</div>
+        <div><div class="mc-title">Inventario en tiempo real</div><div class="mc-text">Actualizado automáticamente cada hora desde rmgautos.cl</div></div>
+      </div>
+      <div class="mc" onclick="showDetail('d-financiamiento','cards-2',this)">
+        <div class="mc-icon">💰</div>
+        <div><div class="mc-title">Explica el financiamiento</div><div class="mc-text">Pie, cuotas, partners — orientación completa sin presionar</div></div>
+      </div>
+      <div class="mc" onclick="showDetail('d-control','cards-2',this)">
+        <div class="mc-icon">🎯</div>
+        <div><div class="mc-title">El vendedor toma el control</div><div class="mc-text">Un clic apaga a Marcela — el vendedor responde directamente</div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── MÓDULO 3: SEMÁFORO ── -->
+<div class="module" style="background:#0d1820">
+  <div class="mod-bg" style="background-image:url('https://images.unsplash.com/photo-1489824904134-891ab64532f1?w=1400&q=80')"></div>
+  <div class="mod-overlay"></div>
+  <div class="mod-num">03</div>
+
+  <div class="mod-left">
+    <div class="mod-tag" style="color:#fbbf24">Organización de tiempos</div>
+    <div class="mod-title">El semáforo.<br>Nadie queda<br>sin atención.</div>
+    <div class="mod-desc">Desde que el cliente responde, el semáforo mide el tiempo. El equipo sabe exactamente a quién atender primero y cuánto tiempo tiene.</div>
+    <div class="sla-row">
+      <div class="sla-pill g"><div class="sp-icon">🟢</div><span class="sp-label">&lt;20 min</span><div class="sp-desc">Todo bien</div></div>
+      <div class="sla-pill y"><div class="sp-icon">🟡</div><span class="sp-label">20-30 min</span><div class="sp-desc">Atender pronto</div></div>
+      <div class="sla-pill r"><div class="sp-icon">🔴</div><span class="sp-label">+60 min</span><div class="sp-desc">Urgente</div></div>
+    </div>
+    <div class="mod-cards" id="cards-3">
+      <div class="mc" onclick="showDetail('d-sala-ca','cards-3',this)">
+        <div class="mc-icon">🏷️</div>
+        <div><div class="mc-title">Sala de espera Chileautos</div><div class="mc-text">Clientes contactados que aún no responden — sin presión de tiempo</div></div>
+      </div>
+      <div class="mc" onclick="showDetail('d-sala-gen','cards-3',this)">
+        <div class="mc-icon">⏳</div>
+        <div><div class="mc-title">Sala de espera general</div><div class="mc-text">Referidos y leads manuales esperando respuesta del cliente</div></div>
+      </div>
+      <div class="mc" onclick="showDetail('d-reasignacion','cards-3',this)">
+        <div class="mc-icon">🔄</div>
+        <div><div class="mc-title">Reasignación automática</div><div class="mc-text">Si nadie atiende en 60 min, el sistema reasigna al siguiente</div></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="mod-right">
+    <div class="mod-detail" id="detail-3">
+      <div class="md-empty"><div class="md-empty-icon">🚦</div>Selecciona para ver los detalles</div>
+      <div class="md-content" id="d-sala-ca">
+        <div class="md-tag">Sala de espera Chileautos</div>
+        <div class="md-title">Organizados, sin perderse nadie</div>
+        <div class="md-desc">Todos los clientes de Chileautos que recibieron el saludo de Marcela y aún no han respondido aparecen aquí — separados de los clientes activos.</div>
+        <ul class="md-points">
+          <li><strong>Sin contador de tiempo:</strong> el SLA no corre hasta que el cliente responde</li>
+          <li><strong>Visibles para todo el equipo:</strong> nombre, teléfono y vehículo de interés</li>
+          <li><strong>Pase automático:</strong> en cuanto responde, entra al semáforo y el vendedor recibe alerta</li>
+        </ul>
+      </div>
+      <div class="md-content" id="d-sala-gen">
+        <div class="md-tag">Sala de espera general</div>
+        <div class="md-title">Para referidos y leads manuales</div>
+        <div class="md-desc">Cuando el vendedor registra un cliente manualmente, queda aquí hasta que el cliente responda el primer mensaje enviado por el sistema.</div>
+        <ul class="md-points">
+          <li><strong>Plantilla WA enviada automáticamente</strong> al momento del registro</li>
+          <li><strong>Sin presión:</strong> el tiempo no corre hasta que hay respuesta</li>
+          <li><strong>El vendedor recibe alerta</strong> en su WhatsApp cuando el cliente responde</li>
+        </ul>
+      </div>
+      <div class="md-content" id="d-reasignacion">
+        <div class="md-tag">Escalada automática en 3 etapas</div>
+        <div class="md-title">El sistema protege cada oportunidad</div>
+        <div class="md-desc">Si el cliente no es atendido, FunnelOS actúa solo — con tres niveles de alerta progresivos para que nadie quede sin respuesta.</div>
+        <ul class="md-points">
+          <li><strong>20 min sin contacto → Alerta al Vendedor 1:</strong> "Tienes 10 minutos antes de que este cliente sea reasignado"</li>
+          <li><strong>30 min → Reasignación al Vendedor 2:</strong> el cliente pasa automáticamente y el Vendedor 2 recibe alerta en su WhatsApp</li>
+          <li><strong>60 min sin contacto del Vendedor 2 → Alerta a gerentes:</strong> el equipo directivo sabe que hay un cliente sin atención</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── MÓDULO 4: CIERRE ── -->
+<div class="module alt" style="background:#0d1820">
+  <div class="mod-bg" style="background-image:url('https://images.unsplash.com/photo-1441148345475-03a2e82f9719?w=1400&q=80')"></div>
+  <div class="mod-overlay"></div>
+  <div class="mod-num">04</div>
+
+  <div class="mod-right">
+    <div class="mod-detail" id="detail-4">
+      <div class="md-empty"><div class="md-empty-icon">🤝</div>Selecciona para ver los detalles</div>
+      <div class="md-content" id="d-tasacion">
+        <div class="md-tag">Auto en parte de pago — 4 pasos</div>
+        <div class="md-title">Tasación profesional, sin improvisar</div>
+        <div class="md-desc">Un proceso claro de 4 pasos desde que Marcela pide los datos hasta que el vendedor llama al cliente con el rango de precio.</div>
+        <ul class="md-points">
+          <li><strong>① Marcela recopila:</strong> le pide al cliente marca, modelo, año, color y fotos del exterior, interior y tablero con kilometraje</li>
+          <li><strong>② Vendedor envía al tasador:</strong> desde la ficha del lead presiona "Solicitar Tasación" — el tasador recibe todo al instante</li>
+          <li><strong>③ Tasador revisa y valora:</strong> entra a FunnelOS, ve los datos y las fotos, e ingresa el rango de precio de retoma</li>
+          <li><strong>④ Vendedor llama al cliente:</strong> ve el rango ingresado por el tasador y contacta al cliente para cerrar el negocio</li>
+        </ul>
+      </div>
+      <div class="md-content" id="d-agenda">
+        <div class="md-tag">Visita al local</div>
+        <div class="md-title">La cita que no se olvida</div>
+        <div class="md-desc">El vendedor agenda la visita desde la ficha del lead. Si delega a Marcela, ella coordina por WhatsApp y confirma la cita.</div>
+        <ul class="md-points">
+          <li><strong>Marcela propone horarios</strong> y confirma con el cliente por WhatsApp</li>
+          <li><strong>Agenda del equipo:</strong> todas las visitas organizadas por día en FunnelOS</li>
+          <li><strong>Recordatorio automático</strong> al cliente el día anterior a la visita</li>
+        </ul>
+      </div>
+      <div class="md-content" id="d-seguimiento">
+        <div class="md-tag">Clientes que no están listos hoy</div>
+        <div class="md-title">El seguimiento que cierra ventas</div>
+        <div class="md-desc">¿El cliente necesita pensarlo? El vendedor programa la tarea y Marcela lo contacta sola en la fecha exacta — sin que nadie tenga que recordarlo.</div>
+        <ul class="md-points">
+          <li><strong>El vendedor programa:</strong> "contactar en 2 semanas con nueva oferta"</li>
+          <li><strong>Marcela ejecuta sola</strong> en la fecha indicada con el mensaje apropiado</li>
+          <li><strong>Más ventas cerradas:</strong> los clientes tibios compran cuando los contactas en el momento justo</li>
+        </ul>
+      </div>
+      <div class="md-content" id="d-pipeline">
+        <div class="md-tag">Tablero Kanban</div>
+        <div class="md-title">El proceso de principio a fin</div>
+        <div class="md-desc">El vendedor arrastra cada tarjeta de columna en columna a medida que avanza la venta. De un vistazo se ve en qué etapa está cada cliente.</div>
+        <div class="pipeline">
+          <div class="pipe-item"><div class="pipe-dot"></div>Nuevo — acaba de llegar</div>
+          <div class="pipe-item"><div class="pipe-dot"></div>Contactado — primer intercambio real</div>
+          <div class="pipe-item"><div class="pipe-dot"></div>Calificado — interés genuino confirmado</div>
+          <div class="pipe-item"><div class="pipe-dot"></div>Negociación — precio y financiamiento</div>
+          <div class="pipe-item"><div class="pipe-dot"></div>Reservado — señal pagada o visita confirmada</div>
+          <div class="pipe-item"><div class="pipe-dot"></div>Cerrado ✓ — venta concretada</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="mod-left">
+    <div class="mod-tag" style="color:#c77dff">Negociación y cierre</div>
+    <div class="mod-title">De la consulta<br>a la venta.<br>Sin perder el hilo.</div>
+    <div class="mod-desc">FunnelOS acompaña todo el proceso — tasación, agendamiento, seguimiento y pipeline de ventas — para que ninguna oportunidad se pierda.</div>
+    <div class="mod-cards" id="cards-4">
+      <div class="mc" onclick="showDetail('d-tasacion','cards-4',this)">
+        <div class="mc-icon">🚗</div>
+        <div><div class="mc-title">Tasación del auto en retoma</div><div class="mc-text">4 pasos: Marcela · Vendedor · Tasador · Llamada al cliente</div></div>
+      </div>
+      <div class="mc" onclick="showDetail('d-agenda','cards-4',this)">
+        <div class="mc-icon">📅</div>
+        <div><div class="mc-title">Agendamiento de visita</div><div class="mc-text">Marcela coordina la cita y recuerda al cliente el día anterior</div></div>
+      </div>
+      <div class="mc" onclick="showDetail('d-seguimiento','cards-4',this)">
+        <div class="mc-icon">🗓️</div>
+        <div><div class="mc-title">Seguimiento automático</div><div class="mc-text">Programa la tarea y Marcela ejecuta sola en la fecha indicada</div></div>
+      </div>
+      <div class="mc" onclick="showDetail('d-pipeline','cards-4',this)">
+        <div class="mc-icon">🗂️</div>
+        <div><div class="mc-title">Pipeline de ventas</div><div class="mc-text">Tablero Kanban: Nuevo → Contactado → Negociación → Cerrado</div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ BLOQUE GERENTE ══ -->
+<div class="mgmt-hero">
+  <div class="mgmt-hero-bg"></div>
+  <div class="mgmt-hero-overlay"></div>
+  <div class="mgmt-hero-content">
+    <div class="mgmt-hero-tag">Para el gerente y el equipo</div>
+    <div class="mgmt-hero-title">Visibilidad<br>total del<br>negocio.</div>
+    <div class="mgmt-hero-desc">El gerente tiene control completo — ve todo, puede reasignar, comparar el equipo y decidir dónde invertir. Basado en datos reales, no en intuición.</div>
+  </div>
+</div>
+
+<div class="mgmt-grid-wrap">
+  <div class="mgmt-grid">
+
+    <div class="mgmt-card" onclick="this.classList.toggle('open')">
+      <div class="mc2-icon">🔔</div>
+      <div class="mc2-title">Alertas automáticas</div>
+      <div class="mc2-sub">3 niveles de alerta: aviso al vendedor a los 20 min, reasignación a los 30 min, alerta a gerentes a los 60 min.</div>
+      <div class="mc2-body">
+        <ul class="mc2-list">
+          <li>Alerta con <strong>nombre del cliente y vehículo</strong> en cada nuevo lead asignado</li>
+          <li><strong>20 min sin contacto:</strong> aviso al vendedor — "tienes 10 min o el cliente se reasigna"</li>
+          <li><strong>30 min:</strong> reasignación automática al Vendedor 2 con alerta inmediata</li>
+          <li><strong>60 min sin contacto del Vendedor 2:</strong> alerta directa a los gerentes</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="mgmt-card" onclick="this.classList.toggle('open')">
+      <div class="mc2-icon">📊</div>
+      <div class="mc2-title">Analítica de canales</div>
+      <div class="mc2-sub">¿Qué canal trae mejores compradores? ¿Cuánto cuesta cada cliente? Datos para decidir dónde invertir el presupuesto.</div>
+      <div class="mc2-body">
+        <ul class="mc2-list">
+          <li><strong>Costo por lead</strong> y costo por venta según el canal de origen</li>
+          <li><strong>Tasa de conversión</strong> — qué porcentaje de leads termina comprando</li>
+          <li><strong>Tiempo promedio</strong> desde primer contacto hasta cierre de venta</li>
+          <li>Qué vehículos generan más consultas — <strong>para optimizar el inventario publicado</strong></li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="mgmt-card" onclick="this.classList.toggle('open')">
+      <div class="mc2-icon">📋</div>
+      <div class="mc2-title">Reportería del equipo</div>
+      <div class="mc2-sub">El gerente ve quién vende más, quién tarda más en responder y dónde está el cuello de botella — sin hojas de cálculo.</div>
+      <div class="mc2-body">
+        <ul class="mc2-list">
+          <li>Leads <strong>asignados vs cerrados</strong> por cada vendedor en el período elegido</li>
+          <li><strong>Tiempo promedio</strong> de primera respuesta por vendedor</li>
+          <li>Gráfico comparativo del <strong>equipo completo</strong> en una sola pantalla</li>
+          <li>Filtros: hoy, ayer, 7 días o <strong>último mes</strong></li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="mgmt-card" onclick="this.classList.toggle('open')">
+      <div class="mc2-icon">👔</div>
+      <div class="mc2-title">Panel del gerente</div>
+      <div class="mc2-sub">Ve todos los leads del equipo, reasigna con un clic, edita cómo habla Marcela y gestiona los usuarios del sistema.</div>
+      <div class="mc2-body">
+        <ul class="mc2-list">
+          <li>Acceso a la <strong>ficha y conversación</strong> de cualquier cliente del equipo</li>
+          <li><strong>Reasignación en segundos</strong> — si un vendedor está sobrecargado o ausente</li>
+          <li>Editor del <strong>comportamiento de Marcela</strong> sin necesidad de conocimientos técnicos</li>
+          <li>Gestión de usuarios: <strong>agregar, editar o desactivar</strong> vendedores</li>
+        </ul>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- FOOTER -->
+<!-- ══ DIAGRAMA DE FLUJO FINAL ══ -->
+<div style="background:#0a1520;padding:80px 60px">
+  <div style="max-width:1000px;margin:0 auto">
+    
+    <div style="text-align:center;margin-bottom:56px">
+      <div style="font-size:10px;font-weight:600;letter-spacing:.18em;text-transform:uppercase;color:#c9a84c;margin-bottom:12px">Resumen visual</div>
+      <div style="font-family:'Barlow Condensed',sans-serif;font-size:clamp(28px,4vw,44px);font-weight:800;text-transform:uppercase;color:#fff;letter-spacing:-.01em">El flujo completo de un lead</div>
+    </div>
+
+    <!-- FILA 1: CANALES -->
+    <div style="display:flex;gap:10px;justify-content:center;margin-bottom:8px;flex-wrap:wrap">
+      <div style="background:rgba(91,156,246,.1);border:1px solid rgba(91,156,246,.3);border-radius:10px;padding:12px 18px;text-align:center;min-width:130px">
+        <div style="font-size:18px;margin-bottom:4px">🏷️</div>
+        <div style="font-size:12px;font-weight:600;color:#5b9cf6">Chileautos</div>
+        <div style="font-size:10px;color:rgba(255,255,255,.35);margin-top:2px">Webhook automático</div>
+      </div>
+      <div style="background:rgba(91,156,246,.1);border:1px solid rgba(91,156,246,.3);border-radius:10px;padding:12px 18px;text-align:center;min-width:130px">
+        <div style="font-size:18px;margin-bottom:4px">🔗</div>
+        <div style="font-size:12px;font-weight:600;color:#5b9cf6">Yapo / Portales</div>
+        <div style="font-size:10px;color:rgba(255,255,255,.35);margin-top:2px">Botón WhatsApp</div>
+      </div>
+      <div style="background:rgba(91,156,246,.1);border:1px solid rgba(91,156,246,.3);border-radius:10px;padding:12px 18px;text-align:center;min-width:130px">
+        <div style="font-size:18px;margin-bottom:4px">💬</div>
+        <div style="font-size:12px;font-weight:600;color:#5b9cf6">WhatsApp directo</div>
+        <div style="font-size:10px;color:rgba(255,255,255,.35);margin-top:2px">Cliente escribe primero</div>
+      </div>
+      <div style="background:rgba(91,156,246,.1);border:1px solid rgba(91,156,246,.3);border-radius:10px;padding:12px 18px;text-align:center;min-width:130px">
+        <div style="font-size:18px;margin-bottom:4px">✍️</div>
+        <div style="font-size:12px;font-weight:600;color:#5b9cf6">Ingreso manual</div>
+        <div style="font-size:10px;color:rgba(255,255,255,.35);margin-top:2px">Referido / Llamada</div>
+      </div>
+    </div>
+
+    <!-- FLECHA -->
+    <div style="text-align:center;color:rgba(255,255,255,.2);font-size:22px;margin:4px 0">↓</div>
+
+    <!-- FILA 2: MOTOR -->
+    <div style="background:rgba(201,168,76,.08);border:1px solid rgba(201,168,76,.3);border-radius:10px;padding:14px 24px;text-align:center;margin-bottom:8px;max-width:600px;margin-left:auto;margin-right:auto">
+      <div style="font-size:12px;font-weight:600;color:#c9a84c">⚙️ &nbsp; Motor central de FunnelOS</div>
+      <div style="font-size:11px;color:rgba(255,255,255,.4);margin-top:3px">Recibe · identifica canal · evita duplicados · asigna vendedor</div>
+    </div>
+
+    <div style="text-align:center;color:rgba(255,255,255,.2);font-size:22px;margin:4px 0">↓</div>
+
+    <!-- FILA 3: DECISIÓN VENTANA -->
+    <div style="display:flex;gap:10px;justify-content:center;margin-bottom:8px;flex-wrap:wrap">
+      <div style="background:rgba(52,211,153,.08);border:1px solid rgba(52,211,153,.25);border-radius:10px;padding:12px 20px;text-align:center;flex:1;min-width:180px;max-width:260px">
+        <div style="font-size:11px;font-weight:600;color:#34d399;margin-bottom:4px">✅ Cliente ya escribió antes</div>
+        <div style="font-size:11px;color:rgba(255,255,255,.4)">Marcela envía texto libre personalizado</div>
+      </div>
+      <div style="background:rgba(201,168,76,.08);border:1px solid rgba(201,168,76,.25);border-radius:10px;padding:12px 20px;text-align:center;flex:1;min-width:180px;max-width:260px">
+        <div style="font-size:11px;font-weight:600;color:#c9a84c;margin-bottom:4px">📋 Cliente nuevo</div>
+        <div style="font-size:11px;color:rgba(255,255,255,.4)">Plantilla WA aprobada por Meta</div>
+      </div>
+    </div>
+
+    <div style="text-align:center;color:rgba(255,255,255,.2);font-size:22px;margin:4px 0">↓</div>
+
+    <!-- FILA 4: SALAS DE ESPERA -->
+    <div style="display:flex;gap:10px;justify-content:center;margin-bottom:8px;flex-wrap:wrap">
+      <div style="background:rgba(201,168,76,.06);border:1px solid rgba(201,168,76,.2);border-radius:10px;padding:12px 20px;text-align:center;flex:1;min-width:180px;max-width:300px">
+        <div style="font-size:11px;font-weight:600;color:#c9a84c;margin-bottom:3px">🏷️ Sala Espera Chileautos</div>
+        <div style="font-size:10px;color:rgba(255,255,255,.35)">Sin SLA · hasta que el cliente responda</div>
+      </div>
+      <div style="background:rgba(199,125,255,.06);border:1px solid rgba(199,125,255,.2);border-radius:10px;padding:12px 20px;text-align:center;flex:1;min-width:180px;max-width:300px">
+        <div style="font-size:11px;font-weight:600;color:#c77dff;margin-bottom:3px">⏳ Sala Espera General</div>
+        <div style="font-size:10px;color:rgba(255,255,255,.35)">Solo leads manuales · sin SLA</div>
+      </div>
+    </div>
+
+    <div style="text-align:center;color:rgba(255,255,255,.2);font-size:22px;margin:4px 0">↓ Cliente responde</div>
+
+    <!-- FILA 5: SEMÁFORO SLA -->
+    <div style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:10px;padding:16px 24px;max-width:680px;margin:0 auto 8px">
+      <div style="font-size:11px;font-weight:600;color:rgba(255,255,255,.5);text-align:center;margin-bottom:12px;letter-spacing:.08em;text-transform:uppercase">🚦 Semáforo SLA — el tiempo corre</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;text-align:center">
+        <div style="background:rgba(52,211,153,.08);border:1px solid rgba(52,211,153,.2);border-radius:8px;padding:10px 6px">
+          <div style="font-size:15px;font-weight:700;color:#34d399">🟢</div>
+          <div style="font-size:10px;font-weight:600;color:#34d399;margin-top:3px">&lt;20 min</div>
+          <div style="font-size:9px;color:rgba(255,255,255,.3);margin-top:2px">Todo bien</div>
+        </div>
+        <div style="background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.2);border-radius:8px;padding:10px 6px">
+          <div style="font-size:15px;font-weight:700;color:#fbbf24">🟡</div>
+          <div style="font-size:10px;font-weight:600;color:#fbbf24;margin-top:3px">20 min → Alerta</div>
+          <div style="font-size:9px;color:rgba(255,255,255,.3);margin-top:2px">10 min o se reasigna</div>
+        </div>
+        <div style="background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.2);border-radius:8px;padding:10px 6px">
+          <div style="font-size:15px;font-weight:700;color:#f87171">🔴</div>
+          <div style="font-size:10px;font-weight:600;color:#f87171;margin-top:3px">30 min → V2</div>
+          <div style="font-size:9px;color:rgba(255,255,255,.3);margin-top:2px">60 min → Gerente</div>
+        </div>
+      </div>
+    </div>
+
+    <div style="text-align:center;color:rgba(255,255,255,.2);font-size:22px;margin:4px 0">↓</div>
+
+    <!-- FILA 6: ATENCIÓN -->
+    <div style="display:flex;gap:10px;justify-content:center;margin-bottom:8px;flex-wrap:wrap">
+      <div style="background:rgba(52,211,153,.08);border:1px solid rgba(52,211,153,.25);border-radius:10px;padding:12px 20px;text-align:center;flex:1;min-width:180px;max-width:280px">
+        <div style="font-size:18px;margin-bottom:4px">🤖</div>
+        <div style="font-size:12px;font-weight:600;color:#34d399">Marcela IA</div>
+        <div style="font-size:10px;color:rgba(255,255,255,.4);margin-top:3px">Inventario · financiamiento · tasación · agenda</div>
+      </div>
+      <div style="background:rgba(91,156,246,.08);border:1px solid rgba(91,156,246,.25);border-radius:10px;padding:12px 20px;text-align:center;flex:1;min-width:180px;max-width:280px">
+        <div style="font-size:18px;margin-bottom:4px">👤</div>
+        <div style="font-size:12px;font-weight:600;color:#5b9cf6">Vendedor</div>
+        <div style="font-size:10px;color:rgba(255,255,255,.4);margin-top:3px">Alerta WA · gestión desde FunnelOS</div>
+      </div>
+    </div>
+
+    <div style="text-align:center;color:rgba(255,255,255,.2);font-size:22px;margin:4px 0">↓</div>
+
+    <!-- FILA 7: TASACIÓN -->
+    <div style="background:rgba(201,168,76,.06);border:1px solid rgba(201,168,76,.2);border-radius:10px;padding:16px 24px;max-width:680px;margin:0 auto 8px">
+      <div style="font-size:11px;font-weight:600;color:#c9a84c;margin-bottom:12px;text-align:center;letter-spacing:.06em;text-transform:uppercase">🚗 Tasación — auto en parte de pago</div>
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;text-align:center">
+        <div><div style="font-size:20px;margin-bottom:4px">🤖</div><div style="font-size:10px;font-weight:600;color:rgba(255,255,255,.7)">① Marcela</div><div style="font-size:9px;color:rgba(255,255,255,.3);margin-top:2px">Pide datos y fotos</div></div>
+        <div><div style="font-size:20px;margin-bottom:4px">👤</div><div style="font-size:10px;font-weight:600;color:rgba(255,255,255,.7)">② Vendedor</div><div style="font-size:9px;color:rgba(255,255,255,.3);margin-top:2px">Envía al tasador</div></div>
+        <div><div style="font-size:20px;margin-bottom:4px">🔍</div><div style="font-size:10px;font-weight:600;color:rgba(255,255,255,.7)">③ Tasador</div><div style="font-size:9px;color:rgba(255,255,255,.3);margin-top:2px">Revisa e ingresa rango</div></div>
+        <div><div style="font-size:20px;margin-bottom:4px">📞</div><div style="font-size:10px;font-weight:600;color:rgba(255,255,255,.7)">④ Vendedor</div><div style="font-size:9px;color:rgba(255,255,255,.3);margin-top:2px">Llama al cliente</div></div>
+      </div>
+    </div>
+
+    <div style="text-align:center;color:rgba(255,255,255,.2);font-size:22px;margin:4px 0">↓</div>
+
+    <!-- FILA 8: PIPELINE -->
+    <div style="display:flex;gap:4px;justify-content:center;flex-wrap:wrap;margin-bottom:8px">
+      <div style="background:rgba(52,211,153,.06);border:1px solid rgba(52,211,153,.15);border-radius:8px;padding:10px 14px;font-size:11px;font-weight:600;color:#34d399;text-align:center;flex:1;min-width:90px;max-width:130px">Nuevo</div>
+      <div style="color:rgba(255,255,255,.2);display:flex;align-items:center;font-size:16px">→</div>
+      <div style="background:rgba(52,211,153,.06);border:1px solid rgba(52,211,153,.15);border-radius:8px;padding:10px 14px;font-size:11px;font-weight:600;color:#34d399;text-align:center;flex:1;min-width:90px;max-width:130px">Contactado</div>
+      <div style="color:rgba(255,255,255,.2);display:flex;align-items:center;font-size:16px">→</div>
+      <div style="background:rgba(52,211,153,.06);border:1px solid rgba(52,211,153,.15);border-radius:8px;padding:10px 14px;font-size:11px;font-weight:600;color:#34d399;text-align:center;flex:1;min-width:90px;max-width:130px">Negociación</div>
+      <div style="color:rgba(255,255,255,.2);display:flex;align-items:center;font-size:16px">→</div>
+      <div style="background:rgba(52,211,153,.06);border:1px solid rgba(52,211,153,.15);border-radius:8px;padding:10px 14px;font-size:11px;font-weight:600;color:#34d399;text-align:center;flex:1;min-width:90px;max-width:130px">Reservado</div>
+      <div style="color:rgba(255,255,255,.2);display:flex;align-items:center;font-size:16px">→</div>
+      <div style="background:rgba(201,168,76,.1);border:1px solid rgba(201,168,76,.4);border-radius:8px;padding:10px 14px;font-size:11px;font-weight:700;color:#c9a84c;text-align:center;flex:1;min-width:90px;max-width:130px">Cerrado ✓</div>
+    </div>
+
+    <!-- FILA 9: GERENTE -->
+    <div style="text-align:center;color:rgba(255,255,255,.2);font-size:22px;margin:4px 0">↓</div>
+    <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap">
+      <div style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:10px;padding:12px 16px;text-align:center;flex:1;min-width:140px;max-width:200px">
+        <div style="font-size:16px;margin-bottom:4px">📊</div>
+        <div style="font-size:11px;font-weight:600;color:rgba(255,255,255,.7)">Analítica</div>
+        <div style="font-size:9px;color:rgba(255,255,255,.3);margin-top:2px">CPL · CPA · conversión</div>
+      </div>
+      <div style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:10px;padding:12px 16px;text-align:center;flex:1;min-width:140px;max-width:200px">
+        <div style="font-size:16px;margin-bottom:4px">📋</div>
+        <div style="font-size:11px;font-weight:600;color:rgba(255,255,255,.7)">Reportería</div>
+        <div style="font-size:9px;color:rgba(255,255,255,.3);margin-top:2px">Rendimiento por vendedor</div>
+      </div>
+      <div style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:10px;padding:12px 16px;text-align:center;flex:1;min-width:140px;max-width:200px">
+        <div style="font-size:16px;margin-bottom:4px">👔</div>
+        <div style="font-size:11px;font-weight:600;color:rgba(255,255,255,.7)">Panel gerente</div>
+        <div style="font-size:9px;color:rgba(255,255,255,.3);margin-top:2px">Control total del equipo</div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<div class="site-footer">
+  <div class="footer-bg"></div>
+  <div class="footer-ov"></div>
+  <div class="footer-inner">
+    <div class="footer-logo">Funnel<span>OS</span></div>
+    <div class="footer-line"></div>
+    <div class="footer-sub">RMG Autos · Sistema activo en producción · 2026</div>
+  </div>
+</div>
+
+</div><!-- fin main -->
 
 <script>
-const info = {
-  chileautos: {
-    icon: '🏷️',
-    title: 'Webhook oficial Chileautos',
-    text: 'Cuando un cliente consulta por un vehículo en Chileautos, la plataforma envía automáticamente un POST a FunnelOS con los datos del prospecto (nombre, teléfono, vehículo). El sistema lo recibe en milisegundos, crea el lead y lo envía a la Sala de Espera Chileautos. Si el cliente ya tiene un lead activo, se marca como Multicotizante en vez de crear un duplicado.'
-  },
-  yapo: {
-    icon: '🔗',
-    title: 'Leads desde Yapo y otros portales',
-    text: 'Cuando el cliente pincha el botón de WhatsApp en un anuncio de Yapo, se abre una conversación con un mensaje pre-cargado: "Me interesa el anuncio X en Yapo...". FunnelOS detecta ese patrón automáticamente, identifica el vehículo de interés, crea el lead con source: Yapo y lo envía a la Sala de Espera General.'
-  },
-  'wa-directo': {
-    icon: '💬',
-    title: 'WhatsApp directo — cliente que escribe primero',
-    text: 'Cuando un cliente escribe directamente al número de WhatsApp Business de RMG Autos, el webhook de Meta recibe el mensaje, crea el lead automáticamente y activa el bot Marcela para responder. Como el cliente escribió primero, la ventana de 24 horas de Meta está activa y no se necesita plantilla aprobada.'
-  },
-  'lead-manual': {
-    icon: '✍️',
-    title: 'Lead manual — ingreso por vendedor',
-    text: 'El vendedor puede crear leads manualmente desde el botón "+ Nuevo Lead" en FunnelOS. Selecciona el canal de origen (Referido, Llamada, Meta Ads, etc.), ingresa nombre, teléfono y vehículo de interés. Si el canal no es WhatsApp directo, el sistema envía la plantilla WA automáticamente y lo pone en Sala de Espera hasta que el cliente responda.'
-  },
-  server: {
-    icon: '⚙️',
-    title: 'server.js — Motor central del ecosistema',
-    text: 'Node.js/Express corriendo en Render. Recibe todos los webhooks (Chileautos, Meta, inbound), aplica lógica de deduplicación por teléfono y externalId, detecta el origen del lead (Yapo, ML, Chileautos), verifica la ventana de 24h de Meta, decide si enviar texto libre o plantilla WA, y enruta el lead a la sala de espera o semáforo correspondiente.'
-  },
-  ventana24: {
-    icon: '⏱️',
-    title: 'Ventana de 24 horas de Meta',
-    text: 'Meta (WhatsApp Business API) permite enviar mensajes de texto libre solo dentro de las 24h después de que el cliente escribió. Fuera de ese período, solo se pueden enviar plantillas aprobadas. FunnelOS revisa el campo lastClientTs de cada lead: si es menor a 24h, envía texto libre. Si no, intenta la plantilla contacto_chileautos_v1.'
-  },
-  'canal-detect': {
-    icon: '🔍',
-    title: 'Detección automática de canal de origen',
-    text: 'Cuando llega un mensaje por WhatsApp, el servidor analiza el texto con expresiones regulares para detectar el origen. Si el mensaje contiene "Me interesa el anuncio en Yapo" → source: Yapo. Si menciona "Mercado Libre" → source: MercadoLibre. Si es un mensaje genérico → source: WhatsApp. Este dato alimenta la analítica de canales.'
-  },
-  'texto-libre': {
-    icon: '✉️',
-    title: 'Mensaje de texto libre — ventana activa',
-    text: 'Cuando la ventana de 24h está activa, Marcela envía un mensaje personalizado directamente: "¡Hola [Nombre]! Soy Marcela de RMG Autos. Vimos que consultaste en Chileautos por el [Vehículo]. ¿Te puedo ayudar con precio, financiamiento o disponibilidad?" Este mensaje queda registrado en el historial de chat del lead.'
-  },
-  plantilla: {
-    icon: '📋',
-    title: 'Plantilla WA — contacto_chileautos_v1',
-    text: 'Plantilla aprobada por Meta en categoría Marketing. Se usa cuando no hay ventana de 24h activa (cliente nuevo). Tiene dos variables: {{1}} = nombre del cliente y {{2}} = vehículo consultado. Fue creada y aprobada en el WABA ID 1555268005502427 de Body Elite. Responde con el saludo de Marcela mencionando exactamente el vehículo que el cliente vio en Chileautos.'
-  },
-  'sala-ca': {
-    icon: '🏷️',
-    title: 'Sala de Espera — Chileautos',
-    text: 'Vista dedicada en FunnelOS donde van todos los leads de Chileautos hasta que el cliente responda. El SLA corre desde el momento en que llega el lead (no desde la respuesta del cliente). Columnas: Nombre, Teléfono, Vehículo, Asignado, Estado, Enviado. Cuando el cliente responde por WhatsApp, el lead pasa automáticamente al semáforo como Nuevo y se notifica al vendedor asignado.'
-  },
-  'sala-general': {
-    icon: '⏳',
-    title: 'Sala de Espera — General',
-    text: 'Vista para leads ingresados manualmente desde canales que no son WhatsApp directo: Yapo, Referidos, Llamadas, Meta Ads, etc. El sistema ya envió la plantilla WA. El lead espera aquí hasta que el cliente responda. Al responder, pasa automáticamente al semáforo como Nuevo y el vendedor recibe notificación. Visible en el sidebar con contador de leads activos.'
-  },
-  semaforo: {
-    icon: '🚦',
-    title: 'Semáforo SLA — Sistema de alertas de tiempo',
-    text: 'Verde (< 20 min): el lead es reciente, prioridad normal. Amarillo / Riesgo (20-30 min): atención requerida pronto. Rojo / Alerta (> 60 min): el lead lleva demasiado tiempo sin atención. Para leads de Chileautos, el SLA corre desde que llegó el lead. Para leads con chat activo, corre desde el último mensaje del cliente. Al superar el umbral, el sistema puede reasignar el lead automáticamente al siguiente vendedor disponible.'
-  },
-  'bot-marcela': {
-    icon: '🤖',
-    title: 'Bot Marcela IA — Vendedora virtual',
-    text: 'Powered by GPT-4. Conoce el inventario completo de RMG Autos en tiempo real (actualizado cada hora via scraper de rmgautos.cl). Responde consultas sobre precio, financiamiento, disponibilidad, tasación de retoma y visitas. Habla como una vendedora real: cálida, directa, con emojis naturales. Detecta señales de intención de compra y actualiza el indicador del lead (WARM / HOT). Se puede apagar por lead si el vendedor quiere tomar el control.'
-  },
-  vendedor: {
-    icon: '👤',
-    title: 'Gestión del vendedor en FunnelOS',
-    text: 'El vendedor recibe notificación WhatsApp al asignársele un lead. Desde la ficha del lead puede: ver el historial completo de chat, responder al cliente directamente (el mensaje llega por WhatsApp), agregar notas internas, registrar datos de retoma (marca/modelo/año/color), solicitar tasación, agendar visita con delegación opcional a Marcela IA, y mover el lead por el pipeline.'
-  },
-  pipeline: {
-    icon: '🗂️',
-    title: 'Pipeline Kanban — Seguimiento del proceso de venta',
-    text: 'Vista Kanban donde cada columna representa una etapa: Nuevo (recién asignado), Contactado (primer intercambio), Calificado (interés confirmado), Negociación (precio/financiamiento en discusión), Reservado (señal pagada o visita confirmada), Cerrado (venta concretada). El vendedor arrastra las tarjetas entre columnas. Cada tarjeta muestra el indicador SLA, señal de intención y tiempo desde última interacción.'
-  },
-  analitica: {
-    icon: '📊',
-    title: 'Analítica de canales — Inteligencia del negocio',
-    text: 'Dashboard que muestra el rendimiento de cada canal: CPL (Costo por Lead), CPA (Costo por Adquisición), CAC (Costo de Adquisición de Cliente), tasa de conversión, tiempo promedio de respuesta y número de leads cerrados por canal. Permite comparar qué canal trae los leads más calificados y tomar decisiones de inversión publicitaria basadas en datos reales.'
-  }
-};
-
-let current = null;
-
-function show(id) {
-  const d = info[id];
-  if (!d) return;
-
-  // Limpiar activos anteriores
-  document.querySelectorAll('.node.active').forEach(n => n.classList.remove('active'));
-
-  // Marcar activo
-  event.currentTarget.classList.add('active');
-
-  document.getElementById('panel-icon').textContent = d.icon;
-  document.getElementById('panel-title').textContent = d.title;
-  document.getElementById('panel-text').textContent = d.text;
-  document.getElementById('info-panel').classList.add('visible');
-  current = id;
+function enterSite(){
+  document.getElementById('screen-intro').classList.add('hidden');
+  document.getElementById('main').classList.add('visible');
+  setTimeout(()=>{
+    document.getElementById('screen-intro').style.display='none';
+  },900);
 }
 
-function closePanel() {
-  document.getElementById('info-panel').classList.remove('visible');
-  document.querySelectorAll('.node.active').forEach(n => n.classList.remove('active'));
-  current = null;
-}
+function showDetail(contentId, cardsGroup, clickedCard){
+  event.stopPropagation();
 
-document.addEventListener('keydown', e => {
-  if (e.key === 'Escape') closePanel();
-});
+  // Marcar card activa
+  document.querySelectorAll('#'+cardsGroup+' .mc').forEach(c=>c.classList.remove('active'));
+  clickedCard.classList.add('active');
+
+  // Encontrar el panel de detalle correspondiente al grupo
+  const groupNum = cardsGroup.split('-')[1];
+  const detailPanel = document.getElementById('detail-'+groupNum);
+
+  // Ocultar empty state
+  const emptyEl = detailPanel.querySelector('.md-empty');
+  if(emptyEl) emptyEl.style.display='none';
+
+  // Ocultar todos los contenidos
+  detailPanel.querySelectorAll('.md-content').forEach(c=>c.classList.remove('show'));
+
+  // Mostrar el seleccionado
+  const target = document.getElementById(contentId);
+  if(target) target.classList.add('show');
+}
 </script>
 </body>
 </html>
