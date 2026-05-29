@@ -1,0 +1,728 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FunnelOS — Ecosistema RMG Autos</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #0a0e14;
+  --surface: #111722;
+  --surface2: #1a2234;
+  --border: rgba(255,255,255,0.07);
+  --border-bright: rgba(255,255,255,0.15);
+  --text: #e8edf5;
+  --muted: #6b7a99;
+  --amber: #f59e0b;
+  --amber-dim: rgba(245,158,11,0.12);
+  --amber-glow: rgba(245,158,11,0.25);
+  --teal: #14b8a6;
+  --teal-dim: rgba(20,184,166,0.12);
+  --purple: #8b5cf6;
+  --purple-dim: rgba(139,92,246,0.12);
+  --green: #10b981;
+  --green-dim: rgba(16,185,129,0.12);
+  --blue: #3b82f6;
+  --blue-dim: rgba(59,130,246,0.12);
+  --gray-dim: rgba(255,255,255,0.05);
+  --red: #ef4444;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: 'DM Sans', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* BG GRID */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(255,255,255,0.025) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,0.025) 1px, transparent 1px);
+  background-size: 48px 48px;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.wrap {
+  position: relative;
+  z-index: 1;
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 48px 24px 80px;
+}
+
+/* HEADER */
+header {
+  text-align: center;
+  margin-bottom: 56px;
+}
+
+.logo-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--amber-dim);
+  border: 1px solid var(--amber);
+  border-radius: 999px;
+  padding: 4px 16px 4px 10px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--amber);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  margin-bottom: 20px;
+}
+
+.logo-dot {
+  width: 6px; height: 6px;
+  background: var(--amber);
+  border-radius: 50%;
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0%,100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.5; transform: scale(0.8); }
+}
+
+h1 {
+  font-size: clamp(28px, 4vw, 44px);
+  font-weight: 300;
+  letter-spacing: -0.03em;
+  line-height: 1.1;
+  color: var(--text);
+  margin-bottom: 12px;
+}
+
+h1 strong { font-weight: 600; color: #fff; }
+
+.subtitle {
+  font-size: 15px;
+  color: var(--muted);
+  max-width: 480px;
+  margin: 0 auto;
+  line-height: 1.6;
+}
+
+/* DIAGRAM */
+.diagram {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  align-items: center;
+}
+
+/* SECTION LABELS */
+.section-label {
+  font-family: 'DM Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted);
+  text-align: center;
+  margin-bottom: 12px;
+  margin-top: 32px;
+}
+
+/* ROWS */
+.row {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  width: 100%;
+  flex-wrap: wrap;
+}
+
+/* CONNECTOR */
+.connector {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 0;
+  width: 100%;
+  position: relative;
+  height: 40px;
+}
+
+.connector-line {
+  width: 1px;
+  height: 40px;
+  background: linear-gradient(to bottom, var(--border-bright), transparent);
+  position: relative;
+}
+
+.connector-line::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  border-left: 4px solid transparent;
+  border-right: 4px solid transparent;
+  border-top: 6px solid var(--border-bright);
+}
+
+.connector-multi {
+  display: flex;
+  justify-content: space-around;
+  width: 100%;
+  height: 40px;
+  position: relative;
+}
+
+.connector-multi::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 12.5%;
+  right: 12.5%;
+  height: 1px;
+  background: var(--border-bright);
+}
+
+.connector-multi .v-line {
+  width: 1px;
+  height: 40px;
+  background: linear-gradient(to bottom, var(--border-bright), rgba(255,255,255,0.04));
+  position: relative;
+}
+
+.connector-multi .v-line::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  border-left: 4px solid transparent;
+  border-right: 4px solid transparent;
+  border-top: 6px solid rgba(255,255,255,0.12);
+}
+
+/* NODES */
+.node {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 14px 20px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  min-width: 160px;
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+}
+
+.node::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  transition: opacity 0.2s;
+  border-radius: inherit;
+}
+
+.node:hover { transform: translateY(-2px); }
+.node:hover::before { opacity: 1; }
+.node:active { transform: translateY(0); }
+
+.node.active {
+  transform: translateY(-2px);
+}
+
+.node-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: #fff;
+  margin-bottom: 3px;
+}
+
+.node-sub {
+  font-size: 11px;
+  color: var(--muted);
+  line-height: 1.4;
+}
+
+/* COLORES */
+.amber { border-color: rgba(245,158,11,0.3); }
+.amber::before { background: var(--amber-dim); }
+.amber:hover { border-color: var(--amber); box-shadow: 0 0 24px var(--amber-glow); }
+.amber.active { border-color: var(--amber); box-shadow: 0 0 24px var(--amber-glow); background: var(--amber-dim); }
+.amber .node-title { color: var(--amber); }
+
+.teal { border-color: rgba(20,184,166,0.3); }
+.teal::before { background: var(--teal-dim); }
+.teal:hover { border-color: var(--teal); box-shadow: 0 0 24px rgba(20,184,166,0.25); }
+.teal.active { border-color: var(--teal); box-shadow: 0 0 24px rgba(20,184,166,0.25); background: var(--teal-dim); }
+.teal .node-title { color: var(--teal); }
+
+.purple { border-color: rgba(139,92,246,0.3); }
+.purple::before { background: var(--purple-dim); }
+.purple:hover { border-color: var(--purple); box-shadow: 0 0 24px rgba(139,92,246,0.25); }
+.purple.active { border-color: var(--purple); box-shadow: 0 0 24px rgba(139,92,246,0.25); background: var(--purple-dim); }
+.purple .node-title { color: var(--purple); }
+
+.green { border-color: rgba(16,185,129,0.3); }
+.green::before { background: var(--green-dim); }
+.green:hover { border-color: var(--green); box-shadow: 0 0 24px rgba(16,185,129,0.25); }
+.green.active { border-color: var(--green); box-shadow: 0 0 24px rgba(16,185,129,0.25); background: var(--green-dim); }
+.green .node-title { color: var(--green); }
+
+.blue { border-color: rgba(59,130,246,0.3); }
+.blue::before { background: var(--blue-dim); }
+.blue:hover { border-color: var(--blue); box-shadow: 0 0 24px rgba(59,130,246,0.25); }
+.blue.active { border-color: var(--blue); box-shadow: 0 0 24px rgba(59,130,246,0.25); background: var(--blue-dim); }
+.blue .node-title { color: var(--blue); }
+
+.gray { border-color: var(--border); }
+.gray::before { background: var(--gray-dim); }
+.gray:hover { border-color: var(--border-bright); }
+.gray.active { border-color: var(--border-bright); background: var(--gray-dim); }
+
+/* WIDE NODE */
+.node.wide { min-width: 320px; max-width: 680px; width: 100%; }
+.node.full { width: 100%; max-width: 760px; }
+
+/* SLA BAR */
+.sla-bar {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+  margin-top: 10px;
+}
+
+.sla-pill {
+  font-size: 10px;
+  font-weight: 600;
+  padding: 3px 10px;
+  border-radius: 999px;
+  letter-spacing: 0.04em;
+}
+
+.sla-green { background: rgba(16,185,129,0.15); color: var(--green); border: 1px solid rgba(16,185,129,0.3); }
+.sla-yellow { background: rgba(245,158,11,0.15); color: var(--amber); border: 1px solid rgba(245,158,11,0.3); }
+.sla-red { background: rgba(239,68,68,0.15); color: var(--red); border: 1px solid rgba(239,68,68,0.3); }
+
+/* PIPELINE ROW */
+.pipeline-stages {
+  display: flex;
+  gap: 0;
+  overflow-x: auto;
+  width: 100%;
+  max-width: 760px;
+  padding-bottom: 4px;
+}
+
+.stage {
+  flex: 1;
+  min-width: 100px;
+  text-align: center;
+  padding: 10px 8px;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--muted);
+  border-right: 1px solid var(--border);
+  position: relative;
+}
+
+.stage:last-child { border-right: none; }
+.stage::after {
+  content: '→';
+  position: absolute;
+  right: -6px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--border-bright);
+  font-size: 10px;
+  z-index: 1;
+}
+.stage:last-child::after { display: none; }
+
+/* INFO PANEL */
+#info-panel {
+  position: fixed;
+  bottom: 0; left: 0; right: 0;
+  background: var(--surface);
+  border-top: 1px solid var(--border-bright);
+  padding: 20px 32px;
+  transform: translateY(100%);
+  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  z-index: 100;
+  display: flex;
+  gap: 20px;
+  align-items: flex-start;
+}
+
+#info-panel.visible { transform: translateY(0); }
+
+.panel-icon {
+  font-size: 28px;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.panel-content { flex: 1; }
+
+.panel-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #fff;
+  margin-bottom: 6px;
+}
+
+.panel-text {
+  font-size: 13px;
+  color: var(--muted);
+  line-height: 1.6;
+  max-width: 720px;
+}
+
+.panel-close {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--muted);
+  width: 28px; height: 28px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 16px;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: all 0.15s;
+}
+
+.panel-close:hover { border-color: var(--border-bright); color: var(--text); }
+
+/* CLICK HINT */
+.hint {
+  text-align: center;
+  font-size: 12px;
+  color: var(--muted);
+  margin-top: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.hint-dot {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: var(--amber);
+  animation: pulse 2s infinite;
+}
+
+/* FOOTER */
+footer {
+  text-align: center;
+  margin-top: 64px;
+  font-size: 11px;
+  color: var(--muted);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header>
+    <div class="logo-badge"><span class="logo-dot"></span> Sistema activo en producción</div>
+    <h1>Ecosistema <strong>FunnelOS</strong></h1>
+    <p class="subtitle">Plataforma de gestión de leads con IA para RMG Autos — haz clic en cada módulo para conocer cómo funciona</p>
+  </header>
+
+  <div class="diagram">
+
+    <!-- CANALES DE ENTRADA -->
+    <div class="section-label">01 — Canales de entrada</div>
+    <div class="row">
+      <div class="node amber" onclick="show('chileautos')">
+        <div class="node-title">Chileautos</div>
+        <div class="node-sub">Webhook oficial CSN DTO</div>
+      </div>
+      <div class="node teal" onclick="show('yapo')">
+        <div class="node-title">Yapo / Portales</div>
+        <div class="node-sub">Botón WhatsApp</div>
+      </div>
+      <div class="node teal" onclick="show('wa-directo')">
+        <div class="node-title">WhatsApp directo</div>
+        <div class="node-sub">Cliente escribe primero</div>
+      </div>
+      <div class="node purple" onclick="show('lead-manual')">
+        <div class="node-title">Lead manual</div>
+        <div class="node-sub">Vendedor lo ingresa</div>
+      </div>
+    </div>
+
+    <div class="connector">
+      <div class="connector-line"></div>
+    </div>
+
+    <!-- PROCESAMIENTO -->
+    <div class="section-label">02 — Procesamiento</div>
+    <div class="row">
+      <div class="node gray wide" onclick="show('server')">
+        <div class="node-title">server.js — Motor central</div>
+        <div class="node-sub">Recibe, deduplica, clasifica y enruta cada lead según su canal y estado</div>
+      </div>
+    </div>
+
+    <div class="connector">
+      <div class="connector-line"></div>
+    </div>
+
+    <!-- DECISIÓN VENTANA 24H -->
+    <div class="section-label">03 — Lógica de contacto</div>
+    <div class="row">
+      <div class="node amber" onclick="show('ventana24')">
+        <div class="node-title">¿Ventana 24h activa?</div>
+        <div class="node-sub">¿El cliente habló antes?</div>
+      </div>
+      <div class="node teal" onclick="show('canal-detect')">
+        <div class="node-title">Canal detectado</div>
+        <div class="node-sub">Yapo · ML · WA directo</div>
+      </div>
+    </div>
+
+    <div class="connector">
+      <div class="connector-line"></div>
+    </div>
+
+    <!-- ENVÍO WA -->
+    <div class="section-label">04 — Primer contacto automático</div>
+    <div class="row">
+      <div class="node green" onclick="show('texto-libre')">
+        <div class="node-title">Texto libre</div>
+        <div class="node-sub">Marcela saluda directo</div>
+      </div>
+      <div class="node amber" onclick="show('plantilla')">
+        <div class="node-title">Plantilla WA</div>
+        <div class="node-sub">contacto_chileautos_v1</div>
+      </div>
+    </div>
+
+    <div class="connector">
+      <div class="connector-line"></div>
+    </div>
+
+    <!-- SALAS DE ESPERA -->
+    <div class="section-label">05 — Salas de espera</div>
+    <div class="row">
+      <div class="node amber wide" onclick="show('sala-ca')">
+        <div class="node-title">Sala de Espera — Chileautos</div>
+        <div class="node-sub">Lead aguarda respuesta · bot contactó · SLA corre desde el ingreso</div>
+      </div>
+      <div class="node purple wide" onclick="show('sala-general')">
+        <div class="node-title">Sala de Espera — General</div>
+        <div class="node-sub">Yapo · Referidos · Manuales · plantilla enviada · SLA activo</div>
+      </div>
+    </div>
+
+    <div class="connector">
+      <div class="connector-line"></div>
+    </div>
+
+    <!-- SEMÁFORO SLA -->
+    <div class="section-label">06 — Semáforo SLA</div>
+    <div class="node full teal" onclick="show('semaforo')" style="max-width:760px">
+      <div class="node-title">Semáforo SLA — Lead activo en el embudo</div>
+      <div class="sla-bar">
+        <span class="sla-pill sla-green">Verde · &lt;20 min</span>
+        <span class="sla-pill sla-yellow">Riesgo · 20-30 min</span>
+        <span class="sla-pill sla-red">Alerta · &gt;60 min</span>
+      </div>
+      <div class="node-sub" style="margin-top:8px">Reasignación automática al superar el umbral</div>
+    </div>
+
+    <div class="connector">
+      <div class="connector-line"></div>
+    </div>
+
+    <!-- BOT + VENDEDOR -->
+    <div class="section-label">07 — Atención</div>
+    <div class="row">
+      <div class="node purple wide" onclick="show('bot-marcela')">
+        <div class="node-title">Bot Marcela IA</div>
+        <div class="node-sub">GPT-4 · inventario en tiempo real · tasación · crédito · cierre de visita</div>
+      </div>
+      <div class="node gray wide" onclick="show('vendedor')">
+        <div class="node-title">Vendedor</div>
+        <div class="node-sub">Notificado por WA · gestión en CRM · notas · retoma · tasación</div>
+      </div>
+    </div>
+
+    <div class="connector">
+      <div class="connector-line"></div>
+    </div>
+
+    <!-- PIPELINE -->
+    <div class="section-label">08 — Pipeline Kanban</div>
+    <div class="node full green" onclick="show('pipeline')" style="max-width:760px">
+      <div class="node-title" style="margin-bottom:12px">Pipeline de venta</div>
+      <div class="pipeline-stages">
+        <div class="stage">Nuevo</div>
+        <div class="stage">Contactado</div>
+        <div class="stage">Calificado</div>
+        <div class="stage">Negociación</div>
+        <div class="stage">Reservado</div>
+        <div class="stage">Cerrado</div>
+      </div>
+    </div>
+
+    <div class="connector">
+      <div class="connector-line"></div>
+    </div>
+
+    <!-- ANALÍTICA -->
+    <div class="section-label">09 — Analítica</div>
+    <div class="node full blue" onclick="show('analitica')" style="max-width:760px">
+      <div class="node-title">Analítica de canales</div>
+      <div class="node-sub">CPL · CPA · CAC · conversión por canal · rendimiento por vendedor · tiempo de respuesta</div>
+    </div>
+
+  </div>
+
+  <div class="hint">
+    <span class="hint-dot"></span>
+    Haz clic en cualquier módulo para ver cómo funciona
+  </div>
+
+  <footer>FunnelOS · RMG Autos · 2026</footer>
+</div>
+
+<!-- INFO PANEL -->
+<div id="info-panel">
+  <div class="panel-icon" id="panel-icon">⚙️</div>
+  <div class="panel-content">
+    <div class="panel-title" id="panel-title">Título</div>
+    <div class="panel-text" id="panel-text">Texto</div>
+  </div>
+  <button class="panel-close" onclick="closePanel()">×</button>
+</div>
+
+<script>
+const info = {
+  chileautos: {
+    icon: '🏷️',
+    title: 'Webhook oficial Chileautos',
+    text: 'Cuando un cliente consulta por un vehículo en Chileautos, la plataforma envía automáticamente un POST a FunnelOS con los datos del prospecto (nombre, teléfono, vehículo). El sistema lo recibe en milisegundos, crea el lead y lo envía a la Sala de Espera Chileautos. Si el cliente ya tiene un lead activo, se marca como Multicotizante en vez de crear un duplicado.'
+  },
+  yapo: {
+    icon: '🔗',
+    title: 'Leads desde Yapo y otros portales',
+    text: 'Cuando el cliente pincha el botón de WhatsApp en un anuncio de Yapo, se abre una conversación con un mensaje pre-cargado: "Me interesa el anuncio X en Yapo...". FunnelOS detecta ese patrón automáticamente, identifica el vehículo de interés, crea el lead con source: Yapo y lo envía a la Sala de Espera General.'
+  },
+  'wa-directo': {
+    icon: '💬',
+    title: 'WhatsApp directo — cliente que escribe primero',
+    text: 'Cuando un cliente escribe directamente al número de WhatsApp Business de RMG Autos, el webhook de Meta recibe el mensaje, crea el lead automáticamente y activa el bot Marcela para responder. Como el cliente escribió primero, la ventana de 24 horas de Meta está activa y no se necesita plantilla aprobada.'
+  },
+  'lead-manual': {
+    icon: '✍️',
+    title: 'Lead manual — ingreso por vendedor',
+    text: 'El vendedor puede crear leads manualmente desde el botón "+ Nuevo Lead" en FunnelOS. Selecciona el canal de origen (Referido, Llamada, Meta Ads, etc.), ingresa nombre, teléfono y vehículo de interés. Si el canal no es WhatsApp directo, el sistema envía la plantilla WA automáticamente y lo pone en Sala de Espera hasta que el cliente responda.'
+  },
+  server: {
+    icon: '⚙️',
+    title: 'server.js — Motor central del ecosistema',
+    text: 'Node.js/Express corriendo en Render. Recibe todos los webhooks (Chileautos, Meta, inbound), aplica lógica de deduplicación por teléfono y externalId, detecta el origen del lead (Yapo, ML, Chileautos), verifica la ventana de 24h de Meta, decide si enviar texto libre o plantilla WA, y enruta el lead a la sala de espera o semáforo correspondiente.'
+  },
+  ventana24: {
+    icon: '⏱️',
+    title: 'Ventana de 24 horas de Meta',
+    text: 'Meta (WhatsApp Business API) permite enviar mensajes de texto libre solo dentro de las 24h después de que el cliente escribió. Fuera de ese período, solo se pueden enviar plantillas aprobadas. FunnelOS revisa el campo lastClientTs de cada lead: si es menor a 24h, envía texto libre. Si no, intenta la plantilla contacto_chileautos_v1.'
+  },
+  'canal-detect': {
+    icon: '🔍',
+    title: 'Detección automática de canal de origen',
+    text: 'Cuando llega un mensaje por WhatsApp, el servidor analiza el texto con expresiones regulares para detectar el origen. Si el mensaje contiene "Me interesa el anuncio en Yapo" → source: Yapo. Si menciona "Mercado Libre" → source: MercadoLibre. Si es un mensaje genérico → source: WhatsApp. Este dato alimenta la analítica de canales.'
+  },
+  'texto-libre': {
+    icon: '✉️',
+    title: 'Mensaje de texto libre — ventana activa',
+    text: 'Cuando la ventana de 24h está activa, Marcela envía un mensaje personalizado directamente: "¡Hola [Nombre]! Soy Marcela de RMG Autos. Vimos que consultaste en Chileautos por el [Vehículo]. ¿Te puedo ayudar con precio, financiamiento o disponibilidad?" Este mensaje queda registrado en el historial de chat del lead.'
+  },
+  plantilla: {
+    icon: '📋',
+    title: 'Plantilla WA — contacto_chileautos_v1',
+    text: 'Plantilla aprobada por Meta en categoría Marketing. Se usa cuando no hay ventana de 24h activa (cliente nuevo). Tiene dos variables: {{1}} = nombre del cliente y {{2}} = vehículo consultado. Fue creada y aprobada en el WABA ID 1555268005502427 de Body Elite. Responde con el saludo de Marcela mencionando exactamente el vehículo que el cliente vio en Chileautos.'
+  },
+  'sala-ca': {
+    icon: '🏷️',
+    title: 'Sala de Espera — Chileautos',
+    text: 'Vista dedicada en FunnelOS donde van todos los leads de Chileautos hasta que el cliente responda. El SLA corre desde el momento en que llega el lead (no desde la respuesta del cliente). Columnas: Nombre, Teléfono, Vehículo, Asignado, Estado, Enviado. Cuando el cliente responde por WhatsApp, el lead pasa automáticamente al semáforo como Nuevo y se notifica al vendedor asignado.'
+  },
+  'sala-general': {
+    icon: '⏳',
+    title: 'Sala de Espera — General',
+    text: 'Vista para leads ingresados manualmente desde canales que no son WhatsApp directo: Yapo, Referidos, Llamadas, Meta Ads, etc. El sistema ya envió la plantilla WA. El lead espera aquí hasta que el cliente responda. Al responder, pasa automáticamente al semáforo como Nuevo y el vendedor recibe notificación. Visible en el sidebar con contador de leads activos.'
+  },
+  semaforo: {
+    icon: '🚦',
+    title: 'Semáforo SLA — Sistema de alertas de tiempo',
+    text: 'Verde (< 20 min): el lead es reciente, prioridad normal. Amarillo / Riesgo (20-30 min): atención requerida pronto. Rojo / Alerta (> 60 min): el lead lleva demasiado tiempo sin atención. Para leads de Chileautos, el SLA corre desde que llegó el lead. Para leads con chat activo, corre desde el último mensaje del cliente. Al superar el umbral, el sistema puede reasignar el lead automáticamente al siguiente vendedor disponible.'
+  },
+  'bot-marcela': {
+    icon: '🤖',
+    title: 'Bot Marcela IA — Vendedora virtual',
+    text: 'Powered by GPT-4. Conoce el inventario completo de RMG Autos en tiempo real (actualizado cada hora via scraper de rmgautos.cl). Responde consultas sobre precio, financiamiento, disponibilidad, tasación de retoma y visitas. Habla como una vendedora real: cálida, directa, con emojis naturales. Detecta señales de intención de compra y actualiza el indicador del lead (WARM / HOT). Se puede apagar por lead si el vendedor quiere tomar el control.'
+  },
+  vendedor: {
+    icon: '👤',
+    title: 'Gestión del vendedor en FunnelOS',
+    text: 'El vendedor recibe notificación WhatsApp al asignársele un lead. Desde la ficha del lead puede: ver el historial completo de chat, responder al cliente directamente (el mensaje llega por WhatsApp), agregar notas internas, registrar datos de retoma (marca/modelo/año/color), solicitar tasación, agendar visita con delegación opcional a Marcela IA, y mover el lead por el pipeline.'
+  },
+  pipeline: {
+    icon: '🗂️',
+    title: 'Pipeline Kanban — Seguimiento del proceso de venta',
+    text: 'Vista Kanban donde cada columna representa una etapa: Nuevo (recién asignado), Contactado (primer intercambio), Calificado (interés confirmado), Negociación (precio/financiamiento en discusión), Reservado (señal pagada o visita confirmada), Cerrado (venta concretada). El vendedor arrastra las tarjetas entre columnas. Cada tarjeta muestra el indicador SLA, señal de intención y tiempo desde última interacción.'
+  },
+  analitica: {
+    icon: '📊',
+    title: 'Analítica de canales — Inteligencia del negocio',
+    text: 'Dashboard que muestra el rendimiento de cada canal: CPL (Costo por Lead), CPA (Costo por Adquisición), CAC (Costo de Adquisición de Cliente), tasa de conversión, tiempo promedio de respuesta y número de leads cerrados por canal. Permite comparar qué canal trae los leads más calificados y tomar decisiones de inversión publicitaria basadas en datos reales.'
+  }
+};
+
+let current = null;
+
+function show(id) {
+  const d = info[id];
+  if (!d) return;
+
+  // Limpiar activos anteriores
+  document.querySelectorAll('.node.active').forEach(n => n.classList.remove('active'));
+
+  // Marcar activo
+  event.currentTarget.classList.add('active');
+
+  document.getElementById('panel-icon').textContent = d.icon;
+  document.getElementById('panel-title').textContent = d.title;
+  document.getElementById('panel-text').textContent = d.text;
+  document.getElementById('info-panel').classList.add('visible');
+  current = id;
+}
+
+function closePanel() {
+  document.getElementById('info-panel').classList.remove('visible');
+  document.querySelectorAll('.node.active').forEach(n => n.classList.remove('active'));
+  current = null;
+}
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') closePanel();
+});
+</script>
+</body>
+</html>
