@@ -1006,8 +1006,13 @@ app.post('/webhook',async(req,res)=>{
       const yapoMatch = body.match(/Me interesa el anuncio\s*"([^"]+)"/i);
       const mlMatch   = body.match(/publicaci[oó]n en Mercado Libre[^:\-]*[:\-]?\s*(.{0,60})/i);
       const caMatch   = body.match(/auto en Chileautos[^:\-]*[:\-]?\s*(.{0,60})/i);
+      const metaMatch = body.match(/anuncio en Meta|vi su anuncio en Meta|anuncio de RMG en Meta|anuncio RMG Meta/i);
 
-      if (yapoMatch) {
+      if (metaMatch) {
+        detectedSource   = 'Meta Ads';
+        detectedInterest = body.replace(/Hola[,.]?\s*/i, '').slice(0, 80) || 'Consulta desde Meta Ads';
+        portalNote = `Lead ingresó desde campaña Meta Ads. Mensaje inicial: ${body.slice(0, 80)}`;
+      } else if (yapoMatch) {
         detectedSource   = 'Yapo';
         detectedInterest = yapoMatch[1].trim();
         portalNote = `Lead ingresó desde Yapo. Vehículo consultado: ${detectedInterest}`;
