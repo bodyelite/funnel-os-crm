@@ -1010,8 +1010,15 @@ app.post('/webhook',async(req,res)=>{
 
       if (metaMatch) {
         detectedSource   = 'Meta Ads';
-        detectedInterest = body.replace(/Hola[,.]?\s*/i, '').slice(0, 80) || 'Consulta desde Meta Ads';
-        portalNote = `Lead ingresó desde campaña Meta Ads. Mensaje inicial: ${body.slice(0, 80)}`;
+        // Extraer el vehículo específico del anuncio desde el texto del mensaje
+        // Formatos esperados: "vi el Opel Mokka GS Line 2024 en su anuncio de Meta"
+        let vehMeta = '';
+        const vm = body.match(/(?:vi el|vi la|interesa el|interesa la|por el|por la|el|la)\s+([A-Za-zÁÉÍÓÚáéíóúÑñ0-9][^,.\n]*?)(?:\s+en su anuncio|\s+en el anuncio|\s+de Meta|\s+por Meta|\s+y me interesa|$)/i);
+        if (vm && vm[1]) vehMeta = vm[1].trim();
+        // Limpiar colas genéricas
+        vehMeta = vehMeta.replace(/\b(en su anuncio|de meta|por meta|y me interesa un auto|y me interesa)\b/gi, '').trim();
+        detectedInterest = vehMeta && vehMeta.length > 2 ? vehMeta : 'Consulta desde Meta Ads';
+        portalNote = `Lead Meta Ads — Anuncio: ${detectedInterest}. Mensaje inicial: ${body.slice(0, 120)}`;
       } else if (yapoMatch) {
         detectedSource   = 'Yapo';
         detectedInterest = yapoMatch[1].trim();
