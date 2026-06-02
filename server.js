@@ -757,7 +757,7 @@ app.post('/api/leads/manual', auth('admin','vendedor'), async (req, res) => {
         } else { console.warn('[LEAD-MANUAL] Plantilla no enviada:', JSON.stringify(waJson)); }
       } catch(we) { console.error('[LEAD-MANUAL] WA exc:', we.message); }
     }
-    const team = await tRead(F.team, tenant);
+    const team = await tRead(F.users, tenant);
     const vend = (team||[]).find(u => u.username === lead.assignedTo);
     if (vend?.phone) sendWA(vend.phone, '\u{1F514} NUEVO LEAD MANUAL [' + canal + ']: ' + nombre + ' asignado a ti en FunnelOS.').catch(()=>{});
     console.log('[LEAD-MANUAL] Creado:', nombre, phone, canal, status);

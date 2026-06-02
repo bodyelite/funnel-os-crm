@@ -187,7 +187,7 @@
     <option value="esperando_respuesta_chileautos">En Espera CA</option>
     <option value="esperando_respuesta_general">En Espera General</option>
   </select>
-  <button onclick="document.getElementById('filtCanal').value='';document.getElementById('filtEstado').value='';renderLeads();" style="background:transparent;border:1px solid var(--bd);color:var(--tm);padding:5px 10px;border-radius:6px;cursor:pointer;font-size:12px;font-family:inherit">Limpiar</button>
+
   <span id="filtCount" style="margin-left:auto;font-size:11px;color:var(--tm)"></span>
 </div>
 <div class="tw" id="lTbl"></div>
@@ -406,6 +406,28 @@ function renderEsperaGeneral(){
   const rows=leads.length?leads.map(l=>`<div class="tr2" style="${gc}" data-id="${l.id}"><span class="sd b"></span><div><strong>${esc(l.name)}</strong></div><div style="font-size:11.5px;color:var(--tm)">${esc(l.phone||'Pendiente')}</div><div style="font-size:11.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(l.interest||'—')}</div><div>${cUsr(l.assignedTo)}</div><div><span style="background:#ede9fe;color:#6d28d9;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:600">⏳ En Espera</span></div><div style="font-size:11px;color:var(--tm)">${fDT(l.lastInteraction)}</div></div>`).join(''):'<div class="ke" style="padding:16px">Sin leads en espera.</div>';
   if($('egTbl')){$('egTbl').innerHTML=hd+rows;$('egTbl').querySelectorAll('.tr2[data-id]').forEach(el=>el.addEventListener('click',()=>openModal(+el.dataset.id)));}
 }
+
+// ════════════════════════════════════════════════════════
+// SISTEMA DE NOTIFICACIONES RMG
+// ════════════════════════════════════════════════════════
+var _notifIds=new Set(),_audioCtx=null,_audioOk=false;
+function _initAudio(){if(_audioOk)return;try{_audioCtx=new(window.AudioContext||window.webkitAudioContext)();if(_audioCtx.state==='suspended')_audioCtx.resume();_audioOk=true;}catch(e){}}
+['click','touchstart','touchend','keydown'].forEach(function(ev){document.addEventListener(ev,_initAudio,{passive:true});});
+function _playSound(){_initAudio();if(!_audioCtx||!_audioOk)return;try{if(_audioCtx.state==='suspended')_audioCtx.resume();[[0,0.09,820,0.38],[0.13,0.09,1040,0.30]].forEach(function(p){var o=_audioCtx.createOscillator(),g=_audioCtx.createGain();o.connect(g);g.connect(_audioCtx.destination);o.type='sine';o.frequency.value=p[2];var t=_audioCtx.currentTime+p[0];g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(p[3],t+0.015);g.gain.exponentialRampToValueAtTime(0.001,t+p[1]);o.start(t);o.stop(t+p[1]+0.05);});}catch(e){}}
+function _getUnreads(){if(!S.leads||!S.user)return[];return S.leads.filter(function(l){if(!l.unread)return false;if(S.user.role==='vendedor')return l.assignedTo===S.user.username;return true;});}
+function _updateBadge(count){
+  document.title=count>0?'('+count+') RMG CRM':'RMG CRM';
+  var btn=document.querySelector('.sb nav button[data-view="leads"]');
+  if(btn){var badge=btn.querySelector('._rmgBadge');if(count>0){if(!badge){badge=document.createElement('span');badge.className='_rmgBadge';badge.style.cssText='background:#ef4444;color:#fff;border-radius:999px;font-size:10px;font-weight:700;padding:1px 5px;margin-left:6px;min-width:18px;height:18px;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;box-shadow:0 0 0 2px var(--p,#fff);animation:_rmgPulse 2s infinite';btn.style.display='flex';btn.style.alignItems='center';btn.style.justifyContent='space-between';btn.appendChild(badge);}badge.textContent=count>99?'99+':String(count);}else{if(badge)badge.remove();}}
+  try{var c=document.createElement('canvas');c.width=32;c.height=32;var x=c.getContext('2d');x.fillStyle='#0f172a';x.beginPath();if(x.roundRect)x.roundRect(0,0,32,32,6);else x.rect(0,0,32,32);x.fill();x.fillStyle='#D4A843';x.font='bold 11px Arial';x.textAlign='center';x.fillText('RMG',16,21);if(count>0){x.fillStyle='#ef4444';x.beginPath();x.arc(26,6,7,0,Math.PI*2);x.fill();x.fillStyle='#fff';x.font='bold 7px Arial';x.fillText(count>9?'9+':String(count),26,9);}var lnk=document.querySelector("link[rel~='icon']");if(!lnk){lnk=document.createElement('link');lnk.rel='icon';document.head.appendChild(lnk);}lnk.href=c.toDataURL();}catch(e){}
+  if('setAppBadge' in navigator){try{count>0?navigator.setAppBadge(count):navigator.clearAppBadge();}catch(e){}}
+}
+function _showSysNotif(leads){if(Notification.permission!=='granted')return;if(document.visibilityState==='visible')return;leads.slice(0,2).forEach(function(l){var msgs=(l.chatHistory||[]).filter(function(m){return m.role==='user';});var last=msgs[msgs.length-1];try{new Notification('💬 '+l.name,{body:last?last.content.slice(0,80):'Nuevo mensaje',icon:'/icon-192.svg',badge:'/icon-192.svg',tag:'rmg-'+l.id,renotify:true});}catch(e){}});}
+function checkNotifications(){var unreads=_getUnreads();var count=unreads.length;var newLeads=unreads.filter(function(l){return!_notifIds.has(l.id+'|'+l.lastClientTs);});var cur=new Set(unreads.map(function(l){return l.id+'|'+l.lastClientTs;}));if(newLeads.length>0&&_notifIds.size>0){_playSound();if('vibrate' in navigator)navigator.vibrate([180,80,180]);_showSysNotif(newLeads);}_notifIds=cur;_updateBadge(count);}
+function requestNotifPermission(){if(typeof Notification!=='undefined'&&Notification.permission==='default')Notification.requestPermission();}
+(function(){var s=document.createElement('style');s.textContent='@keyframes _rmgPulse{0%,100%{box-shadow:0 0 0 2px var(--p,#fff),0 0 0 3px #ef4444}50%{box-shadow:0 0 0 2px var(--p,#fff),0 0 0 5px rgba(239,68,68,.25)}}';document.head.appendChild(s);})();
+// ════════════════════════════════════════════════════════
+
 function renderAll(){const isA=S.user?.role==='admin';if(isA)renderDash();renderLeads();renderChileautos();renderEsperaGeneral();renderKanban();renderCalendar();if(isA){renderAnalytics();renderTeam();}if(S.mid&&$('mbg').classList.contains('show'))refreshModalSilent();if(S.slaOpen)renderSlaPanel(S.slaOpen);if(S.funOpen)renderFunPanel(S.funOpen);try{checkNotifications();}catch(e){}}
 
 function renderSlaCards(){
