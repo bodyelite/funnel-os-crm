@@ -130,8 +130,7 @@
 <body>
 <div id="lv" class="lw"><div class="lc"><h1>FunnelOS CRM</h1><div class="sub">Torre de Control · Marcela IA</div><label>Empresa</label><select id="liT"><option value="demo_automotora">RMG Autos</option></select><label>Usuario</label><input id="liU" value="gerente" placeholder="gerente|vendedor1|vendedor2"><label>Contraseña</label><input id="liP" type="password" value="demo"><button id="liB">Entrar</button><div class="err" id="liE"></div><div class="hint">Demo: <strong>gerente / demo</strong> &nbsp;·&nbsp; daniela / demo &nbsp;·&nbsp; carlos / demo</div></div></div>
 <div id="av" class="app" style="display:none">
-<aside class="sb"><h1 id="bizName">FunnelOS</h1><div class="who" id="uBadge">—</div><nav><button class="active" data-view="dashboard">📊 Operación</button><button data-view="leads">📋 Leads</button><button data-view="chileautos" id="navCA" style="background:#e8f5e9;color:#2e7d32;font-weight:700">🏷 Chileautos</button><button data-view="espera-general" id="navEG" style="background:#ede9fe;color:#6d28d9;font-weight:700;display:none">⏳ En Espera</button><button data-view="pipeline">🗂 Pipeline</button><button data-view="analytics" id="navA">📈 Analítica</button><button data-view="team" id="navT">👥 Equipo</button><button data-view="inventario" id="navInv">🚗 Inventario</button><button id="btnSyncInv" style="background:linear-gradient(135deg,#16a34a,#15803d);color:#fff;border:none;border-radius:8px;padding:7px 13px;font-size:12px;font-weight:700;cursor:pointer;margin-left:4px" onclick="syncInventario()">🔄 Sync RMG</button><button data-view="config" id="navC">⚙️ Config</button></nav><button id="btnInstallApp" onclick="installApp()" style="display:none;margin-top:8px;background:linear-gradient(135deg,#D4A843,#F2C955);color:#0f172a;border:none;border-radius:8px;padding:8px 12px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;align-items:center;gap:6px;letter-spacing:.04em">📲 Instalar App</button>
-<button class="lout" id="loutB">Cerrar sesión</button></aside>
+<aside class="sb"><h1 id="bizName">FunnelOS</h1><div class="who" id="uBadge">—</div><nav><button class="active" data-view="dashboard">📊 Operación</button><button data-view="leads">📋 Leads</button><button data-view="chileautos" id="navCA" style="background:#e8f5e9;color:#2e7d32;font-weight:700">🏷 Chileautos</button><button data-view="espera-general" id="navEG" style="background:#ede9fe;color:#6d28d9;font-weight:700;display:none">⏳ En Espera</button><button data-view="pipeline">🗂 Pipeline</button><button data-view="analytics" id="navA">📈 Analítica</button><button data-view="team" id="navT">👥 Equipo</button><button data-view="inventario" id="navInv">🚗 Inventario</button><button id="btnSyncInv" style="background:linear-gradient(135deg,#16a34a,#15803d);color:#fff;border:none;border-radius:8px;padding:7px 13px;font-size:12px;font-weight:700;cursor:pointer;margin-left:4px" onclick="syncInventario()">🔄 Sync RMG</button><button data-view="config" id="navC">⚙️ Config</button></nav><button class="lout" id="loutB">Cerrar sesión</button></aside>
 <main class="mn">
 <div class="tb" id="mainTb"><span class="lbl">Rango</span><div class="qk"><button data-q="all">Todo</button><button data-q="today">Hoy</button><button data-q="yesterday">Ayer</button><button data-q="7d">7d</button><button data-q="30d">30d</button></div><span class="lbl">Desde</span><input type="date" id="dS"><span class="lbl">Hasta</span><input type="date" id="dE"><button class="clr" id="dC">Limpiar</button><button id="btnFastForward" class="clr" style="color:var(--wn); border-color:var(--wn); font-weight:700;">⏳ Forzar SLA 30m</button><span class="lbl" id="lblS">Vendedor</span><select id="selF"><option value="">Todos</option></select><span class="ri" id="rI">Sin filtro</span></div>
 <section id="view-dashboard" class="view active">
@@ -274,7 +273,7 @@
 <section id="view-config" class="view">
 <div class="st">⚙️ Configuración</div>
 <div class="cfs"><h3>🏢 Empresa</h3><div class="cfg"><div><label class="cfl">Nombre del negocio</label><input class="cfi" id="cfgN" placeholder="RMG Autos"></div><div><label class="cfl">Color acento</label><input type="color" class="cfi" id="cfgC" value="#3b82f6" style="padding:4px;height:36px;cursor:pointer"></div></div><div style="margin-top:12px"><label class="cfl">Clave de acceso (modifica para cambiar contraseña global)</label><div style="display:flex;gap:8px;align-items:center"><input class="cfi" id="cfgClave" type="password" placeholder="Nueva clave (dejar vacío para no cambiar)" style="flex:1"><button type="button" onclick="toggleClave()" style="background:var(--p2);border:1px solid var(--bd);color:var(--tm);padding:8px 12px;border-radius:8px;cursor:pointer;font-size:12px">👁</button></div></div><div class="ca" style="margin-top:12px"><button class="bp" id="cfgSB">Guardar Empresa</button></div></div>
-<div class="cfs"><h3>👥 Equipo</h3><div style="overflow-x:auto"><table class="ut" id="uTbl"><thead><tr><th>Usuario</th><th>Nombre</th><th>Rol</th><th>Teléfono WhatsApp</th><th>Nueva Contraseña</th><th>Estado</th><th>Acciones</th></tr></thead><tbody id="uTbd"></tbody></table></div><div class="ca"><button class="bp" id="addUB">+ Agregar</button></div></div>
+<div class="cfs"><h3>👥 Equipo</h3><div style="overflow-x:auto"><table class="ut" id="uTbl"><thead><tr><th>Usuario</th><th>Nombre</th><th>Rol</th><th>Teléfono</th><th>Nueva Pwd</th><th>Estado</th><th>Acciones</th></tr></thead><tbody id="uTbd"></tbody></table></div><div class="ca"><button class="bp" id="addUB">+ Agregar</button></div></div>
 <div class="cfs" id="nuF" style="display:none"><h3>➕ Nuevo Usuario</h3><div class="cfg"><div><label class="cfl">Username</label><input class="cfi" id="nuU"></div><div><label class="cfl">Contraseña</label><input class="cfi" id="nuPw" value="demo"></div><div><label class="cfl">Nombre</label><input class="cfi" id="nuN"></div><div><label class="cfl">Rol</label><select class="cfi" id="nuR"><option value="vendedor">Vendedor</option><option value="admin">Admin</option><option value="secretaria">Secretaria</option></select></div><div><label class="cfl">Teléfono WA</label><input class="cfi" id="nuPh"></div><div><label class="cfl">Estado</label><select class="cfi" id="nuSt"><option value="Activo">Activo</option><option value="Inactivo">Inactivo</option></select></div></div><div class="ca"><button class="bp" id="nuSv">Crear</button><button class="bs" id="nuCn">Cancelar</button></div></div>
 </section>
 </main>
@@ -789,23 +788,7 @@ async function renderInventario(){
 }
 async function loadConfig(){try{const cfg=await api('GET','/api/config');$('cfgN').value=cfg.businessName||'';$('cfgC').value=cfg.accentColor||'#3b82f6';}catch(e){toast('Error config',true);}}
 async function loadUsers(){try{const users=await api('GET','/api/users');S.users=users;renderUserTable(users);}catch(e){toast('Error usuarios',true);}}
-function renderUserTable(users){const tbody=$('uTbd');tbody.innerHTML=users.map(u=>`<tr data-un="${esc(u.username)}">
-  <td><strong>${esc(u.username)}</strong><div style="font-size:10px;color:var(--tm);margin-top:2px">${u.role==='admin'?'👔 Gerencia':u.role==='vendedor'?'💼 Vendedor':'📋 Secretaria'}</div></td>
-  <td><input class="un" value="${esc(u.name)}" placeholder="Nombre completo"></td>
-  <td><select class="ur"><option value="admin" ${u.role==='admin'?'selected':''}>Admin / Gerencia</option><option value="vendedor" ${u.role==='vendedor'?'selected':''}>Vendedor</option><option value="secretaria" ${u.role==='secretaria'?'selected':''}>Secretaria</option></select></td>
-  <td><input class="up" value="${esc(u.phone||'')}" placeholder="+56912345678"></td>
-  <td>
-    <div style="display:flex;gap:4px;align-items:center">
-      <input class="upw" type="password" placeholder="Nueva clave..." style="width:110px;padding:6px 8px;background:var(--p3);border:1px solid var(--bd);color:var(--tx);border-radius:6px;font-size:12px;font-family:inherit">
-      <button type="button" onclick="this.previousElementSibling.type=this.previousElementSibling.type==='password'?'text':'password'" style="background:var(--p2);border:1px solid var(--bd);color:var(--tm);padding:5px 7px;border-radius:6px;cursor:pointer;font-size:11px">👁</button>
-    </div>
-  </td>
-  <td><select class="us"><option value="Activo" ${(u.status||'Activo')==='Activo'?'selected':''}>Activo</option><option value="Inactivo" ${u.status==='Inactivo'?'selected':''}>Inactivo</option></select></td>
-  <td style="display:flex;gap:6px;flex-wrap:wrap">
-    <button class="bp usv" style="padding:6px 10px;font-size:12px">Guardar</button>
-    ${u.role!=='admin'?`<button class="bdn udl">Eliminar</button>`:''}
-  </td>
-</tr>`).join('');tbody.querySelectorAll('tr[data-un]').forEach(row=>{const un=row.dataset.un;row.querySelector('.usv').addEventListener('click',async()=>{const btn=row.querySelector('.usv');btn.disabled=true;btn.textContent='…';try{const payload={name:row.querySelector('.un').value.trim(),role:row.querySelector('.ur').value,phone:row.querySelector('.up').value.trim(),status:row.querySelector('.us').value};const pwField=row.querySelector('.upw');if(pwField&&pwField.value.trim()){payload.password=pwField.value.trim();}await api('PUT','/api/users/'+encodeURIComponent(un),payload);if(pwField)pwField.value='';toast(un+' actualizado ✓');await loadUsers();}catch(e){toast(e.message,true);}finally{btn.disabled=false;btn.textContent='Guardar';}});const delBtn=row.querySelector('.udl');if(delBtn)delBtn.addEventListener('click',async()=>{if(!confirm('¿Eliminar '+un+'?'))return;try{await api('DELETE','/api/users/'+encodeURIComponent(un));toast('Usuario eliminado');await loadUsers();}catch(e){toast(e.message,true);}});});}
+function renderUserTable(users){const tbody=$('uTbd');tbody.innerHTML=users.map(u=>`<tr data-un="${esc(u.username)}"><td><strong>${esc(u.username)}</strong></td><td><input class="un" value="${esc(u.name)}"></td><td><select class="ur"><option value="admin" ${u.role==='admin'?'selected':''}>Admin</option><option value="vendedor" ${u.role==='vendedor'?'selected':''}>Vendedor</option><option value="secretaria" ${u.role==='secretaria'?'selected':''}>Secretaria</option></select></td><td><input class="up" value="${esc(u.phone||'')}"></td><td><select class="us"><option value="Activo" ${(u.status||'Activo')==='Activo'?'selected':''}>Activo</option><option value="Inactivo" ${u.status==='Inactivo'?'selected':''}>Inactivo</option></select></td><td style="display:flex;gap:6px"><button class="bp usv" style="padding:6px 10px;font-size:12px">Guardar</button>${u.role!=='admin'?`<button class="bdn udl">Eliminar</button>`:''}</td></tr>`).join('');tbody.querySelectorAll('tr[data-un]').forEach(row=>{const un=row.dataset.un;row.querySelector('.usv').addEventListener('click',async()=>{const btn=row.querySelector('.usv');btn.disabled=true;btn.textContent='…';try{await api('PUT','/api/users/'+encodeURIComponent(un),{name:row.querySelector('.un').value.trim(),role:row.querySelector('.ur').value,phone:row.querySelector('.up').value.trim(),status:row.querySelector('.us').value});toast(un+' actualizado ✓');await loadUsers();}catch(e){toast(e.message,true);}finally{btn.disabled=false;btn.textContent='Guardar';}});const delBtn=row.querySelector('.udl');if(delBtn)delBtn.addEventListener('click',async()=>{if(!confirm('¿Eliminar '+un+'?'))return;try{await api('DELETE','/api/users/'+encodeURIComponent(un));toast('Usuario eliminado');await loadUsers();}catch(e){toast(e.message,true);}});});}
 function toggleClave(){const i=$('cfgClave');i.type=i.type==='password'?'text':'password';}
 $('cfgSB').addEventListener('click',async()=>{const btn=$('cfgSB');btn.disabled=true;btn.textContent='…';try{const n=$('cfgN').value.trim(),ac=$('cfgC').value,clave=$('cfgClave')?.value?.trim();const payload={businessName:n,accentColor:ac};if(clave){payload.newPassword=clave;}await api('PUT','/api/config',payload);if(clave&&payload.newPassword){await api('PUT','/api/config/password',{newPassword:clave}).catch(()=>{});}$('bizName').textContent=n||'RMG Autos';document.documentElement.style.setProperty('--ac',ac);if($('cfgClave'))$('cfgClave').value='';toast('Configuración guardada ✓');}catch(e){toast(e.message,true);}finally{btn.disabled=false;btn.textContent='Guardar Empresa';}});
 $('addUB').addEventListener('click',()=>{$('nuF').style.display='block';$('addUB').style.display='none';$('nuU').focus();});
@@ -1288,30 +1271,6 @@ document.getElementById('nlBg')?.addEventListener('click', function(e){
   .cbx { background: #f8fafc !important; border-color: #e2e8f0 !important; }
 </style>
 
-
-<script>
-if('serviceWorker' in navigator){
-  window.addEventListener('load',()=>{
-    navigator.serviceWorker.register('/sw.js')
-      .then(r=>console.log('[SW] Registrado:',r.scope))
-      .catch(e=>console.log('[SW] Error:',e));
-  });
-}
-// Prompt de instalación para Android Chrome
-let _deferredPrompt=null;
-window.addEventListener('beforeinstallprompt',e=>{
-  e.preventDefault();
-  _deferredPrompt=e;
-  const btn=document.getElementById('btnInstallApp');
-  if(btn)btn.style.display='flex';
-});
-window.addEventListener('appinstalled',()=>{
-  _deferredPrompt=null;
-  const btn=document.getElementById('btnInstallApp');
-  if(btn)btn.style.display='none';
-  console.log('[PWA] App instalada');
-});
-</script>
 </body>
 </html>
 
