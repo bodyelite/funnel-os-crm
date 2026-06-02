@@ -119,16 +119,9 @@
 
 
 
-<link rel="manifest" href="/manifest.json">
-<meta name="theme-color" content="#0f172a">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="RMG CRM">
-<link rel="apple-touch-icon" href="/icon-192.svg">
-<link rel="icon" type="image/svg+xml" href="/icon-192.svg">
 </head>
 <body>
-<div id="lv" class="lw"><div class="lc"><h1>FunnelOS CRM</h1><div class="sub">Torre de Control · Marcela IA</div><label>Empresa</label><select id="liT"><option value="demo_automotora">RMG Autos</option></select><label>Usuario</label><input id="liU" value="gerente" placeholder="gerente|vendedor1|vendedor2"><label>Contraseña</label><input id="liP" type="password" value="demo"><button id="liB">Entrar</button><div class="err" id="liE"></div><div class="hint">Demo: <strong>gerente / demo</strong> &nbsp;·&nbsp; daniela / demo &nbsp;·&nbsp; carlos / demo</div></div></div>
+<div id="lv" class="lw"><div class="lc"><h1>FunnelOS CRM</h1><div class="sub">Torre de Control · Marcela IA</div><label>Empresa</label><select id="liT"><option value="demo_automotora">Automotora Andes</option><option value="rmg">RMG Autos</option><option value="demo_clinica">Clínica Vital</option></select><label>Usuario</label><input id="liU" value="gerente" placeholder="gerente|vendedor1|vendedor2"><label>Contraseña</label><input id="liP" type="password" value="demo"><button id="liB">Entrar</button><div class="err" id="liE"></div><div class="hint">Demo: <strong>gerente / demo</strong> &nbsp;·&nbsp; daniela / demo &nbsp;·&nbsp; carlos / demo</div></div></div>
 <div id="av" class="app" style="display:none">
 <aside class="sb"><h1 id="bizName">FunnelOS</h1><div class="who" id="uBadge">—</div><nav><button class="active" data-view="dashboard">📊 Operación</button><button data-view="leads">📋 Leads</button><button data-view="chileautos" id="navCA" style="background:#e8f5e9;color:#2e7d32;font-weight:700">🏷 Chileautos</button><button data-view="espera-general" id="navEG" style="background:#ede9fe;color:#6d28d9;font-weight:700;display:none">⏳ En Espera</button><button data-view="pipeline">🗂 Pipeline</button><button data-view="analytics" id="navA">📈 Analítica</button><button data-view="team" id="navT">👥 Equipo</button><button data-view="inventario" id="navInv">🚗 Inventario</button><button id="btnSyncInv" style="background:linear-gradient(135deg,#16a34a,#15803d);color:#fff;border:none;border-radius:8px;padding:7px 13px;font-size:12px;font-weight:700;cursor:pointer;margin-left:4px" onclick="syncInventario()">🔄 Sync RMG</button><button data-view="config" id="navC">⚙️ Config</button></nav><button class="lout" id="loutB">Cerrar sesión</button></aside>
 <main class="mn">
@@ -226,21 +219,9 @@
       <select id="nlAsignado" style="width:100%;padding:9px 12px;background:var(--p2);border:1px solid var(--bd);color:var(--tx);border-radius:8px;font-family:inherit;font-size:13px">
       </select>
     </div>
-    <div>
-      <label style="font-size:11.5px;color:var(--tm);display:block;margin-bottom:4px;font-weight:600">Marca</label>
-      <select id="nlMarca" onchange="onNlMarcaChange()" style="width:100%;padding:9px 12px;background:var(--p2);border:1px solid var(--bd);color:var(--tx);border-radius:8px;font-family:inherit;font-size:13px">
-        <option value="">Seleccionar marca...</option>
-      </select>
-    </div>
-    <div>
-      <label style="font-size:11.5px;color:var(--tm);display:block;margin-bottom:4px;font-weight:600">Vehículo de Interés</label>
-      <select id="nlInteres" style="width:100%;padding:9px 12px;background:var(--p2);border:1px solid var(--bd);color:var(--tx);border-radius:8px;font-family:inherit;font-size:13px">
-        <option value="">Seleccionar marca primero...</option>
-      </select>
-    </div>
     <div style="grid-column:1/-1">
-      <label style="font-size:11.5px;color:var(--tm);display:block;margin-bottom:4px;font-weight:600">Detalles adicionales del interés</label>
-      <input id="nlInteresExtra" type="text" placeholder="Ej: interesado en crédito, quiere tasar auto en parte de pago..." style="width:100%;padding:9px 12px;background:var(--p2);border:1px solid var(--bd);color:var(--tx);border-radius:8px;font-family:inherit;font-size:13px">
+      <label style="font-size:11.5px;color:var(--tm);display:block;margin-bottom:4px;font-weight:600">Vehículo de Interés</label>
+      <input id="nlInteres" type="text" placeholder="Ej: 2024 Toyota Corolla" style="width:100%;padding:9px 12px;background:var(--p2);border:1px solid var(--bd);color:var(--tx);border-radius:8px;font-family:inherit;font-size:13px">
     </div>
     <div style="grid-column:1/-1">
       <label style="font-size:11.5px;color:var(--tm);display:block;margin-bottom:4px;font-weight:600">Notas iniciales</label>
@@ -272,7 +253,7 @@
 </section>
 <section id="view-config" class="view">
 <div class="st">⚙️ Configuración</div>
-<div class="cfs"><h3>🏢 Empresa</h3><div class="cfg"><div><label class="cfl">Nombre del negocio</label><input class="cfi" id="cfgN" placeholder="RMG Autos"></div><div><label class="cfl">Color acento</label><input type="color" class="cfi" id="cfgC" value="#3b82f6" style="padding:4px;height:36px;cursor:pointer"></div></div><div style="margin-top:12px"><label class="cfl">Clave de acceso (modifica para cambiar contraseña global)</label><div style="display:flex;gap:8px;align-items:center"><input class="cfi" id="cfgClave" type="password" placeholder="Nueva clave (dejar vacío para no cambiar)" style="flex:1"><button type="button" onclick="toggleClave()" style="background:var(--p2);border:1px solid var(--bd);color:var(--tm);padding:8px 12px;border-radius:8px;cursor:pointer;font-size:12px">👁</button></div></div><div class="ca" style="margin-top:12px"><button class="bp" id="cfgSB">Guardar Empresa</button></div></div>
+<div class="cfs"><h3>🏢 Empresa</h3><div class="cfg"><div><label class="cfl">Nombre</label><input class="cfi" id="cfgN" placeholder="Automotora Andes"></div><div><label class="cfl">Color acento</label><input type="color" class="cfi" id="cfgC" value="#3b82f6" style="padding:4px;height:36px;cursor:pointer"></div></div><div class="ca" style="margin-top:12px"><button class="bp" id="cfgSB">Guardar Empresa</button></div></div>
 <div class="cfs"><h3>👥 Equipo</h3><div style="overflow-x:auto"><table class="ut" id="uTbl"><thead><tr><th>Usuario</th><th>Nombre</th><th>Rol</th><th>Teléfono</th><th>Nueva Pwd</th><th>Estado</th><th>Acciones</th></tr></thead><tbody id="uTbd"></tbody></table></div><div class="ca"><button class="bp" id="addUB">+ Agregar</button></div></div>
 <div class="cfs" id="nuF" style="display:none"><h3>➕ Nuevo Usuario</h3><div class="cfg"><div><label class="cfl">Username</label><input class="cfi" id="nuU"></div><div><label class="cfl">Contraseña</label><input class="cfi" id="nuPw" value="demo"></div><div><label class="cfl">Nombre</label><input class="cfi" id="nuN"></div><div><label class="cfl">Rol</label><select class="cfi" id="nuR"><option value="vendedor">Vendedor</option><option value="admin">Admin</option><option value="secretaria">Secretaria</option></select></div><div><label class="cfl">Teléfono WA</label><input class="cfi" id="nuPh"></div><div><label class="cfl">Estado</label><select class="cfi" id="nuSt"><option value="Activo">Activo</option><option value="Inactivo">Inactivo</option></select></div></div><div class="ca"><button class="bp" id="nuSv">Crear</button><button class="bs" id="nuCn">Cancelar</button></div></div>
 </section>
@@ -405,7 +386,7 @@ function renderEsperaGeneral(){
   const rows=leads.length?leads.map(l=>`<div class="tr2" style="${gc}" data-id="${l.id}"><span class="sd b"></span><div><strong>${esc(l.name)}</strong></div><div style="font-size:11.5px;color:var(--tm)">${esc(l.phone||'Pendiente')}</div><div style="font-size:11.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(l.interest||'—')}</div><div>${cUsr(l.assignedTo)}</div><div><span style="background:#ede9fe;color:#6d28d9;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:600">⏳ En Espera</span></div><div style="font-size:11px;color:var(--tm)">${fDT(l.lastInteraction)}</div></div>`).join(''):'<div class="ke" style="padding:16px">Sin leads en espera.</div>';
   if($('egTbl')){$('egTbl').innerHTML=hd+rows;$('egTbl').querySelectorAll('.tr2[data-id]').forEach(el=>el.addEventListener('click',()=>openModal(+el.dataset.id)));}
 }
-function renderAll(){const isA=S.user?.role==='admin';if(isA)renderDash();renderLeads();renderChileautos();renderEsperaGeneral();renderKanban();renderCalendar();if(isA){renderAnalytics();renderTeam();}if(S.mid&&$('mbg').classList.contains('show'))refreshModalSilent();if(S.slaOpen)renderSlaPanel(S.slaOpen);if(S.funOpen)renderFunPanel(S.funOpen);try{checkNotifications();}catch(e){}}
+function renderAll(){const isA=S.user?.role==='admin';if(isA)renderDash();renderLeads();renderChileautos();renderEsperaGeneral();renderKanban();renderCalendar();if(isA){renderAnalytics();renderTeam();}if(S.mid&&$('mbg').classList.contains('show'))refreshModalSilent();if(S.slaOpen)renderSlaPanel(S.slaOpen);if(S.funOpen)renderFunPanel(S.funOpen);}
 
 function renderSlaCards(){
   const nv=S.leads.filter(l=>l.status==='Nuevo');
@@ -789,8 +770,7 @@ async function renderInventario(){
 async function loadConfig(){try{const cfg=await api('GET','/api/config');$('cfgN').value=cfg.businessName||'';$('cfgC').value=cfg.accentColor||'#3b82f6';}catch(e){toast('Error config',true);}}
 async function loadUsers(){try{const users=await api('GET','/api/users');S.users=users;renderUserTable(users);}catch(e){toast('Error usuarios',true);}}
 function renderUserTable(users){const tbody=$('uTbd');tbody.innerHTML=users.map(u=>`<tr data-un="${esc(u.username)}"><td><strong>${esc(u.username)}</strong></td><td><input class="un" value="${esc(u.name)}"></td><td><select class="ur"><option value="admin" ${u.role==='admin'?'selected':''}>Admin</option><option value="vendedor" ${u.role==='vendedor'?'selected':''}>Vendedor</option><option value="secretaria" ${u.role==='secretaria'?'selected':''}>Secretaria</option></select></td><td><input class="up" value="${esc(u.phone||'')}"></td><td><select class="us"><option value="Activo" ${(u.status||'Activo')==='Activo'?'selected':''}>Activo</option><option value="Inactivo" ${u.status==='Inactivo'?'selected':''}>Inactivo</option></select></td><td style="display:flex;gap:6px"><button class="bp usv" style="padding:6px 10px;font-size:12px">Guardar</button>${u.role!=='admin'?`<button class="bdn udl">Eliminar</button>`:''}</td></tr>`).join('');tbody.querySelectorAll('tr[data-un]').forEach(row=>{const un=row.dataset.un;row.querySelector('.usv').addEventListener('click',async()=>{const btn=row.querySelector('.usv');btn.disabled=true;btn.textContent='…';try{await api('PUT','/api/users/'+encodeURIComponent(un),{name:row.querySelector('.un').value.trim(),role:row.querySelector('.ur').value,phone:row.querySelector('.up').value.trim(),status:row.querySelector('.us').value});toast(un+' actualizado ✓');await loadUsers();}catch(e){toast(e.message,true);}finally{btn.disabled=false;btn.textContent='Guardar';}});const delBtn=row.querySelector('.udl');if(delBtn)delBtn.addEventListener('click',async()=>{if(!confirm('¿Eliminar '+un+'?'))return;try{await api('DELETE','/api/users/'+encodeURIComponent(un));toast('Usuario eliminado');await loadUsers();}catch(e){toast(e.message,true);}});});}
-function toggleClave(){const i=$('cfgClave');i.type=i.type==='password'?'text':'password';}
-$('cfgSB').addEventListener('click',async()=>{const btn=$('cfgSB');btn.disabled=true;btn.textContent='…';try{const n=$('cfgN').value.trim(),ac=$('cfgC').value,clave=$('cfgClave')?.value?.trim();const payload={businessName:n,accentColor:ac};if(clave){payload.newPassword=clave;}await api('PUT','/api/config',payload);if(clave&&payload.newPassword){await api('PUT','/api/config/password',{newPassword:clave}).catch(()=>{});}$('bizName').textContent=n||'RMG Autos';document.documentElement.style.setProperty('--ac',ac);if($('cfgClave'))$('cfgClave').value='';toast('Configuración guardada ✓');}catch(e){toast(e.message,true);}finally{btn.disabled=false;btn.textContent='Guardar Empresa';}});
+$('cfgSB').addEventListener('click',async()=>{const btn=$('cfgSB');btn.disabled=true;btn.textContent='…';try{const n=$('cfgN').value.trim(),ac=$('cfgC').value;await api('PUT','/api/config',{businessName:n,accentColor:ac});$('bizName').textContent=n||'FunnelOS';document.documentElement.style.setProperty('--ac',ac);toast('Configuración guardada ✓');}catch(e){toast(e.message,true);}finally{btn.disabled=false;btn.textContent='Guardar Empresa';}});
 $('addUB').addEventListener('click',()=>{$('nuF').style.display='block';$('addUB').style.display='none';$('nuU').focus();});
 $('nuCn').addEventListener('click',()=>{$('nuF').style.display='none';$('addUB').style.display='';});
 $('nuSv').addEventListener('click',async()=>{const btn=$('nuSv');btn.disabled=true;btn.textContent='…';try{const u=$('nuU').value.trim(),pw=$('nuPw').value.trim()||'demo',n=$('nuN').value.trim(),r=$('nuR').value,ph=$('nuPh').value.trim(),st=$('nuSt').value;if(!u||!n)throw new Error('Username y nombre requeridos');await api('POST','/api/users',{username:u,password:pw,name:n,role:r,phone:ph,status:st});toast(u+' creado ✓');[$('nuU'),$('nuPw'),$('nuN'),$('nuPh')].forEach(i=>i.value='');$('nuF').style.display='none';$('addUB').style.display='';await loadUsers();}catch(e){toast(e.message,true);}finally{btn.disabled=false;btn.textContent='Crear';}});
@@ -1057,57 +1037,20 @@ function openNuevoLeadModal(){
   modal.style.display = 'flex';
   document.getElementById('nlNombre').value = '';
   document.getElementById('nlTel').value = '';
-  if(document.getElementById('nlInteresExtra'))document.getElementById('nlInteresExtra').value = '';
+  document.getElementById('nlInteres').value = '';
   document.getElementById('nlNota').value = '';
   document.getElementById('nlErr').textContent = '';
   document.getElementById('nlCanal').value = 'WhatsApp';
+  // Poblar vendedores
   const sel = document.getElementById('nlAsignado');
   sel.innerHTML = '';
-  (S.users||[]).filter(u=>u.role==='vendedor').forEach(u=>{
+  (S.team||[]).filter(u=>u.role!=='admin'||true).forEach(u=>{
     const o = document.createElement('option');
-    o.value = u.username; o.textContent = u.name||u.username;
+    o.value = u.username; o.textContent = u.displayName||u.username;
     sel.appendChild(o);
   });
-  if(!sel.options.length){ const o=document.createElement('option'); o.value='daniela'; o.textContent='Daniela Narváez'; sel.appendChild(o); }
+  if(!sel.options.length){ const o=document.createElement('option'); o.value='vendedor1'; o.textContent='vendedor1'; sel.appendChild(o); }
   onNlCanalChange();
-  cargarInventarioEnModal();
-}
-
-async function cargarInventarioEnModal(){
-  try{
-    const data = await api('GET','/api/inventory/scraper');
-    const items = data.structured||[];
-    window._nlInventario = items;
-    const marcas = [...new Set(items.map(i=>i.brand).filter(Boolean))].sort();
-    const selMarca = document.getElementById('nlMarca');
-    if(!selMarca)return;
-    selMarca.innerHTML = '<option value="">Seleccionar marca...</option>';
-    marcas.forEach(m=>{
-      const o=document.createElement('option');
-      o.value=m; o.textContent=m;
-      selMarca.appendChild(o);
-    });
-  }catch(e){console.error('Error cargando inventario:',e);}
-}
-
-function onNlMarcaChange(){
-  const marca = document.getElementById('nlMarca')?.value||'';
-  const selAuto = document.getElementById('nlInteres');
-  if(!selAuto)return;
-  selAuto.innerHTML = '<option value="">Seleccionar vehículo...</option>';
-  if(!marca)return;
-  const items = (window._nlInventario||[]).filter(i=>i.brand===marca);
-  items.forEach(i=>{
-    const o=document.createElement('option');
-    const label = [i.model, i.year, i.km?i.km:'', i.precio_credito?'$'+parseInt(i.precio_credito).toLocaleString('es-CL'):''].filter(Boolean).join(' · ');
-    o.value = label;
-    o.dataset.link = i.link||'';
-    o.dataset.price = i.precio_credito||i.price||0;
-    o.dataset.km = i.km||'';
-    o.dataset.model = i.model||'';
-    o.textContent = label;
-    selAuto.appendChild(o);
-  });
 }
 
 function closeNuevoLeadModal(){
@@ -1134,16 +1077,8 @@ async function crearLeadManual(){
   const tel    = document.getElementById('nlTel').value.trim();
   const canal  = document.getElementById('nlCanal').value;
   const asign  = document.getElementById('nlAsignado').value;
-  const selAuto= document.getElementById('nlInteres');
-  const interesBase = selAuto?.value||'';
-  const interesExtra = document.getElementById('nlInteresExtra')?.value?.trim()||'';
-  const interes = [interesBase, interesExtra].filter(Boolean).join(' — ');
+  const interes= document.getElementById('nlInteres').value.trim();
   const nota   = document.getElementById('nlNota').value.trim();
-  // capturar datos del auto seleccionado
-  const selOpt = selAuto?.selectedOptions?.[0];
-  const autoLink  = selOpt?.dataset?.link||'';
-  const autoPrice = selOpt?.dataset?.price||'';
-  const autoKm    = selOpt?.dataset?.km||'';
   const errEl  = document.getElementById('nlErr');
   const btn    = document.getElementById('nlSubmit');
 

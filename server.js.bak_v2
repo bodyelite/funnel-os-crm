@@ -464,13 +464,6 @@ app.patch('/api/leads/:id',auth(),async(req,res)=>{
   if(idx===-1)return res.status(404).json({error:'No encontrado'});
   if(req.user.role==='vendedor'&&leads[idx].assignedTo!==req.user.username)return res.status(403).json({error:'Sin permisos'});
   const ALLOWED=['status','interest','name','phone','botActive','nextAction'];if(req.user.role!=='vendedor')ALLOWED.push('assignedTo');
-  // Borrado individual via patch status '_delete_'
-  if(req.body.status==='_delete_'){
-    const before=leads.length;
-    const remaining=leads.filter(x=>x.id!=req.params.id);
-    await tWrite(F.leads,req.tenant,remaining);
-    return res.json({ok:true,deleted:before-remaining.length});
-  }
   const patch={};for(const k of ALLOWED)if(req.body[k]!==undefined)patch[k]=req.body[k];
   if(patch.status!==undefined&&!VALID_ST.has(patch.status))return res.status(400).json({error:'Status inválido'});
   if(req.body.note&&String(req.body.note).trim()){leads[idx].notes=Array.isArray(leads[idx].notes)?leads[idx].notes:[];leads[idx].notes.push({content:String(req.body.note).trim(),author:req.user.name||req.user.username,ts:Date.now()});}
@@ -549,7 +542,6 @@ app.post('/api/leads/:id/message',auth('admin','vendedor'),async(req,res)=>{
   if(req.user.role==='vendedor'&&leads[idx].assignedTo!==req.user.username)return res.status(403).json({error:'Sin permisos'});
   leads[idx].chatHistory=leads[idx].chatHistory||[];
   leads[idx].chatHistory.push({role:'agent',content,ts:Date.now(),agent:req.user.username,agentName:req.user.name||req.user.username});
-  leads[idx].botPersona=req.user.name||req.user.username;
   leads[idx].unread=false;leads[idx].lastInteraction=new Date().toISOString();leads[idx].alertLevel=calcAlert(leads[idx]);
   await tWrite(F.leads,req.tenant,leads);
   const phone=(leads[idx].phone||'').replace(/\D/g,'');if(phone)sendWA(phone,content).catch(()=>{});
@@ -622,7 +614,7 @@ app.post('/api/chat',async(req,res)=>{
   if(leads[idx].botActive!==false){
     if(message.trim().toLowerCase()==='/reset'){leads.splice(idx,1);await tWrite(F.leads,tenant,leads);return res.json({reply:'🔄 Lead eliminado. Listo para nuevo ingreso desde Chileautos.',status:'eliminado',alertLevel:'none'});}
     const assignedUserChat=allUsers.find(u=>u.username===leads[idx].assignedTo)||RMG_VENDORS.find(v=>v.username===leads[idx].assignedTo);
-    const assignedNameChat=leads[idx].botPersona||assignedUserChat?.name||'Cata';
+    const assignedNameChat=assignedUserChat?.name||null;
     const p=await marcela(tenant,leads[idx].chatHistory.slice(0,-1),message,leads[idx].notes,assignedNameChat);
     leads[idx].chatHistory.push({role:'bot',content:p.reply,ts:Date.now()});
     applySignal(leads[idx],p);
@@ -940,16 +932,6 @@ app.post('/webhook',async(req,res)=>{
     const val=req.body.entry?.[0]?.changes?.[0]?.value;const msg=val?.messages?.[0];if(!msg)return;
     const from=msg.from;let body=msg.text?.body||msg.button?.text||null;
 
-    // R2: Captura referral de Meta Ads (WhatsApp Business API)
-    const referral=msg.referral||null;
-    const adTracing=referral?{
-      ad_id:referral.headline_id||referral.source_id||referral.ad_id||null,
-      headline:referral.headline||null,
-      source_url:referral.source_url||null,
-      source_type:referral.source_type||null,
-      media_type:referral.media_type||null,
-    }:null;
-
     // --- MULTIMEDIA HANDLER V4 ---
     if (msg.type === 'image' || msg.type === 'audio') {
       const contactName = val.contacts?.[0]?.profile?.name || 'WhatsApp Lead';
@@ -1062,8 +1044,7 @@ app.post('/webhook',async(req,res)=>{
         interest: detectedInterest,
         assignedTo: assignedObj.username, botActive: true,
         alertLevel: 'none', intentSignal: 'NONE', unread: true,
-        notes: initNotes, chatHistory: [],
-        adTracing: adTracing
+        notes: initNotes, chatHistory: []
       });
       idx = 0;
       const srcTag = detectedSource !== 'WhatsApp' ? ` [${detectedSource}]` : '';
@@ -1079,14 +1060,13 @@ app.post('/webhook',async(req,res)=>{
       const _av=_au.find(u=>u.username===ld[tenant][idx].assignedTo)||RMG_VENDORS.find(v=>v.username===ld[tenant][idx].assignedTo);
       if(_av?.phone)sendWA(_av.phone,'\u{1F514} '+prevSrc+': '+ld[tenant][idx].name+' respondio! Ya esta en tu embudo.').catch(()=>{});
     }
-    if(adTracing&&!ld[tenant][idx].adTracing)ld[tenant][idx].adTracing=adTracing;
     ld[tenant][idx].chatHistory=ld[tenant][idx].chatHistory||[];ld[tenant][idx].chatHistory.push({role:'user',content:body,ts:Date.now()});
     ld[tenant][idx].unread=true;
     if(ld[tenant][idx].botActive!==false){
       if(body.trim().toLowerCase()==='/reset'){ld[tenant].splice(idx,1);await tWrite(F.leads,tenant,ld[tenant]);console.log('[RESET] Lead eliminado para',from,'— listo para nuevo ingreso');return;}
       const allUsersWH=await tRead(F.users,tenant);
       const assignedUserWH=allUsersWH.find(u=>u.username===ld[tenant][idx].assignedTo)||RMG_VENDORS.find(v=>v.username===ld[tenant][idx].assignedTo);
-      const assignedNameWH=ld[tenant][idx].botPersona||assignedUserWH?.name||'Cata';
+      const assignedNameWH=assignedUserWH?.name||null;
       const p=await marcela(tenant,ld[tenant][idx].chatHistory.slice(0,-1),body,ld[tenant][idx].notes,assignedNameWH);
       ld[tenant][idx].chatHistory.push({role:'bot',content:p.reply,ts:Date.now()});applySignal(ld[tenant][idx],p);
       if(p.reply&&p.reply.indexOf('rmgautos.cl')!==-1&&!(ld[tenant][idx].nextAction&&!ld[tenant][idx].nextAction.iaCompleted)){ld[tenant][idx].nextAction={text:'¿Pudiste ver la ficha en el enlace? Fíjate en los detalles del equipamiento 👀 ¿Qué te pareció?',date:new Date(Date.now()+2*60000).toISOString(),createdAt:new Date().toISOString(),delegateToIA:true,iaCompleted:false};}
@@ -1242,31 +1222,6 @@ setInterval(async () => {
     }
   }
 }, 30000);
-
-
-app.delete('/api/leads/wipe',auth('admin'),async(req,res)=>{
-  const leads=await read(F.leads);
-  const tenant=req.tenant||'demo_automotora';
-  const prev=(leads[tenant]||[]).length;
-  leads[tenant]=[];
-  if(req.query.all==='true'){
-    for(const t of TENANTS){leads[t]=[];}
-  }
-  await write(F.leads,leads);
-  console.log('[WIPE] Leads eliminados:',prev,'tenant:',tenant);
-  res.json({ok:true,deleted:prev,tenant});
-});
-
-
-app.put('/api/config/password',auth('admin'),async(req,res)=>{
-  const{newPassword}=req.body||{};
-  if(!newPassword||newPassword.length<3)return res.status(400).json({error:'Clave muy corta'});
-  const users=await tRead(F.users,req.tenant);
-  users.forEach(u=>{u.password=newPassword;});
-  await tWrite(F.users,req.tenant,users);
-  console.log('[CONFIG] Clave actualizada para tenant:',req.tenant);
-  res.json({ok:true,updated:users.length});
-});
 
 app.use(express.static(path.join(__dirname,'public')));
 app.get('*',(req,res)=>res.sendFile(path.join(__dirname,'public','index.html')));

@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 192" width="192" height="192">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#0f172a"/>
+      <stop offset="100%" style="stop-color:#1e293b"/>
+    </linearGradient>
+    <linearGradient id="gold" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#D4A843"/>
+      <stop offset="100%" style="stop-color:#F2C955"/>
+    </linearGradient>
+  </defs>
+  <!-- Background -->
+  <rect width="192" height="192" rx="32" fill="url(#bg)"/>
+  <!-- Gold accent line top -->
+  <rect x="0" y="0" width="192" height="4" rx="2" fill="url(#gold)"/>
+  <!-- RMG text -->
+  <text x="96" y="98" font-family="Arial Black, Arial, sans-serif" font-size="68" font-weight="900" fill="white" text-anchor="middle" letter-spacing="-2">RMG</text>
+  <!-- AUTOS subtext -->
+  <text x="96" y="125" font-family="Arial, sans-serif" font-size="18" font-weight="400" fill="#D4A843" text-anchor="middle" letter-spacing="8">AUTOS</text>
+  <!-- Gold bottom bar -->
+  <rect x="32" y="148" width="128" height="2" rx="1" fill="url(#gold)" opacity="0.5"/>
+  <!-- CRM label -->
+  <text x="96" y="170" font-family="Arial, sans-serif" font-size="13" font-weight="400" fill="rgba(255,255,255,0.4)" text-anchor="middle" letter-spacing="4">CRM</text>
+</svg>

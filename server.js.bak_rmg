@@ -1257,17 +1257,6 @@ app.delete('/api/leads/wipe',auth('admin'),async(req,res)=>{
   res.json({ok:true,deleted:prev,tenant});
 });
 
-
-app.put('/api/config/password',auth('admin'),async(req,res)=>{
-  const{newPassword}=req.body||{};
-  if(!newPassword||newPassword.length<3)return res.status(400).json({error:'Clave muy corta'});
-  const users=await tRead(F.users,req.tenant);
-  users.forEach(u=>{u.password=newPassword;});
-  await tWrite(F.users,req.tenant,users);
-  console.log('[CONFIG] Clave actualizada para tenant:',req.tenant);
-  res.json({ok:true,updated:users.length});
-});
-
 app.use(express.static(path.join(__dirname,'public')));
 app.get('*',(req,res)=>res.sendFile(path.join(__dirname,'public','index.html')));
 setInterval(async()=>{for(const t of TENANTS){try{await applySlaRules(t);}catch(e){console.error('SLA',t,e.message);}}},60000);
