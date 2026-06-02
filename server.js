@@ -1004,7 +1004,10 @@ app.post('/webhook',async(req,res)=>{
         }
       }
       
+      ld[tenant][idx].lastClientTs=new Date().toISOString();
+      ld[tenant][idx].unread=true;
       await tWrite(F.leads, tenant, ld[tenant]);
+      console.log('[WH-MEDIA] Guardado media para',from);
     }
 // --- FIN MULTIMEDIA HANDLER V4 ---
     
@@ -1108,8 +1111,12 @@ app.post('/webhook',async(req,res)=>{
       }
       await sendWA(from,p.reply);
     }
-    ld[tenant][idx].lastInteraction=new Date().toISOString();ld[tenant][idx].alertLevel=calcAlert(ld[tenant][idx]);
+    ld[tenant][idx].lastInteraction=new Date().toISOString();
+    ld[tenant][idx].lastClientTs=new Date().toISOString();
+    ld[tenant][idx].unread=true;
+    ld[tenant][idx].alertLevel=calcAlert(ld[tenant][idx]);
     await write(F.leads,ld);
+    console.log('[WH-SAVED] Lead guardado:',ld[tenant][idx].name,'phone:',from,'idx:',idx);
   }catch(e){console.error('Webhook:',e);}
 });
 
