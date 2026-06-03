@@ -1,0 +1,575 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Zonas — Compraventa Autos Santiago</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#f8f7f4;--white:#fff;--surface:#f0efe9;
+  --border:#e2e0d8;--border2:#ccc9bc;
+  --text:#1a1a18;--muted:#6b6a62;--faint:#9e9d94;
+  --sidebar:370px;
+}
+html,body{height:100%;overflow:hidden;font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text)}
+.shell{display:flex;height:100vh}
+
+/* ── SIDEBAR ── */
+.sidebar{width:var(--sidebar);min-width:var(--sidebar);height:100%;background:var(--white);display:flex;flex-direction:column;border-right:1px solid var(--border);z-index:10}
+.sidebar-top{padding:16px 16px 0}
+.app-row{display:flex;align-items:center;gap:10px;margin-bottom:14px}
+.app-logo{width:36px;height:36px;border-radius:10px;background:#1a1a18;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0}
+.app-title{font-family:'Space Grotesk',sans-serif;font-size:14px;font-weight:700;line-height:1.2}
+.app-sub{font-size:11px;color:var(--muted)}
+.search-wrap{display:flex;align-items:center;gap:8px;background:var(--surface);border:1px solid var(--border);border-radius:22px;padding:9px 14px;margin-bottom:12px}
+.search-wrap input{background:none;border:none;outline:none;font-family:'DM Sans',sans-serif;font-size:13px;color:var(--text);flex:1}
+.search-wrap input::placeholder{color:var(--faint)}
+.filter-scroll{display:flex;gap:6px;overflow-x:auto;padding-bottom:12px;scrollbar-width:none}
+.filter-scroll::-webkit-scrollbar{display:none}
+.chip{flex-shrink:0;font-size:11px;font-weight:500;padding:5px 13px;border-radius:20px;border:1px solid var(--border2);cursor:pointer;color:var(--muted);background:var(--white);transition:all .18s;white-space:nowrap}
+.chip:hover{border-color:var(--text);color:var(--text)}
+.chip.on{background:var(--text);border-color:var(--text);color:#fff}
+.result-bar{display:flex;justify-content:space-between;align-items:center;padding:8px 16px;border-top:1px solid var(--border);border-bottom:1px solid var(--border);background:var(--surface)}
+.result-bar span{font-size:11px;color:var(--muted)}
+.result-bar strong{font-size:11px;font-weight:600;color:var(--text)}
+
+/* ── LIST ── */
+.list{flex:1;overflow-y:auto;padding:0}
+.list::-webkit-scrollbar{width:3px}
+.list::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px}
+
+.zona-item{display:flex;gap:12px;align-items:flex-start;padding:13px 16px;cursor:pointer;border-bottom:1px solid var(--border);transition:background .15s;position:relative}
+.zona-item:hover{background:var(--surface)}
+.zona-item.active{background:#f0f9ff;border-left:3px solid #1a1a18}
+.zi-letter{width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:700;color:#fff;flex-shrink:0;margin-top:2px;box-shadow:0 2px 6px rgba(0,0,0,.2)}
+.zi-body{flex:1;min-width:0}
+.zi-name{font-size:13px;font-weight:600;color:var(--text);margin-bottom:1px;line-height:1.3}
+.zi-addr{font-size:11px;color:var(--muted);margin-bottom:6px;line-height:1.4}
+.zi-meta{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.badge{font-size:10px;font-weight:600;padding:2px 8px;border-radius:10px}
+.zi-hint{font-size:11px;color:var(--muted);margin-top:6px;line-height:1.5;display:none}
+.zona-item.active .zi-hint{display:block}
+
+/* ── DETAIL PANEL bajo cada zona ── */
+.zona-detail{display:none;padding:10px 16px 14px 58px;border-bottom:1px solid var(--border);background:#f0f9ff}
+.zona-item.active + .zona-detail{display:block}
+.det-title{font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px}
+.comp-pill-list{display:flex;flex-direction:column;gap:5px;margin-bottom:10px}
+.comp-pill{display:flex;align-items:center;justify-content:space-between;background:var(--white);border:1px solid var(--border);border-radius:8px;padding:7px 10px;font-size:12px;cursor:pointer;transition:border-color .15s}
+.comp-pill:hover{border-color:#999}
+.comp-pill.highlighted{border-color:#3b82f6;background:#eff6ff}
+.cp-left{display:flex;align-items:center;gap:7px}
+.cp-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+.cp-name{font-weight:500;color:var(--text)}
+.cp-right{display:flex;align-items:center;gap:5px}
+.cp-stars{color:#f59e0b;font-size:10px}
+.cp-rat{font-size:11px;font-weight:600}
+.cp-tag{font-size:10px;padding:1px 6px;border-radius:8px;font-weight:500}
+.no-comp-msg{display:flex;align-items:center;gap:8px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:8px 10px;font-size:12px;color:#166534;font-weight:500}
+.stat-row{display:flex;gap:8px}
+.stat-box{flex:1;background:var(--white);border:1px solid var(--border);border-radius:8px;padding:8px 10px;text-align:center}
+.stat-num{font-family:'Space Grotesk',sans-serif;font-size:14px;font-weight:700;line-height:1}
+.stat-lbl{font-size:10px;color:var(--muted);margin-top:2px}
+
+/* ── MAP ── */
+.map-wrap{flex:1;position:relative}
+#map{width:100%;height:100%}
+
+/* ── COMPETITOR TOOLTIP ── */
+.comp-tooltip{
+  position:absolute;z-index:1200;
+  background:var(--white);border:1px solid var(--border);
+  border-radius:12px;padding:12px 14px;
+  min-width:220px;max-width:260px;
+  box-shadow:0 8px 28px rgba(0,0,0,.14);
+  pointer-events:none;
+  display:none;
+}
+.comp-tooltip.vis{display:block}
+.ct-name{font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:700;margin-bottom:2px}
+.ct-addr{font-size:11px;color:var(--muted);margin-bottom:8px}
+.ct-row{display:flex;justify-content:space-between;font-size:11px;padding:4px 0;border-bottom:1px solid var(--border)}
+.ct-row:last-of-type{border-bottom:none}
+.ct-l{color:var(--muted)} .ct-r{font-weight:500}
+.ct-note{margin-top:7px;font-size:11px;color:var(--muted);line-height:1.5;background:var(--surface);border-radius:7px;padding:7px 9px}
+
+/* ── MAP UI ── */
+.map-header{position:absolute;top:12px;left:12px;background:var(--white);border:1px solid var(--border);border-radius:12px;padding:10px 14px;z-index:800;display:flex;gap:12px;align-items:center;box-shadow:0 2px 12px rgba(0,0,0,.08)}
+.mh-stat{text-align:center}
+.mh-num{font-family:'Space Grotesk',sans-serif;font-size:17px;font-weight:700;line-height:1}
+.mh-lbl{font-size:10px;color:var(--muted);margin-top:1px}
+.mh-div{width:1px;height:28px;background:var(--border)}
+.legend{position:absolute;bottom:28px;left:12px;background:var(--white);border:1px solid var(--border);border-radius:12px;padding:10px 14px;z-index:800;font-size:11px;box-shadow:0 2px 12px rgba(0,0,0,.08)}
+.leg-title{font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px}
+.leg-row{display:flex;align-items:center;gap:7px;margin-bottom:4px}
+.leg-row:last-child{margin-bottom:0}
+.leg-dot{width:10px;height:10px;border-radius:3px;flex-shrink:0}
+.hint-map{position:absolute;top:12px;right:12px;background:var(--white);border:1px solid var(--border);border-radius:10px;padding:8px 12px;font-size:11px;color:var(--muted);z-index:800;box-shadow:0 2px 8px rgba(0,0,0,.07)}
+</style>
+</head>
+<body>
+<div class="shell">
+
+<!-- ═══ SIDEBAR ═══ -->
+<aside class="sidebar">
+  <div class="sidebar-top">
+    <div class="app-row">
+      <div class="app-logo">🚗</div>
+      <div>
+        <div class="app-title">Zonas Estratégicas — Santiago</div>
+        <div class="app-sub">Compraventa autos $8–40M · 6 sectores analizados</div>
+      </div>
+    </div>
+    <div class="search-wrap">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#9e9d94" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+      <input type="text" id="searchInput" placeholder="Buscar zona...">
+    </div>
+    <div class="filter-scroll">
+      <button class="chip on" onclick="setFilter('all',this)">Todas</button>
+      <button class="chip" onclick="setFilter('alta',this)">🟢 Alta oportunidad</button>
+      <button class="chip" onclick="setFilter('media',this)">🟡 Media</button>
+      <button class="chip" onclick="setFilter('bajo',this)">💰 Arriendo bajo</button>
+    </div>
+  </div>
+  <div class="result-bar">
+    <span>Zonas</span><strong id="countLbl">6 resultados</strong>
+  </div>
+  <div class="list" id="zonaList"></div>
+</aside>
+
+<!-- ═══ MAP ═══ -->
+<div class="map-wrap">
+  <div id="map"></div>
+
+  <div class="map-header">
+    <div class="mh-stat"><div class="mh-num" style="color:#16a34a">4</div><div class="mh-lbl">Alta oport.</div></div>
+    <div class="mh-div"></div>
+    <div class="mh-stat"><div class="mh-num" style="color:#ca8a04">1</div><div class="mh-lbl">Media</div></div>
+    <div class="mh-div"></div>
+    <div class="mh-stat"><div class="mh-num" style="color:#dc2626">1</div><div class="mh-lbl">Evitar</div></div>
+    <div class="mh-div"></div>
+    <div class="mh-stat"><div class="mh-num" style="color:#3b82f6">8</div><div class="mh-lbl">Competidores</div></div>
+  </div>
+
+  <div class="hint-map" id="hintMap">👆 Haz clic en una zona para ver competidores</div>
+
+  <div class="legend">
+    <div class="leg-title">Nivel de oportunidad</div>
+    <div class="leg-row"><div class="leg-dot" style="background:#16a34a"></div><span>Alta (score 80–91)</span></div>
+    <div class="leg-row"><div class="leg-dot" style="background:#ca8a04"></div><span>Media (score 74–79)</span></div>
+    <div class="leg-row"><div class="leg-dot" style="background:#dc2626"></div><span>Saturada / Evitar</span></div>
+    <div class="leg-row"><div class="leg-dot" style="background:#dc2626;border-radius:50%"></div><span>Competidor en zona</span></div>
+    <div class="leg-row"><div class="leg-dot" style="background:#ca8a04;border-radius:50%"></div><span>Competidor débil</span></div>
+    <div class="leg-row"><div class="leg-dot" style="background:#3b82f6;border-radius:50%"></div><span>⭐ Zona ideal instalar</span></div>
+  </div>
+
+  <!-- Tooltip competidor -->
+  <div class="comp-tooltip" id="compTooltip"></div>
+</div>
+</div>
+
+<script>
+// ══════════════════════════════════════════════════
+//  DATOS COMPLETOS
+// ══════════════════════════════════════════════════
+const ZONAS = [
+  {
+    id:'A', name:'Quilicura / Huechuraba', sub:'Av. Américo Vespucio Norte',
+    lat:-33.358, lng:-70.697, radius:2400,
+    score:91, oportunidad:'alta', comp:'Baja', arriendo:'$3.5–5M',
+    color:'#16a34a',
+    ideal:true,
+    desc:'Corredor en expansión con alta conectividad. Baja competencia formal. Zona de máxima oportunidad.',
+    stats:[{label:'Flujo vehicular',val:'92%'},{label:'Arriendo',val:'$3.5–5M'},{label:'Score',val:'91/100'}],
+    competidores:[
+      {
+        name:'Autocenter Quilicura', addr:'Av. Vespucio 1855, Quilicura',
+        lat:-33.3719, lng:-70.7086,
+        rating:3.7, reviews:389,
+        tag:'Denuncias fraude', tagColor:'#dc2626',
+        nivel:'debil',
+        nota:'Tiene volumen pero con reseñas graves de falsificación de documentos. No representa competencia de calidad.'
+      },
+      {
+        name:'Automotriz Vespucio Norte', addr:'Av. Vespucio 1900, Conchalí',
+        lat:-33.3673, lng:-70.6825,
+        rating:2.9, reviews:19,
+        tag:'Muy mal servicio', tagColor:'#dc2626',
+        nivel:'debil',
+        nota:'Rating 2.9. Denuncias de autos defectuosos y sin respuesta. Competencia extremadamente débil.'
+      },
+      {
+        name:'Autoplaza Huechuraba', addr:'Av. Vespucio 1737, Huechuraba',
+        lat:-33.3662, lng:-70.6783,
+        rating:3.6, reviews:86,
+        tag:'Baja actividad', tagColor:'#ca8a04',
+        nivel:'debil',
+        nota:'Mall de autos actualmente en declive. Vendedores inactivos, bajo stock visible.'
+      },
+      {
+        name:'Automóviles Rivera', addr:'Av. Frei Montalva 7030, Quilicura',
+        lat:-33.3727, lng:-70.6978,
+        rating:5.0, reviews:3,
+        tag:'Actor marginal', tagColor:'#16a34a',
+        nivel:'minimo',
+        nota:'Solo 3 reseñas. No representa barrera de entrada real. Casi inexistente.'
+      },
+      {
+        name:'ZONA IDEAL — Instalar aquí', addr:'Av. Frei Montalva 9500+, Quilicura Norte',
+        lat:-33.3420, lng:-70.7180,
+        rating:null, reviews:null,
+        tag:'⭐ Zona recomendada', tagColor:'#3b82f6',
+        nivel:'ideal',
+        nota:'Sin competidores formales. Alta densidad residencial en expansión. Arriendos accesibles $2.5–4.5M. Mayor oportunidad de todo el corredor.'
+      },
+    ]
+  },
+  {
+    id:'B', name:'Maipú (sector poniente)', sub:'Av. Pajaritos / Américo Vespucio',
+    lat:-33.510, lng:-70.758, radius:2800,
+    score:87, oportunidad:'alta', comp:'Media-baja', arriendo:'$4–6M',
+    color:'#16a34a',
+    ideal:false,
+    desc:'Mayor densidad poblacional de Santiago. Alta demanda de autos $8–20M. Varios actores pero sin dominio claro.',
+    stats:[{label:'Flujo vehicular',val:'88%'},{label:'Arriendo',val:'$4–6M'},{label:'Score',val:'87/100'}],
+    competidores:[
+      {
+        name:'Dercocenter Maipú', addr:'Av. Pajaritos 3690, Maipú',
+        lat:-33.5120, lng:-70.7650,
+        rating:4.1, reviews:890,
+        tag:'Competencia activa', tagColor:'#dc2626',
+        nivel:'fuerte',
+        nota:'Concesionario oficial grande. Foco en autos nuevos principalmente. Competencia en usados semi-nuevos.'
+      },
+      {
+        name:'Autoplaza Maipú', addr:'Av. Américo Vespucio 399, Maipú',
+        lat:-33.5050, lng:-70.7520,
+        rating:3.8, reviews:210,
+        tag:'Competencia media', tagColor:'#ca8a04',
+        nivel:'medio',
+        nota:'Presencia en la zona pero con calificación mejorable. Oportunidad de diferenciarse en servicio.'
+      },
+    ]
+  },
+  {
+    id:'C', name:'Pudahuel', sub:'Av. El Sol / Ruta 68',
+    lat:-33.430, lng:-70.810, radius:2200,
+    score:84, oportunidad:'alta', comp:'Baja', arriendo:'$2.5–4M',
+    color:'#16a34a',
+    ideal:false,
+    desc:'Zona aeroportuaria en expansión. Arriendos bajos. Clientela emergente sin oferta formal cercana.',
+    stats:[{label:'Flujo vehicular',val:'80%'},{label:'Arriendo',val:'$2.5–4M'},{label:'Score',val:'84/100'}],
+    competidores:[]
+  },
+  {
+    id:'D', name:'Conchalí / Recoleta', sub:'Av. Independencia / El Salto',
+    lat:-33.390, lng:-70.665, radius:1800,
+    score:82, oportunidad:'alta', comp:'Baja', arriendo:'$3–5M',
+    color:'#16a34a',
+    ideal:false,
+    desc:'Alta circulación, pocos actores formales. Buena conectividad. Borde norte del cluster Huechuraba.',
+    stats:[{label:'Flujo vehicular',val:'78%'},{label:'Arriendo',val:'$3–5M'},{label:'Score',val:'82/100'}],
+    competidores:[
+      {
+        name:'Automotora Guillermo Morales', addr:'Av. Vespucio 1001, Huechuraba',
+        lat:-33.3753, lng:-70.6580,
+        rating:4.0, reviews:423,
+        tag:'Quejas postventa', tagColor:'#ca8a04',
+        nivel:'medio',
+        nota:'Gran volumen (~200 autos) pero con quejas recurrentes de postventa. Oportunidad de capturar clientes insatisfechos.'
+      },
+      {
+        name:'Rosselot Huechuraba', addr:'Av. Vespucio 981, Huechuraba',
+        lat:-33.3761, lng:-70.6561,
+        rating:3.3, reviews:92,
+        tag:'Mal servicio', tagColor:'#dc2626',
+        nivel:'debil',
+        nota:'Rating 3.3. Múltiples denuncias de incumplimiento. Actor vulnerable. Diferenciarse fácilmente en servicio.'
+      },
+    ]
+  },
+  {
+    id:'E', name:'Peñaflor / Talagante', sub:'Av. Ortúzar / Ruta 78',
+    lat:-33.615, lng:-70.890, radius:3000,
+    score:80, oportunidad:'alta', comp:'Muy baja', arriendo:'$1.5–3M',
+    color:'#ca8a04',
+    ideal:false,
+    desc:'Municipios en expansión. Clientes hoy viajan a Santiago a comprar. Costos mínimos. Mercado casi virgen.',
+    stats:[{label:'Flujo vehicular',val:'65%'},{label:'Arriendo',val:'$1.5–3M'},{label:'Score',val:'80/100'}],
+    competidores:[]
+  },
+  {
+    id:'F', name:'Puente Alto / San Bernardo', sub:'Av. Nos / Gran Avenida Sur',
+    lat:-33.615, lng:-70.615, radius:3000,
+    score:74, oportunidad:'media', comp:'Media-alta', arriendo:'$4.5–7M',
+    color:'#dc2626',
+    ideal:false,
+    desc:'Zona populosa pero saturada. Arriendos altos. Requiere diferenciación fuerte para penetrar el mercado.',
+    stats:[{label:'Flujo vehicular',val:'90%'},{label:'Arriendo',val:'$4.5–7M'},{label:'Score',val:'74/100'}],
+    competidores:[
+      {
+        name:'Dercocenter Puente Alto', addr:'Av. Concha y Toro 2960, Puente Alto',
+        lat:-33.6100, lng:-70.6130,
+        rating:4.3, reviews:1200,
+        tag:'Actor fuerte', tagColor:'#dc2626',
+        nivel:'fuerte',
+        nota:'Gran concesionario con presencia consolidada. Difícil competir directamente. Enfocarse en usados de mayor precio.'
+      },
+      {
+        name:'Salco Automotora P.Alto', addr:'Av. Gabriela Ote. 2755, Puente Alto',
+        lat:-33.6180, lng:-70.6080,
+        rating:3.9, reviews:540,
+        tag:'Competencia activa', tagColor:'#ca8a04',
+        nivel:'medio',
+        nota:'Presencia local consolidada con foco en usados económicos. Arriendos altos dificultan la rentabilidad.'
+      },
+      {
+        name:'Motorland Automotora', addr:'Gran Av. José M. Carrera 7800, SB',
+        lat:-33.6020, lng:-70.6230,
+        rating:4.1, reviews:330,
+        tag:'Usados populares', tagColor:'#ca8a04',
+        nivel:'medio',
+        nota:'Actor de San Bernardo con buen volumen. Zona ya bien cubierta por varios actores.'
+      },
+    ]
+  },
+];
+
+// ══════════════════════════════════════════════════
+//  MAP SETUP
+// ══════════════════════════════════════════════════
+const map = L.map('map',{center:[-33.48,-70.72],zoom:11,zoomControl:false});
+L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',{
+  attribution:'© OpenStreetMap © CARTO',maxZoom:19
+}).addTo(map);
+L.control.zoom({position:'bottomright'}).addTo(map);
+
+let activeZona = null;
+const zonaCircles = {};
+const zonaMarkers = {};
+const compMarkers = {}; // { zonaId: [L.marker, ...] }
+
+function makeStars(r){
+  if(!r) return '';
+  return Array.from({length:5},(_,i)=>`<span style="color:${i<Math.round(r)?'#f59e0b':'#ccc'};font-size:10px">★</span>`).join('');
+}
+
+function compColor(nivel){
+  return nivel==='fuerte'?'#dc2626':nivel==='medio'?'#ca8a04':nivel==='minimo'?'#16a34a':nivel==='ideal'?'#3b82f6':'#16a34a';
+}
+
+// Draw zone circles + zone markers
+ZONAS.forEach(z=>{
+  const circle = L.circle([z.lat,z.lng],{
+    radius:z.radius,
+    color:z.color,fillColor:z.color,fillOpacity:0.10,
+    weight:2, dashArray: z.oportunidad==='alta'?null:'6 4'
+  }).addTo(map);
+  circle.on('click',()=>selectZona(z.id,true));
+  zonaCircles[z.id]=circle;
+
+  const icon = L.divIcon({
+    html:`<div style="background:${z.color};color:#fff;width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:Space Grotesk,sans-serif;font-size:13px;font-weight:700;box-shadow:0 3px 10px rgba(0,0,0,.25);border:2px solid #fff;cursor:pointer">${z.id}</div>`,
+    className:'',iconSize:[30,30],iconAnchor:[15,15]
+  });
+  const m = L.marker([z.lat,z.lng],{icon}).addTo(map);
+  m.on('click',()=>selectZona(z.id,true));
+  zonaMarkers[z.id]=m;
+
+  compMarkers[z.id]=[];
+});
+
+// ── Show/hide competitor markers for a zone ──
+function showCompMarkers(zonaId){
+  const z = ZONAS.find(x=>x.id===zonaId);
+  if(!z) return;
+  z.competidores.forEach((c,idx)=>{
+    const col = compColor(c.nivel);
+    const isIdeal = c.nivel==='ideal';
+
+    const html = isIdeal
+      ? `<div style="background:#3b82f6;color:#fff;width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:16px;box-shadow:0 0 0 3px rgba(59,130,246,.3),0 4px 14px rgba(0,0,0,.3);border:2px solid #fff;cursor:pointer">★</div>`
+      : `<div style="position:relative">
+           <div style="background:${col};width:28px;height:28px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);box-shadow:0 3px 10px rgba(0,0,0,.3);border:2px solid #fff;cursor:pointer">
+             <span style="display:block;width:100%;height:100%;display:flex;align-items:center;justify-content:center;transform:rotate(45deg);font-family:Space Grotesk,sans-serif;font-size:10px;font-weight:700;color:#fff">${idx+1}</span>
+           </div>
+         </div>`;
+
+    const icon = L.divIcon({
+      html,className:'',
+      iconSize:isIdeal?[34,34]:[28,34],
+      iconAnchor:isIdeal?[17,17]:[14,34]
+    });
+
+    const marker = L.marker([c.lat,c.lng],{icon,zIndexOffset:1000}).addTo(map);
+    marker.on('click',(e)=>{
+      L.DomEvent.stopPropagation(e);
+      showCompTooltip(c, e.originalEvent.clientX, e.originalEvent.clientY);
+      // highlight sidebar row
+      document.querySelectorAll('.comp-pill').forEach(p=>p.classList.remove('highlighted'));
+      const pill = document.getElementById(`cp-${zonaId}-${idx}`);
+      if(pill){pill.classList.add('highlighted');pill.scrollIntoView({behavior:'smooth',block:'nearest'})}
+    });
+    compMarkers[zonaId].push(marker);
+  });
+}
+
+function hideCompMarkers(zonaId){
+  if(!compMarkers[zonaId]) return;
+  compMarkers[zonaId].forEach(m=>map.removeLayer(m));
+  compMarkers[zonaId]=[];
+}
+
+function showCompTooltip(c, cx, cy){
+  const tt = document.getElementById('compTooltip');
+  const col = compColor(c.nivel);
+  tt.innerHTML=`
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+      <div style="width:10px;height:10px;border-radius:50%;background:${col};flex-shrink:0"></div>
+      <div class="ct-name">${c.name}</div>
+    </div>
+    <div class="ct-addr">${c.addr}</div>
+    ${c.rating?`<div class="ct-row"><span class="ct-l">Rating</span><span class="ct-r">${makeStars(c.rating)} ${c.rating}</span></div>`:''}
+    ${c.reviews?`<div class="ct-row"><span class="ct-l">Reseñas</span><span class="ct-r">${c.reviews.toLocaleString('es-CL')}</span></div>`:''}
+    <div class="ct-row"><span class="ct-l">Nivel</span><span class="ct-r" style="color:${col}">${c.tag}</span></div>
+    <div class="ct-note">${c.nota}</div>`;
+
+  // position near click but keep inside viewport
+  const mapEl = document.getElementById('map');
+  const rect = mapEl.getBoundingClientRect();
+  const relX = cx - rect.left;
+  const relY = cy - rect.top;
+  const ttW=260, ttH=200;
+  const left = relX + ttW + 20 > rect.width ? relX - ttW - 10 : relX + 14;
+  const top = relY + ttH > rect.height ? relY - ttH : relY;
+
+  tt.style.left = left+'px';
+  tt.style.top = top+'px';
+  tt.classList.add('vis');
+}
+
+map.on('click',()=>{
+  document.getElementById('compTooltip').classList.remove('vis');
+});
+
+// ══════════════════════════════════════════════════
+//  SIDEBAR
+// ══════════════════════════════════════════════════
+function renderList(filter,search=''){
+  const items = ZONAS.filter(z=>{
+    const mf = filter==='all'?true:
+      filter==='alta'?z.oportunidad==='alta':
+      filter==='media'?z.oportunidad==='media':
+      filter==='bajo'?(z.arriendo.startsWith('$1')||z.arriendo.startsWith('$2')||z.arriendo.startsWith('$3.5')):true;
+    const ms = !search||z.name.toLowerCase().includes(search)||z.sub.toLowerCase().includes(search);
+    return mf&&ms;
+  });
+  document.getElementById('countLbl').textContent=`${items.length} resultado${items.length!==1?'s':''}`;
+
+  const list=document.getElementById('zonaList');
+  list.innerHTML = items.flatMap(z=>{
+    const isActive = z.id===activeZona;
+    const sc = z.score>=85?'#16a34a':z.score>=78?'#ca8a04':'#dc2626';
+    const cc = z.comp.toLowerCase().includes('baja')||z.comp.includes('Muy')?'#16a34a':z.comp.toLowerCase().includes('media')?'#ca8a04':'#dc2626';
+
+    const compPills = z.competidores.length>0
+      ? z.competidores.map((c,i)=>`
+          <div class="comp-pill" id="cp-${z.id}-${i}" onclick="focusComp('${z.id}',${i})">
+            <div class="cp-left">
+              <div class="cp-dot" style="background:${compColor(c.nivel)}"></div>
+              <span class="cp-name">${c.name}</span>
+            </div>
+            <div class="cp-right">
+              ${c.rating?`<span class="cp-stars">${makeStars(c.rating)}</span><span class="cp-rat">${c.rating}</span>`:''}
+              <span class="cp-tag" style="background:${c.tagColor}18;color:${c.tagColor}">${c.tag}</span>
+            </div>
+          </div>`).join('')
+      : `<div class="no-comp-msg">✓ Sin competidores formales — zona libre</div>`;
+
+    const statBoxes = z.stats.map(s=>`<div class="stat-box"><div class="stat-num">${s.val}</div><div class="stat-lbl">${s.label}</div></div>`).join('');
+
+    return [
+      `<div class="zona-item${isActive?' active':''}" id="zi-${z.id}" onclick="selectZona('${z.id}')">
+        <div class="zi-letter" style="background:${z.color}">${z.id}</div>
+        <div class="zi-body">
+          <div class="zi-name">${z.name}${z.ideal?' ⭐':''}</div>
+          <div class="zi-addr">${z.sub}</div>
+          <div class="zi-meta">
+            <span class="badge" style="background:${sc}15;color:${sc}">Score ${z.score}</span>
+            <span class="badge" style="background:${cc}12;color:${cc}">Comp. ${z.comp}</span>
+            <span style="font-size:10px;color:var(--muted)">${z.arriendo}/mes</span>
+          </div>
+          <div class="zi-hint">${z.desc}</div>
+        </div>
+      </div>`,
+      `<div class="zona-detail" id="zd-${z.id}">
+        <div class="stat-row" style="margin-bottom:10px">${statBoxes}</div>
+        <div class="det-title">Competidores en esta zona (${z.competidores.length}) — haz clic para ver en mapa</div>
+        <div class="comp-pill-list">${compPills}</div>
+      </div>`
+    ];
+  }).join('');
+}
+
+function makeStars(r){
+  if(!r)return'';
+  return Array.from({length:5},(_,i)=>`<span style="color:${i<Math.round(r)?'#f59e0b':'#ccc'};font-size:10px">★</span>`).join('');
+}
+
+function selectZona(id, fromMap=false){
+  const prev=activeZona;
+
+  // hide previous comp markers
+  if(prev) hideCompMarkers(prev);
+
+  activeZona = prev===id ? null : id;
+
+  if(activeZona){
+    showCompMarkers(activeZona);
+    const z=ZONAS.find(x=>x.id===activeZona);
+    if(z&&!fromMap) map.flyTo([z.lat,z.lng],12,{duration:1});
+    if(z&&fromMap) {
+      const el=document.getElementById(`zi-${id}`);
+      if(el) el.scrollIntoView({behavior:'smooth',block:'nearest'});
+    }
+    document.getElementById('hintMap').style.display='none';
+  } else {
+    document.getElementById('hintMap').style.display='block';
+  }
+
+  document.getElementById('compTooltip').classList.remove('vis');
+  renderList(currentFilter, document.getElementById('searchInput').value.toLowerCase());
+}
+
+function focusComp(zonaId, idx){
+  const z=ZONAS.find(x=>x.id===zonaId);
+  if(!z) return;
+  const c=z.competidores[idx];
+  if(!c) return;
+  map.flyTo([c.lat,c.lng],15,{duration:0.8});
+  // highlight marker
+  document.querySelectorAll('.comp-pill').forEach(p=>p.classList.remove('highlighted'));
+  const pill=document.getElementById(`cp-${zonaId}-${idx}`);
+  if(pill) pill.classList.add('highlighted');
+}
+
+let currentFilter='all';
+function setFilter(f,btn){
+  currentFilter=f;
+  if(activeZona){hideCompMarkers(activeZona);activeZona=null;}
+  document.getElementById('compTooltip').classList.remove('vis');
+  document.getElementById('hintMap').style.display='block';
+  document.querySelectorAll('.chip').forEach(c=>c.classList.remove('on'));
+  btn.classList.add('on');
+  renderList(f,document.getElementById('searchInput').value.toLowerCase());
+}
+document.getElementById('searchInput').addEventListener('input',e=>renderList(currentFilter,e.target.value.toLowerCase()));
+
+renderList('all');
+</script>
+</body>
+</html>
