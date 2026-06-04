@@ -13,7 +13,7 @@
 .cchat{display:flex;flex-direction:column;gap:10px}.cbx{background:var(--bg);border:1px solid var(--bd);border-radius:9px;padding:10px;max-height:220px;overflow-y:auto;display:flex;flex-direction:column;gap:6px}.bb{max-width:85%;padding:7px 10px;border-radius:9px;font-size:12px;line-height:1.45;word-wrap:break-word}.bb.us{background:var(--p2);align-self:flex-start}.bb.bo{background:var(--ac);color:#fff;align-self:flex-end;border-top-right-radius:2px}.bb.an{background:var(--ag);color:var(--agt);align-self:flex-end;border-top-right-radius:2px}.bb .ts3{font-size:9.5px;opacity:.65;margin-left:6px}.bb .at{display:block;font-size:9.5px;opacity:.7;margin-bottom:2px}.che{text-align:center;padding:20px 10px;color:var(--tm);font-size:12px}.acl{font-size:10.5px;color:var(--tm);margin-bottom:4px;font-weight:600;text-transform:uppercase;letter-spacing:.05em}.acmp{display:flex;gap:6px;align-items:flex-end}.acmp textarea{flex:1;padding:9px 11px;background:var(--p2);border:1px solid var(--bd);color:var(--tx);border-radius:8px;font-family:inherit;font-size:12.5px;resize:none;min-height:38px;max-height:90px;line-height:1.4;transition:border-color var(--tr)}.acmp textarea:focus{outline:none;border-color:var(--ac)}.acmp textarea::placeholder{color:var(--tm)}.acmp button.snb{background:var(--ac);color:#fff;border:none;padding:9px 14px;border-radius:8px;font-weight:600;cursor:pointer;font-size:12.5px;font-family:inherit;white-space:nowrap;transition:background var(--tr);flex-shrink:0}.acmp button.snb:hover{background:var(--adk)}.acmp button.snb:disabled{opacity:.5;cursor:not-allowed}.ca2{display:flex;flex-direction:column;gap:12px}.ca2 select,.ca2 textarea{width:100%;padding:8px 10px;background:var(--p2);border:1px solid var(--bd);color:var(--tx);border-radius:7px;font-family:inherit;font-size:12.5px;resize:vertical}.ca2 textarea{min-height:65px}.ca2 .pm{width:100%;background:var(--ac);color:#fff;border:none;padding:9px;border-radius:7px;font-weight:600;cursor:pointer;font-size:13px;font-family:inherit;transition:background var(--tr)}.ca2 .pm:hover{background:var(--adk)}.ca2 .pm:disabled{opacity:.5;cursor:not-allowed}.nl{display:flex;flex-direction:column;gap:5px;max-height:110px;overflow-y:auto}.ni{background:var(--p2);border:1px solid var(--bd);border-radius:7px;padding:7px 9px;font-size:11.5px;line-height:1.4}.ni .nm{font-size:10px;color:var(--tm);margin-top:2px}.nn{color:var(--tm);font-size:11.5px;padding:6px 0}.btw{background:var(--p2);border:1px solid var(--bd);border-radius:9px;padding:10px 12px;display:flex;align-items:center;justify-content:space-between;gap:8px}.btl{font-size:12px;font-weight:600;color:var(--ts);display:flex;align-items:center;gap:6px}.bsw{position:relative;display:inline-block;width:44px;height:24px;flex-shrink:0}.bsw input{opacity:0;width:0;height:0}.bsl{position:absolute;cursor:pointer;inset:0;background:var(--p3);border-radius:24px;transition:background .2s}.bsl::before{content:'';position:absolute;height:18px;width:18px;left:3px;bottom:3px;background:#fff;border-radius:50%;transition:transform .2s}.bsw input:checked+.bsl{background:var(--ok)}.bsw input:checked+.bsl::before{transform:translateX(20px)}.bst{font-size:11px;font-weight:700;min-width:28px;text-align:right}.bst.on{color:var(--ok)}.bst.of{color:var(--tm)}.toast{position:fixed;bottom:22px;right:22px;background:var(--ok);color:#fff;padding:9px 15px;border-radius:8px;font-size:12.5px;font-weight:600;opacity:0;transform:translateY(8px);pointer-events:none;transition:opacity .2s,transform .2s;z-index:300}.toast.show{opacity:1;transform:translateY(0)}.toast.err{background:var(--bd2)}
 
 @media(max-width:768px){.mn::before{left:0!important}
-  html,body{width:100%;overflow-x:clip}
+  html,body{overflow-x:hidden;width:100%}
   .app{grid-template-columns:1fr!important;grid-template-rows:auto 1fr!important;min-height:100vh}
   .sb{flex-direction:row!important;align-items:center;justify-content:flex-start;padding:6px 10px!important;border-right:none!important;border-bottom:1px solid var(--bd);overflow-x:auto;gap:4px;position:sticky;top:0;z-index:100;-webkit-overflow-scrolling:touch;background:var(--p)}
   .sb h1{font-size:11.5px!important;white-space:nowrap;flex-shrink:0;margin:0 6px 0 0!important}
@@ -156,8 +156,7 @@
 <section id="view-chileautos" class="view"><div class="st">🏷 Sala de Espera — Chileautos</div><div style="font-size:13px;color:var(--tm);margin-bottom:12px">Leads contactados por el bot. Cuando el cliente responda, pasan automáticamente a Leads.</div><div id="caTbl"></div></section><section id="view-leads" class="view">
 <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:14px">
   <div class="st" style="margin-bottom:0">Leads</div>
-  <button id="btnBulkDelete" onclick="bulkDelete()" style="display:none;background:var(--bd2);color:#fff;border:none;border-radius:8px;padding:8px 16px;font-size:13px;font-weight:600;cursor:pointer;margin-right:10px">🗑 Borrar Seleccionados</button>
-<button id="btnNuevoLead" onclick="openNuevoLeadModal()" style="background:var(--ac);color:#fff;border:none;border-radius:8px;padding:8px 16px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:6px">＋ Nuevo Lead</button>
+  <button id="btnNuevoLead" onclick="openNuevoLeadModal()" style="background:var(--ac);color:#fff;border:none;border-radius:8px;padding:8px 16px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:6px">＋ Nuevo Lead</button>
 </div>
 <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;background:var(--p);border:1px solid var(--bd);border-radius:var(--r);padding:10px 14px;margin-bottom:12px">
   <span class="lbl">Canal</span>
@@ -546,8 +545,8 @@ function renderDash(){renderSlaCards();renderFunnel();renderPerfTable();}
 function renderXRows(items,timeFn){if(!items.length)return'<div class="xe2">Sin leads.</div>';const gc='grid-template-columns:10px 1fr 1fr 1fr 1fr auto';const hd=`<div class="xlr" style="${gc};cursor:default;background:var(--p2)"><div></div><div style="font-size:10px;font-weight:700;color:var(--tm);text-transform:uppercase">Nombre</div><div style="font-size:10px;font-weight:700;color:var(--tm);text-transform:uppercase">Canal</div><div style="font-size:10px;font-weight:700;color:var(--tm);text-transform:uppercase">Vendedor</div><div style="font-size:10px;font-weight:700;color:var(--tm);text-transform:uppercase">Estado</div><div style="font-size:10px;font-weight:700;color:var(--tm);text-transform:uppercase">Última</div></div>`;return hd+items.map(l=>`<div class="xlr" data-id="${l.id}" style="${gc}">${adot(l.alertLevel)}<div><div class="lrn">${esc(l.name)}</div><div class="lrs">${l.unread?'● Sin resp · ':''}${esc(l.phone||'')}</div></div><div>${cSrc(l.source)}</div><div>${cUsr(l.assignedTo)}</div><div>${stpl(l.status)}</div><div class="lrt" style="color:var(--tm)">${timeFn(l)}</div></div>`).join('');}
 function bindXRows(c){c.querySelectorAll('.xlr[data-id]').forEach(el=>el.addEventListener('click',()=>openModal(+el.dataset.id)));}
 function renderLeads(){
-  const gc='grid-template-columns:22px 8px 8px 11px 1.3fr .9fr 1.1fr .85fr .85fr 1.2fr .75fr';
-  const hd=`<div class="tr2 hd" style="${gc}"><div></div><div></div><div></div><div></div><div>Nombre</div><div>Tel.</div><div>Interés</div><div>Canal</div><div>Asignado</div><div>Estado</div><div>Última</div></div>`;
+  const gc='grid-template-columns:8px 8px 11px 1.3fr .9fr 1.1fr .85fr .85fr 1.2fr .75fr';
+  const hd=`<div class="tr2 hd" style="${gc}"><div></div><div></div><div></div><div>Nombre</div><div>Tel.</div><div>Interés</div><div>Canal</div><div>Asignado</div><div>Estado</div><div>Última</div></div>`;
   const filtCanal = document.getElementById('filtCanal')?.value || '';
   const filtEstado = document.getElementById('filtEstado')?.value || '';
   let leads = S.leads || [];
@@ -555,8 +554,7 @@ function renderLeads(){
   if(filtEstado) leads = leads.filter(l => (l.status||'') === filtEstado);
   const countEl = document.getElementById('filtCount');
   if(countEl) countEl.textContent = (filtCanal||filtEstado) ? `${leads.length} resultado${leads.length!==1?'s':''}` : `${leads.length} leads`;
-  const isAdmin = S.user && S.user.role === 'admin';
-  const rows = leads.length ? leads.map(l=>`<div class="tr2" style="${gc}" data-id="${l.id}">${isAdmin ? '<div style="display:flex;align-items:center;justify-content:center"><input type="checkbox" class="blk-chk" value="'+l.id+'" style="accent-color:var(--bd2);cursor:pointer;width:14px;height:14px" onclick="event.stopPropagation()"></div>' : '<div></div>'}${l.unread?'<div class="ud"></div>':'<div></div>'}${adot(l.alertLevel)}${sdot(l.intentSignal||'NONE')}<div><strong>${esc(l.name)}</strong></div><div style="font-size:11.5px;color:var(--tm)">${esc(l.phone||'—')}</div><div style="font-size:11.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(l.interest||'—')}</div><div>${cSrc(l.source)}</div><div>${cUsr(l.assignedTo)}</div><div>${stpl(l.status)}</div><div style="font-size:11px;color:var(--tm)">${fDT(l.lastClientTs||l.lastInteraction)}</div></div>`).join('') : '<div class="ke" style="padding:16px">Sin leads para este filtro.</div>';
+  const rows = leads.length ? leads.map(l=>`<div class="tr2" style="${gc}" data-id="${l.id}">${l.unread?'<div class="ud"></div>':'<div></div>'}${adot(l.alertLevel)}${sdot(l.intentSignal||'NONE')}<div><strong>${esc(l.name)}</strong></div><div style="font-size:11.5px;color:var(--tm)">${esc(l.phone||'—')}</div><div style="font-size:11.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(l.interest||'—')}</div><div>${cSrc(l.source)}</div><div>${cUsr(l.assignedTo)}</div><div>${stpl(l.status)}</div><div style="font-size:11px;color:var(--tm)">${fDT(l.lastClientTs||l.lastInteraction)}</div></div>`).join('') : '<div class="ke" style="padding:16px">Sin leads para este filtro.</div>';
   $('lTbl').innerHTML=hd+rows;
   $('lTbl').querySelectorAll('.tr2[data-id]').forEach(el=>el.addEventListener('click',()=>openModal(+el.dataset.id)));
 }
@@ -933,7 +931,7 @@ const ALL_ST=['esperando_respuesta_chileautos','esperando_respuesta_general','Nu
 function findLead(id){let l=S.leads.find(x=>x.id===id);if(l)return l;for(const v of S.team||[]){const f=(v.leads||[]).find(x=>x.id===id);if(f)return f;}return null;}
 function openModal(id){S.mid=id;renderModal();$('mbg').classList.add('show');(function(){var mp=document.getElementById('mMainPane'),hp=document.getElementById('mHistPane'),g=document.getElementById('mtabGestion'),h=document.getElementById('mtabHistorial');if(mp){mp.style.display='grid';if(hp)hp.style.display='none';if(g){g.style.color='var(--ac)';g.style.borderBottomColor='var(--ac)';}if(h){h.style.color='var(--tm)';h.style.borderBottomColor='transparent';}}})();
   // Marcar como leído si tiene mensajes sin leer
-  const _lead=findLead(id);if(_lead&&_lead.unread){api('PATCH','/api/leads/'+id,{status:_lead.status}).then(r=>{const idx=S.leads.findIndex(x=>x.id==id);if(idx>-1){S.leads[idx].unread=false;}checkNotifications();}).catch(()=>{});}
+  const _lead=findLead(id);if(_lead&&_lead.unread){api('PATCH','/api/leads/'+id,{status:_lead.status}).then(r=>{const idx=S.leads.findIndex(x=>x.id==id);if(idx>-1){S.leads[idx].unread=false;}updateNotifBadges();}).catch(()=>{});}
   const lead=findLead(id);
   if(lead&&(lead.chatHistory||[]).length>0){
     api('POST','/api/leads/'+id+'/resumen').then(r=>{
@@ -1431,22 +1429,6 @@ window.addEventListener('appinstalled',()=>{
   if(btn)btn.style.display='none';
   console.log('[PWA] App instalada');
 });
-</script>
-<script>
-function bulkDelete() {
-  const checks = document.querySelectorAll('.blk-chk:checked');
-  const ids = Array.from(checks).map(c => Number(c.value));
-  if(!ids.length) return toast('Selecciona al menos un lead', true);
-  if(!confirm('¿Borrar ' + ids.length + ' leads de forma permanente?')) return;
-  api('POST', '/api/leads/bulk-delete', {ids}).then(r => {
-    toast('✅ Borrados: ' + r.deleted);
-    refresh();
-  }).catch(e => toast(e.message, true));
-}
-setInterval(()=>{
-  const btn = document.getElementById('btnBulkDelete');
-  if(btn) btn.style.display = (S.user && S.user.role === 'admin') ? 'inline-flex' : 'none';
-}, 1000);
 </script>
 </body>
 </html>

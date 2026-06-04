@@ -1251,8 +1251,6 @@ setInterval(async () => {
 }, 30000);
 
 
-app.post('/api/leads/bulk-delete',auth('admin'),async(req,res)=>{const ids=req.body.ids||[];if(!ids.length)return res.status(400).json({error:'vacio'});let leads=await tRead(F.leads,req.tenant);const before=leads.length;leads=leads.filter(l=>!ids.includes(l.id));await tWrite(F.leads,req.tenant,leads);res.json({ok:true,deleted:before-leads.length});});
-
 app.delete('/api/leads/wipe',auth('admin'),async(req,res)=>{
   const leads=await read(F.leads);
   const tenant=req.tenant||'demo_automotora';
@@ -1294,10 +1292,8 @@ app.post('/api/tasacion/request', async (req, res) => {
       `Vehículo en retoma: ${ti.make || '?'} ${ti.model || '?'} ${ti.year || '?'}\n` +
       `Color: ${ti.color || '?'}\nPor favor evaluar y registrar oferta en el CRM.`;
 
-    const users = await tRead(F.users, tenant, []);
-    const admins = users.filter(u => u.role === 'admin' && u.status === 'Activo');
-    for (const admin of admins) {
-      if (admin.phone) await sendWA(admin.phone, texto);
+    for (const staff of STAFF_TASACION) {
+      await sendWA(staff.phone, texto);
     }
     res.json({ ok: true, notified: STAFF_TASACION.length });
   } catch (err) {
