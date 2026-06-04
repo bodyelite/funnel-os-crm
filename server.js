@@ -27,7 +27,7 @@ const SLA_GREEN=20;
 const SLA_YELLOW=50;
 const SLA_REASSIGN=30;
 const FINAL_ST=new Set(['Cerrado','Abandonado','Perdido']);
-const VALID_ST=new Set(['Nuevo','En Proceso','Contactado','Calificado','Agendado','Reservado','Seguimiento','Negociación','Atendido','Cerrado','Abandonado','Perdido']);
+const VALID_ST=new Set(['Nuevo','En Proceso','Contactado','Calificado','Agendado','Reservado','Seguimiento','Negociación','Atendido','Cerrado','Abandonado','Perdido','esperando_respuesta_chileautos','esperando_respuesta_general']);
 const read=async f=>{try{return JSON.parse(await fs.readFile(f,'utf8'));}catch{return{};}};
 const write=(f,d)=>fs.writeFile(f,JSON.stringify(d,null,2));
 const tRead=async(f,t,fb=[])=>{const s=await read(f);return s[t]!==undefined?s[t]:fb;};
