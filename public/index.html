@@ -555,8 +555,9 @@ function renderLeads(){
   if(filtEstado) leads = leads.filter(l => (l.status||'') === filtEstado);
   const countEl = document.getElementById('filtCount');
   if(countEl) countEl.textContent = (filtCanal||filtEstado) ? `${leads.length} resultado${leads.length!==1?'s':''}` : `${leads.length} leads`;
+  window.selBulk = window.selBulk || new Set();
   const isAdmin = S.user && S.user.role === 'admin';
-  const rows = leads.length ? leads.map(l=>`<div class="tr2" style="${gc}" data-id="${l.id}">${isAdmin ? '<div style="display:flex;align-items:center;justify-content:center"><input type="checkbox" class="blk-chk" value="'+l.id+'" style="accent-color:var(--bd2);cursor:pointer;width:14px;height:14px" onclick="event.stopPropagation()"></div>' : '<div></div>'}${l.unread?'<div class="ud"></div>':'<div></div>'}${adot(l.alertLevel)}${sdot(l.intentSignal||'NONE')}<div><strong>${esc(l.name)}</strong></div><div style="font-size:11.5px;color:var(--tm)">${esc(l.phone||'—')}</div><div style="font-size:11.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(l.interest||'—')}</div><div>${cSrc(l.source)}</div><div>${cUsr(l.assignedTo)}</div><div>${stpl(l.status)}</div><div style="font-size:11px;color:var(--tm)">${fDT(l.lastClientTs||l.lastInteraction)}</div></div>`).join('') : '<div class="ke" style="padding:16px">Sin leads para este filtro.</div>';
+  const rows = leads.length ? leads.map(l=>`<div class="tr2" style="${gc}" data-id="${l.id}">${isAdmin ? '<div style="display:flex;align-items:center;justify-content:center"><input type="checkbox" class="blk-chk" value="'+l.id+'" '+(window.selBulk.has(String(l.id))?'checked':'')+' style="accent-color:var(--bd2);cursor:pointer;width:14px;height:14px" onclick="event.stopPropagation(); if(this.checked) window.selBulk.add(this.value); else window.selBulk.delete(this.value);"></div>' : '<div></div>'}${l.unread?'<div class="ud"></div>':'<div></div>'}${adot(l.alertLevel)}${sdot(l.intentSignal||'NONE')}<div><strong>${esc(l.name)}</strong></div><div style="font-size:11.5px;color:var(--tm)">${esc(l.phone||'—')}</div><div style="font-size:11.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(l.interest||'—')}</div><div>${cSrc(l.source)}</div><div>${cUsr(l.assignedTo)}</div><div>${stpl(l.status)}</div><div style="font-size:11px;color:var(--tm)">${fDT(l.lastClientTs||l.lastInteraction)}</div></div>`).join('') : '<div class="ke" style="padding:16px">Sin leads para este filtro.</div>';
   $('lTbl').innerHTML=hd+rows;
   $('lTbl').querySelectorAll('.tr2[data-id]').forEach(el=>el.addEventListener('click',()=>openModal(+el.dataset.id)));
 }
@@ -1440,6 +1441,7 @@ function bulkDelete() {
   if(!confirm('¿Borrar ' + ids.length + ' leads de forma permanente?')) return;
   api('POST', '/api/leads/bulk-delete', {ids}).then(r => {
     toast('✅ Borrados: ' + r.deleted);
+    if(window.selBulk) window.selBulk.clear();
     refresh();
   }).catch(e => toast(e.message, true));
 }
