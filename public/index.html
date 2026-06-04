@@ -171,6 +171,36 @@ window.fetch = function() {
   return _oldFetch.apply(this, args);
 };
 </script>
+<script>
+// Matar cualquier Service Worker que ya esté instalado en los celulares de los vendedores
+if('serviceWorker' in navigator) {
+  navigator.serviceWorker.getRegistrations().then(regs => {
+    for(let reg of regs) { reg.unregister(); console.log('SW aniquilado'); }
+  });
+}
+
+// Modificar fetch para prohibir absolutamente el caché a nivel de servidor
+const _superFetch = window.fetch;
+window.fetch = function() {
+  let args = Array.prototype.slice.call(arguments);
+  if (typeof args[0] === 'string' && args[0].includes('/api/') && (!args[1] || !args[1].method || args[1].method.toUpperCase() === 'GET')) {
+    args[1] = args[1] || {};
+    args[1].cache = 'no-store'; // Orden directa a Safari: NO CACHEAR NADA
+    args[1].headers = args[1].headers || {};
+    args[1].headers['Cache-Control'] = 'no-cache, no-store, must-revalidate';
+    args[1].headers['Pragma'] = 'no-cache';
+    args[1].headers['Expires'] = '0';
+  }
+  return _superFetch.apply(this, args);
+};
+
+// Refresco automático al desbloquear el celular
+document.addEventListener('visibilitychange', () => {
+  if(document.visibilityState === 'visible' && typeof refresh === 'function') {
+    setTimeout(refresh, 600); // 0.6 seg de respiro para que iOS vuelva a conectar el 4G/WiFi
+  }
+});
+</script>
 </head>
 
 <body>
@@ -1459,7 +1489,7 @@ document.getElementById('nlBg')?.addEventListener('click', function(e){
 <script>
 if('serviceWorker' in navigator){
   window.addEventListener('load',()=>{
-    navigator.serviceWorker.register('/sw.js')
+    Promise.reject('SW Desactivado por Gerencia')
       .then(r=>console.log('[SW] Registrado:',r.scope))
       .catch(e=>console.log('[SW] Error:',e));
   });
