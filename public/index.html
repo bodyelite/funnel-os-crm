@@ -134,21 +134,29 @@
       top: 0 !important;
       left: 0 !important;
       width: 100% !important;
-      min-height: 70px !important; /* Más alto para los dedos */
-      z-index: 9999 !important; /* Siempre por encima de todo */
-      box-shadow: 0 4px 10px rgba(0,0,0,0.15) !important;
+      /* Ajuste quirúrgico para el notch/isla dinámica de iPhone */
+      padding-top: max(env(safe-area-inset-top), 45px) !important;
+      padding-bottom: 12px !important;
+      z-index: 9999 !important;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.2) !important;
       display: flex !important;
       align-items: center !important;
-      overflow-x: auto !important; /* Permite deslizar si hay muchos botones */
+      overflow-x: auto !important;
       white-space: nowrap !important;
+      background: #0f172a !important; /* Mantiene el color corporativo */
     }
     .shell {
-      padding-top: 70px !important; /* Empuja el contenido hacia abajo */
+      /* Empuja toda la aplicación hacia abajo para respetar el nuevo alto del menú */
+      padding-top: max(env(safe-area-inset-top) + 70px, 95px) !important;
     }
     .sb > * {
-      /* Hace que los botones dentro del menú sean más grandes y legibles */
-      font-size: 15px !important; 
-      padding: 8px 12px !important;
+      font-size: 13px !important; 
+      padding: 8px 14px !important;
+    }
+    .sb h1 {
+      margin-top: 0 !important;
+      margin-bottom: 0 !important;
+      margin-right: 10px !important;
     }
   }
 </style>
