@@ -1485,6 +1485,25 @@ setInterval(()=>{
   if(btn) btn.style.display = (S.user && S.user.role === 'admin') ? 'inline-flex' : 'none';
 }, 1000);
 </script>
+<script>
+let iosAudioUnlocked = false;
+function unlockiOSAudio() {
+  if(iosAudioUnlocked) return;
+  const silent = new Audio('data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA');
+  silent.play().then(() => {
+    iosAudioUnlocked = true;
+    ['touchstart','click'].forEach(e => document.removeEventListener(e, unlockiOSAudio));
+  }).catch(()=>{});
+}
+['touchstart','click'].forEach(e => document.addEventListener(e, unlockiOSAudio));
+
+document.addEventListener('visibilitychange', () => {
+  if(document.visibilityState === 'visible' && typeof refresh === 'function') refresh();
+});
+window.addEventListener('focus', () => {
+  if(typeof refresh === 'function') refresh();
+});
+</script>
 </body>
 </html>
 
