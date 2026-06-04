@@ -160,6 +160,17 @@
     }
   }
 </style>
+<script>
+// Parche anti-cache agresivo para sincronizacion Safari/iOS
+const _oldFetch = window.fetch;
+window.fetch = function() {
+  let args = Array.prototype.slice.call(arguments);
+  if (typeof args[0] === 'string' && args[0].includes('/api/') && (!args[1] || !args[1].method || args[1].method.toUpperCase() === 'GET')) {
+    args[0] += (args[0].includes('?') ? '&' : '?') + '_t=' + Date.now();
+  }
+  return _oldFetch.apply(this, args);
+};
+</script>
 </head>
 
 <body>
