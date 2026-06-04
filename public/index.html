@@ -126,7 +126,34 @@
 <meta name="apple-mobile-web-app-title" content="RMG CRM">
 <link rel="apple-touch-icon" href="/icon-192.svg">
 <link rel="icon" type="image/svg+xml" href="/icon-192.svg">
+
+<style id="mobile-menu-fix">
+  @media (max-width: 768px) {
+    .sb {
+      position: fixed !important;
+      top: 0 !important;
+      left: 0 !important;
+      width: 100% !important;
+      min-height: 70px !important; /* Más alto para los dedos */
+      z-index: 9999 !important; /* Siempre por encima de todo */
+      box-shadow: 0 4px 10px rgba(0,0,0,0.15) !important;
+      display: flex !important;
+      align-items: center !important;
+      overflow-x: auto !important; /* Permite deslizar si hay muchos botones */
+      white-space: nowrap !important;
+    }
+    .shell {
+      padding-top: 70px !important; /* Empuja el contenido hacia abajo */
+    }
+    .sb > * {
+      /* Hace que los botones dentro del menú sean más grandes y legibles */
+      font-size: 15px !important; 
+      padding: 8px 12px !important;
+    }
+  }
+</style>
 </head>
+
 <body>
 <div id="lv" class="lw"><div class="lw-bg"></div><div class="lw-grid"></div><div class="lc"><h1>FunnelOS CRM</h1><div class="sub">Torre de Control · Cata IA</div><label>Empresa</label><select id="liT"><option value="demo_automotora">RMG Autos</option></select><label>Usuario</label><input id="liU" value="gerente" placeholder="gerente|vendedor1|vendedor2"><label>Contraseña</label><input id="liP" type="password" value="demo"><button id="liB">Entrar</button><div class="err" id="liE"></div><div class="hint">Demo: <strong>gerente / demo</strong> &nbsp;·&nbsp; daniela / demo &nbsp;·&nbsp; carlos / demo</div></div></div>
 <div id="av" class="app" style="display:none">
