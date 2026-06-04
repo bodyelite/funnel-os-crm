@@ -16,6 +16,39 @@ const app=express();
 const PORT=process.env.PORT||3000;
 const DATA=process.env.RENDER?'/var/data':path.join(__dirname,'data');
 if(!fsSync.existsSync(DATA))fsSync.mkdirSync(DATA,{recursive:true});
+
+// ── WEB PUSH ─────────────────────────────────────────────────────
+(function setupVapid(){
+  const pub=process.env.VAPID_PUBLIC_KEY, priv=process.env.VAPID_PRIVATE_KEY;
+  if(pub&&priv){webpush.setVapidDetails('mailto:admin@rmgautos.cl',pub,priv);console.log('[PUSH] VAPID OK');}
+  else{console.warn('[PUSH] Sin VAPID keys — push desactivado');}
+})();
+const _PUSH_FILE=require('path').join(__dirname,'data','push_subs.json');
+let _pushSubs={};
+try{_pushSubs=JSON.parse(require('fs').readFileSync(_PUSH_FILE,'utf8'));}catch(_){}
+async function _saveSubs(){try{require('fs').writeFileSync(_PUSH_FILE,JSON.stringify(_pushSubs));}catch(_){}}
+async function sendWebPush(tenant,username,payload){
+  const key=tenant+':'+username, subs=_pushSubs[key]||[], dead=[];
+  for(const sub of subs){
+    try{await webpush.sendNotification(sub,JSON.stringify(payload));}
+    catch(err){if(err.statusCode===410||err.statusCode===404)dead.push(sub.endpoint);}
+  }
+  if(dead.length){_pushSubs[key]=subs.filter(s=>!dead.includes(s.endpoint));await _saveSubs();}
+}
+async function notifyTenantPush(tenant,leads){
+  try{
+    const unreads=(leads||[]).filter(l=>l.unread);
+    if(!unreads.length)return;
+    const last=unreads[unreads.length-1];
+    const msg=(last.chatHistory||[]).filter(m=>m.role==='user').slice(-1)[0];
+    const payload={title:'RMG CRM — '+last.name,body:msg?msg.content.slice(0,80):'Nuevo mensaje',count:unreads.length};
+    for(const k of Object.keys(_pushSubs).filter(k=>k.startsWith(tenant+':'))){
+      await sendWebPush(tenant,k.split(':')[1],payload);
+    }
+  }catch(e){console.warn('[PUSH] error:',e.message);}
+}
+// ── fin WEB PUSH ──────────────────────────────────────────────────
+
 app.use(express.json({limit:'2mb'}));
 app.use((req,res,next)=>{res.header('Access-Control-Allow-Origin','*');res.header('Access-Control-Allow-Headers','Content-Type,X-Auth-Token,Authorization');res.header('Access-Control-Allow-Methods','GET,POST,PUT,PATCH,DELETE,OPTIONS');if(req.method==='OPTIONS')return res.sendStatus(200);next();});
 
@@ -1364,6 +1397,29 @@ app.patch('/api/leads/:id/tradein', async (req, res) => {
 });
 
 
+
+
+// ── PUSH endpoints ────────────────────────────────────────────────
+app.get('/api/push/vapid-public-key',(req,res)=>{
+  const key=process.env.VAPID_PUBLIC_KEY;
+  if(!key)return res.status(503).json({error:'VAPID no configurado'});
+  res.json({publicKey:key});
+});
+app.post('/api/push/subscribe',auth(),async(req,res)=>{
+  const{subscription}=req.body;
+  if(!subscription||!subscription.endpoint)return res.status(400).json({error:'subscription requerida'});
+  const key=req.tenant+':'+req.user.username;
+  _pushSubs[key]=_pushSubs[key]||[];
+  if(!_pushSubs[key].some(s=>s.endpoint===subscription.endpoint)){_pushSubs[key].push(subscription);await _saveSubs();}
+  res.json({ok:true});
+});
+app.post('/api/push/unsubscribe',auth(),async(req,res)=>{
+  const{endpoint}=req.body;
+  const key=req.tenant+':'+req.user.username;
+  if(_pushSubs[key]){_pushSubs[key]=_pushSubs[key].filter(s=>s.endpoint!==endpoint);await _saveSubs();}
+  res.json({ok:true});
+});
+// ── fin PUSH endpoints ────────────────────────────────────────────
 
 app.listen(PORT,()=>{console.log(`🚀 FunnelOS :${PORT} | SLA_GREEN=${SLA_GREEN} SLA_REASSIGN=${SLA_REASSIGN} SLA_YELLOW=${SLA_YELLOW}`);seed().catch(console.error);});
 
