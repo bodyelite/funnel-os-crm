@@ -487,7 +487,7 @@ function renderEsperaGeneral(){
 // ═══════════════════════════════════════════════════
 // NOTIFICACIONES RMG — globo + sonido + badge
 // ═══════════════════════════════════════════════════
-var _notifIds=new Set(),_audioCtx=null,_audioOk=false;
+var _notifIds=new Set(),_audioCtx=null,_audioOk=false,_notifFirstLoad=true;
 
 function _initAudio(){
   if(_audioOk)return;
@@ -584,7 +584,13 @@ function checkNotifications(){
   var count=unreads.length;
   var newLeads=unreads.filter(function(l){return!_notifIds.has(l.id+'|'+l.lastClientTs);});
   var cur=new Set(unreads.map(function(l){return l.id+'|'+l.lastClientTs;}));
-  if(newLeads.length>0&&_notifIds.size>0){
+  if(_notifFirstLoad){
+    _notifIds=cur;
+    _notifFirstLoad=false;
+    _updateBadge(count);
+    return;
+  }
+  if(newLeads.length>0){
     _playSound();
     if('vibrate' in navigator)navigator.vibrate([180,80,180]);
     _showSysNotif(newLeads);

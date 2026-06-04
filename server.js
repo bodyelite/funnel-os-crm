@@ -1039,7 +1039,7 @@ app.post('/webhook',async(req,res)=>{
       }
       
       ld[tenant][idx].lastClientTs=new Date().toISOString();
-      ld[tenant][idx].unread=true;
+      ld[tenant][idx].unread=true;ld[tenant][idx].lastClientTs=Date.now();
       await tWrite(F.leads, tenant, ld[tenant]);
       console.log('[WH-MEDIA] Guardado media para',from);
     }
@@ -1110,7 +1110,7 @@ app.post('/webhook',async(req,res)=>{
       const prevSrc = ld[tenant][idx].status==='esperando_respuesta_chileautos' ? 'Chileautos' : (ld[tenant][idx].source||'Canal');
       ld[tenant][idx].status='Nuevo';
       ld[tenant][idx].botActive=true;
-      ld[tenant][idx].unread=true;
+      ld[tenant][idx].unread=true;ld[tenant][idx].lastClientTs=Date.now();
       ld[tenant][idx].notes=(ld[tenant][idx].notes||[]).concat({content:'✅ Cliente respondió. Activado en embudo desde sala de espera ('+prevSrc+').',author:'Sistema',ts:Date.now()});
       const _au=await tRead(F.users,tenant);
       const _av=_au.find(u=>u.username===ld[tenant][idx].assignedTo)||RMG_VENDORS.find(v=>v.username===ld[tenant][idx].assignedTo);
@@ -1118,7 +1118,7 @@ app.post('/webhook',async(req,res)=>{
     }
     if(adTracing&&!ld[tenant][idx].adTracing)ld[tenant][idx].adTracing=adTracing;
     ld[tenant][idx].chatHistory=ld[tenant][idx].chatHistory||[];ld[tenant][idx].chatHistory.push({role:'user',content:body,ts:Date.now()});
-    ld[tenant][idx].unread=true;
+    ld[tenant][idx].unread=true;ld[tenant][idx].lastClientTs=Date.now();
     if(ld[tenant][idx].botActive!==false){
       if(body.trim().toLowerCase()==='/reset'){ld[tenant].splice(idx,1);await tWrite(F.leads,tenant,ld[tenant]);console.log('[RESET] Lead eliminado para',from,'— listo para nuevo ingreso');return;}
       const allUsersWH=await tRead(F.users,tenant);
@@ -1147,10 +1147,11 @@ app.post('/webhook',async(req,res)=>{
     }
     ld[tenant][idx].lastInteraction=new Date().toISOString();
     ld[tenant][idx].lastClientTs=new Date().toISOString();
-    ld[tenant][idx].unread=true;
+    ld[tenant][idx].unread=true;ld[tenant][idx].lastClientTs=Date.now();
     ld[tenant][idx].alertLevel=calcAlert(ld[tenant][idx]);
     await write(F.leads,ld);
     console.log('[WH-SAVED] Lead guardado:',ld[tenant][idx].name,'phone:',from,'idx:',idx);
+    try{ await notifyTenantPush(tenant, ld[tenant]||[]); console.log('[PUSH] Notificación enviada'); }catch(ePush){ console.warn('[PUSH] error:',ePush.message); }
   }catch(e){console.error('Webhook:',e);}
 });
 
