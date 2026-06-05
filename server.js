@@ -342,9 +342,7 @@ function isShield(t){if(!t)return false;const n=t.toLowerCase().normalize('NFD')
 
 async function getSellers(tenant) {
   const allUsers = await tRead(F.users, tenant);
-  const rmgNames = ['daniela','carlos'];
-  const fromDB = allUsers.filter(u => rmgNames.includes(u.username) && u.role === 'vendedor' && (!u.status || u.status === 'Activo'));
-  return fromDB.length >= 2 ? fromDB : RMG_VENDORS;
+  return allUsers.filter(u => u.role === 'vendedor' && (!u.status || u.status === 'Activo'));
 }
 async function rrNext(tenant,exclude=null){const sl=await getSellers(tenant);if(!sl.length)return null;const pool=exclude?sl.filter(s=>s.username!==exclude):sl;const list=pool.length?pool:sl;const rr=await read(F.rr);const idx=(rr[tenant]||0)%list.length;rr[tenant]=(idx+1)%list.length;await write(F.rr,rr);return list[idx];}
 
@@ -1441,20 +1439,4 @@ setTimeout(async () => {
   } catch(e) { console.log('Error en parche', e); }
 }, 3000);
 
-// --- PARCHE: MIGRAR LEADS A VENDEDORES REALES ---
-setTimeout(async () => {
-  try {
-    let leads = await tRead(F.leads, 'demo_automotora');
-    let changed = false;
-    if (leads && Array.isArray(leads)) {
-      leads.forEach(l => {
-        if (l.assignedTo === 'vendedor1') { l.assignedTo = 'daniela'; changed = true; }
-        if (l.assignedTo === 'vendedor2') { l.assignedTo = 'carlos'; changed = true; }
-      });
-      if (changed) {
-        await tWrite(F.leads, 'demo_automotora', leads);
-        console.log('✅ Leads asignados a Daniela y Carlos.');
-      }
-    }
-  } catch(e) { console.log('Error en parche migración', e); }
-}, 4000);
+// Parche de migracion zombi anulado por gerencia.
