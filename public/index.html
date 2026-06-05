@@ -735,7 +735,7 @@ function renderAnalytics(){
   S.leads.forEach(l=>{
     const c=l.source||'Otro';
     if(!chF[c]) chF[c]={n:0,g:0,a:0,cl:0,p:0,m:{}};
-    if(l.status==='Nuevo') chF[c].n++;
+    if (true) chF[c].n++;
     else if(['En Proceso','Contactado'].includes(l.status)) chF[c].g++;
     else if(['Agendado','Calificado'].includes(l.status)) chF[c].a++;
     else if(l.status==='Cerrado') chF[c].cl++;
