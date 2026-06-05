@@ -1108,6 +1108,8 @@ function renderModal(){const l=findLead(S.mid);if(!l){closeModal();return;}$('mT
             </label>
             <label style="color:#94a3b8;font-size:12px;">Modelo<br>
               <input id="ti-model" style="width:100%;background:#1e293b;border:1px solid #334155;color:#e2e8f0;border-radius:6px;padding:5px 8px;font-size:13px;" value="${ti.model||''}">
+            <input id="ti-km" placeholder="Kilometraje (ej: 45.000 km)" value="" style="width:100%; padding:6px; background:var(--p3); border:1px solid var(--bd); border-radius:4px; font-size:11.5px; color:var(--tx);" oninput="document.getElementById('ti-km').setAttribute('data-val',this.value)">
+            <input id="ti-version" placeholder="Versión/Equipamiento (ej: 4x4 Full)" value="" style="width:100%; padding:6px; background:var(--p3); border:1px solid var(--bd); border-radius:4px; font-size:11.5px; color:var(--tx);" oninput="document.getElementById('ti-version').setAttribute('data-val',this.value)">
             </label>
             <label style="color:#94a3b8;font-size:12px;">Año<br>
               <input id="ti-year" style="width:100%;background:#1e293b;border:1px solid #334155;color:#e2e8f0;border-radius:6px;padding:5px 8px;font-size:13px;" value="${ti.year||''}">
@@ -1275,7 +1277,7 @@ window.saveTiFields = async function(leadId) {
   const model = (document.getElementById('ti-model')||{}).value||'';
   const year = (document.getElementById('ti-year')||{}).value||'';
   const color = (document.getElementById('ti-color')||{}).value||'';
-  await fetch('/api/leads/'+leadId+'/tradein', { method:'PATCH', headers:{'Content-Type':'application/json'}, body:JSON.stringify({make,model,year,color}) });
+  await fetch('/api/leads/'+leadId+'/tradein', { method:'PATCH', headers:{'Content-Type':'application/json'}, body:JSON.stringify({make,model,year,color,km:document.getElementById('ti-km')?.value||'',version:document.getElementById('ti-version')?.value||''}) });
   toast('Datos de retoma guardados ✓');
 };
 window.solicitarTasacion = async function(leadId) {
