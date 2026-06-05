@@ -1461,6 +1461,20 @@ app.post('/api/push/unsubscribe',auth(),async(req,res)=>{
 });
 // ── fin PUSH endpoints ────────────────────────────────────────────
 
+
+app.post('/markAsRead', express.json(), (req, res) => {
+    const { id } = req.body;
+    const leads = JSON.parse(fs.readFileSync('/var/data/leads.json', 'utf8'));
+    let found = false;
+    for (let tenant in leads) {
+        leads[tenant].forEach(l => {
+            if (l.id == id) { l.unread = false; found = true; }
+        });
+    }
+    if (found) fs.writeFileSync('/var/data/leads.json', JSON.stringify(leads, null, 2));
+    res.json({ success: true });
+});
+
 app.listen(PORT,()=>{console.log(`🚀 FunnelOS :${PORT} | SLA_GREEN=${SLA_GREEN} SLA_REASSIGN=${SLA_REASSIGN} SLA_YELLOW=${SLA_YELLOW}`);seed().catch(console.error);});
 
 // --- PARCHE: AUTO-RESETEO DE CLAVES ---
