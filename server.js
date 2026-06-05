@@ -439,7 +439,7 @@ async function seed(){
     {username:'gerente',password:'demo',name:'Andrés Salas',role:'admin',phone:'56912000001',status:'Activo'},
             {username:'recepcion',password:'demo',name:'Daniela Ortiz',role:'secretaria',phone:'56912000004',status:'Activo'}
   ];}else{
-    for(const v of RMG_VENDORS){if(!users.demo_automotora.find(u=>u.username===v.username))users.demo_automotora.push(v);}
+    // BLOQUEADO: no recrear vendors demo automaticamente
   }
   if(!users.demo_clinica)users.demo_clinica=[{username:'gerente',password:'demo',name:'Dr. Hernán Vidal',role:'admin',phone:'56912000010',status:'Activo'},{username:'vendedor1',password:'demo',name:'Karina Bravo',role:'vendedor',phone:'56912000011',status:'Activo'},{username:'recepcion',password:'demo',name:'Marcela Tapia',role:'secretaria',phone:'56912000012',status:'Activo'}];
   await write(F.users,users);
