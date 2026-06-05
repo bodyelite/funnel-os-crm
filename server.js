@@ -286,7 +286,7 @@ async function marcela(tenant, history, msg, notes, assignedName) {
 
     const baseSysPrompt = (botCfg && botCfg.systemPrompt) || 'Eres Marcela, asesora de ventas de Automotora Andes. Responde de forma calida y profesional en espanol chileno.';
     let sysPromptProcessed = baseSysPrompt.replace(/\{nombreIA\}/g, assignedName || 'Cata');
-    sysPromptProcessed += '\n\nREGLA DE BUSQUEDA: Se extremadamente flexible al comparar el auto que pide el cliente con el inventario. El orden de las palabras, el ano o la version (ej. "Mokka 2022 GT" vs "Mokka GT 2022") no importan. Si los terminos clave coinciden, asume que es el mismo vehiculo y confirma amablemente que SI esta disponible.\n\nINVENTARIO DISPONIBLE:\n' + (invS || '(sin inventario disponible temporalmente)');
+    sysPromptProcessed += '\n\nREGLA DE MATCHING OBLIGATORIA: Los nombres de los autos que llegan de portales (MercadoLibre, Yapo, Chileautos) suelen venir mal escritos, duplicados o incompletos (ej. "Mg Mg3 1.5 Std Mt"). En nuestro inventario pueden estar más detallados (ej. "MG 3 HATCH BACK 1.5 STD MT AC"). TU DEBER ES UNIRLOS. Ignora palabras extra como "Hatchback", "Sedan", "SUV", letras extra o repeticiones de marca. Si la marca y el número/modelo principal coinciden, ES EL MISMO AUTO. ¡NUNCA digas que no lo tienes en el primer mensaje! Responde con entusiasmo: "¡Sí, claro! Te cuento sobre el [Nombre exacto del inventario]" y dale los detalles y el link.\n\nINVENTARIO DISPONIBLE:\n' + (invS || '(sin inventario disponible temporalmente)');
     if (notes && notes.length) {
       sysPromptProcessed += '\nNOTAS INTERNAS:\n' + notes.slice(-5).map(n => '- ' + n.author + ': ' + n.content).join('\n');
     }
