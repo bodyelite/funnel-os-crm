@@ -3,3 +3,9 @@ node_modules/
 .DS_Store
 .chileautos_cookies.json
 data/
+
+data/leads.json
+data/users.json
+data/rr.json
+data/spend.json
+data/bot.json

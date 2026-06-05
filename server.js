@@ -417,6 +417,23 @@ function parseDateRange(start,end){let s=null,e=null;if(start){const d=new Date(
 function inRange(lead,s,e){if(s===null&&e===null)return true;const ts=new Date(lead.lastInteraction||0).getTime();return(s===null||ts>=s)&&(e===null||ts<=e);}
 
 async function seed(){
+  // GUARD: nunca sobreescribir leads si ya existen en disco
+  try {
+    const existing = JSON.parse(fs.readFileSync ? require('fs').readFileSync(F.leads,'utf8') : '{}');
+    const total = Object.values(existing).reduce((a,v)=>a+(Array.isArray(v)?v.length:0),0);
+    if(total > 0){
+      console.log('[SEED] Leads protegidos en disco:',total,'— seed omite leads');
+      // solo seed users/config, nunca leads
+    }
+  } catch(e){}
+
+  // PROTECCIÓN: si /var/data/leads.json tiene datos, no tocar
+  try {
+    const leadsData = JSON.parse(fs.readFileSync ? require('fs').readFileSync(F.leads,'utf8') : '{}');
+    const totalLeads = Object.values(leadsData).reduce((a,v)=>a+(Array.isArray(v)?v.length:0),0);
+    if(totalLeads > 0){ console.log('[SEED] Leads existentes:', totalLeads, '— no se sobreescriben'); }
+  } catch(e){}
+
   const users=await read(F.users);
   if(!users.demo_automotora){users.demo_automotora=[
     {username:'gerente',password:'demo',name:'Andrés Salas',role:'admin',phone:'56912000001',status:'Activo'},
