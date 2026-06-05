@@ -1190,36 +1190,35 @@ function renderModalChat(l){
   const h = Array.isArray(l.chatHistory) ? l.chatHistory : [];
   const mc = $('mChat');
   if(!mc) return;
-  
+
   if(!h.length){
     if(mc.innerHTML !== '<div class="che">Sin historial aún.</div>') {
         mc.innerHTML = '<div class="che">Sin historial aún.</div>';
     }
     return;
   }
-  
-  // LA MAGIA: Una "firma" única del chat actual (cantidad de mensajes + hora del último)
-  const sig = h.length + '_' + (h[h.length-1].ts || '');
-  
-  // Si el chat no ha recibido NINGÚN mensaje nuevo, ABORTAMOS y NO TOCAMOS el HTML. Cero saltos.
-  if(mc.getAttribute('data-sig') === sig) return;
-  mc.setAttribute('data-sig', sig);
-  
-  // Si hay mensajes nuevos, guardamos la posición antes de re-dibujar
-  const isScrolledToBottom = mc.scrollHeight - mc.scrollTop <= mc.clientHeight + 60;
-  const oldScroll = mc.scrollTop;
-  
-  mc.innerHTML = h.map(m => {
+
+  const newHtml = h.map(m => {
     const cls = m.role === 'user' ? 'us' : m.role === 'agent' ? 'an' : 'bo';
     const tag = m.role === 'user' ? '' : '<span class="at">' + esc(m.agentName || 'Agente') + '</span>';
     return '<div class="bb ' + cls + '">' + tag + esc(m.content) + (m.ts ? '<span class="ts3">' + fTM(m.ts) + '</span>' : '') + '</div>';
   }).join('');
-  
-  // Restauramos la posición inteligentemente
-  if(isScrolledToBottom){
-    mc.scrollTop = mc.scrollHeight;
-  } else {
-    mc.scrollTop = oldScroll;
+
+  // Si el contenido visual es IDENTICO, abortamos para que no parpadee la pantalla
+  if (mc.innerHTML === newHtml) return;
+
+  // Calculamos si el vendedor estaba leyendo arriba o si esta al fondo
+  const isAtBottom = mc.scrollHeight - mc.scrollTop <= mc.clientHeight + 80;
+  const currentLead = mc.getAttribute('data-lead');
+  const isNewLead = currentLead !== String(l.id);
+
+  // Actualizamos el chat
+  mc.innerHTML = newHtml;
+  mc.setAttribute('data-lead', String(l.id));
+
+  // Solo lo pateamos al fondo si es un chat nuevo o si ya estaba leyendo el ultimo mensaje
+  if (isAtBottom || isNewLead) {
+     setTimeout(() => { mc.scrollTop = mc.scrollHeight; }, 50);
   }
 }
 function renderModalNotes(l){const n=Array.isArray(l.notes)?l.notes:[];$('mNts').innerHTML=n.length?n.slice().reverse().map(x=>`<div class="ni">${esc(x.content)}<div class="nm">${esc(x.author||'—')} · ${fDT(x.ts)}</div></div>`).join(''):'<div class="nn">Sin notas.</div>';}
