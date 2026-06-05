@@ -1008,7 +1008,15 @@ app.post('/webhook',async(req,res)=>{
       if (idx === -1) {
         const assignedObj = await rrNext(tenant) || {username: 'vendedor1'};
         const n = new Date().toISOString();
-        ld[tenant].unshift({id: Date.now(), name: contactName, phone: '+' + from, source: 'WhatsApp', status: 'Nuevo', lastInteraction: n, lastClientTs: n, interest: msg.type === 'image' ? '[Foto Recibida]' : '[Audio Recibido]', assignedTo: assignedObj.username, botActive: true, alertLevel: 'none', intentSignal: 'NONE', unread: true, notes: [], chatHistory: [], media: []});
+        ld[tenant].unshift({id: Date.now(), name: contactName, phone: '+' + from, source: ((() => {
+        const txt = (typeof body === 'string' ? body : (typeof message === 'string' ? message : '')).toLowerCase();
+        if(!txt) return 'WhatsApp';
+        if(txt.includes('mercadolibre') || txt.includes('mlc-')) return 'Mercado Libre';
+        if(txt.includes('chileautos')) return 'Chileautos';
+        if(txt.includes('yapo')) return 'Yapo';
+        if(txt.includes('facebook') || txt.includes('instagram') || txt.includes('fb.me') || txt.includes('vi tu anuncio') || txt.includes('vi este anuncio')) return 'Meta Ads';
+        return 'WhatsApp';
+    })()), status: 'Nuevo', lastInteraction: n, lastClientTs: n, interest: msg.type === 'image' ? '[Foto Recibida]' : '[Audio Recibido]', assignedTo: assignedObj.username, botActive: true, alertLevel: 'none', intentSignal: 'NONE', unread: true, notes: [], chatHistory: [], media: []});
         idx = 0;
       }
 
