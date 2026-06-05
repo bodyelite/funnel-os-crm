@@ -1304,7 +1304,7 @@ function renderMediaGallery(lead) {
   const items = (lead.media || []).filter(function(item) { return item.type === 'image'; });
   if (!items.length) return;
 
-  let html = '<div id="media-gallery-section" style="margin-top:12px;padding:14px;background:#f8fafc;border:2px dashed #cbd5e1;border-radius:8px;">';
+  let html = '<div id="media-gallery-section" data-lead-id="'+lead.id+'" style="margin-top:12px;padding:14px;background:#f8fafc;border:2px dashed #cbd5e1;border-radius:8px;">';
   html += '<strong style="font-size:12px;color:#334155;display:block;margin-bottom:10px;">📷 Galería de Fotos</strong>';
   html += '<div style="display:flex;flex-wrap:wrap;gap:10px;">';
 
@@ -1322,7 +1322,10 @@ function renderMediaGallery(lead) {
 // Bucle infalible: revisa si la ficha está abierta y dibuja las fotos
 setInterval(() => {
    const leadId = typeof S !== 'undefined' ? S.mid : null;
-   if(leadId && (document.getElementById('tradein-section') || document.querySelector('.cchat')) && !document.getElementById('media-gallery-section')) {
+   const existingGallery = document.getElementById('media-gallery-section');
+   const galleryLeadId = existingGallery ? existingGallery.getAttribute('data-lead-id') : null;
+   if(leadId && (document.getElementById('tradein-section') || document.querySelector('.cchat')) && (!existingGallery || galleryLeadId != leadId)) {
+     if(existingGallery) existingGallery.remove();
        const lead = (S.leads || []).find(x => x.id == leadId);
        if(lead && lead.media && lead.media.length > 0) {
            renderMediaGallery(lead);
