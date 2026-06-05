@@ -350,6 +350,7 @@ async function rrNext(tenant,exclude=null){const sl=await getSellers(tenant);if(
 
 function calcAlert(lead){
   if(FINAL_ST.has(lead.status))return'none';
+  if(lead.status==='esperando_respuesta_chileautos'||lead.status==='esperando_respuesta_general')return'none';
   if(lead.status==='Reservado'){
     const ref=lead.reservadoAt||lead.lastInteraction;
     if(!ref)return'none';
@@ -509,6 +510,7 @@ app.patch('/api/leads/:id',auth(),async(req,res)=>{
   if(patch.status!==undefined&&!VALID_ST.has(patch.status))return res.status(400).json({error:'Status inválido'});
   if(req.body.note&&String(req.body.note).trim()){leads[idx].notes=Array.isArray(leads[idx].notes)?leads[idx].notes:[];leads[idx].notes.push({content:String(req.body.note).trim(),author:req.user.name||req.user.username,ts:Date.now()});}
   if(patch.status==='Reservado'&&leads[idx].status!=='Reservado')patch.reservadoAt=new Date().toISOString();
+  if(patch.status==='Nuevo' && (leads[idx].status==='esperando_respuesta_chileautos'||leads[idx].status==='esperando_respuesta_general')) patch.lastClientTs=new Date().toISOString();
   Object.assign(leads[idx],patch);
   leads[idx].lastInteraction=new Date().toISOString();leads[idx].unread=false;leads[idx].alertLevel=calcAlert(leads[idx]);
   await tWrite(F.leads,req.tenant,leads);res.json(leads[idx]);
@@ -1039,7 +1041,7 @@ app.post('/webhook',async(req,res)=>{
       }
       
       ld[tenant][idx].lastClientTs=new Date().toISOString();
-      ld[tenant][idx].unread=true;ld[tenant][idx].lastClientTs=Date.now();
+      ld[tenant][idx].unread=true;ld[tenant][idx].lastClientTs=new Date().toISOString();
       await tWrite(F.leads, tenant, ld[tenant]);
       console.log('[WH-MEDIA] Guardado media para',from);
     }
@@ -1110,7 +1112,7 @@ app.post('/webhook',async(req,res)=>{
       const prevSrc = ld[tenant][idx].status==='esperando_respuesta_chileautos' ? 'Chileautos' : (ld[tenant][idx].source||'Canal');
       ld[tenant][idx].status='Nuevo';
       ld[tenant][idx].botActive=true;
-      ld[tenant][idx].unread=true;ld[tenant][idx].lastClientTs=Date.now();
+      ld[tenant][idx].unread=true;ld[tenant][idx].lastClientTs=new Date().toISOString();
       ld[tenant][idx].notes=(ld[tenant][idx].notes||[]).concat({content:'✅ Cliente respondió. Activado en embudo desde sala de espera ('+prevSrc+').',author:'Sistema',ts:Date.now()});
       const _au=await tRead(F.users,tenant);
       const _av=_au.find(u=>u.username===ld[tenant][idx].assignedTo)||RMG_VENDORS.find(v=>v.username===ld[tenant][idx].assignedTo);
@@ -1118,7 +1120,7 @@ app.post('/webhook',async(req,res)=>{
     }
     if(adTracing&&!ld[tenant][idx].adTracing)ld[tenant][idx].adTracing=adTracing;
     ld[tenant][idx].chatHistory=ld[tenant][idx].chatHistory||[];ld[tenant][idx].chatHistory.push({role:'user',content:body,ts:Date.now()});
-    ld[tenant][idx].unread=true;ld[tenant][idx].lastClientTs=Date.now();
+    ld[tenant][idx].unread=true;ld[tenant][idx].lastClientTs=new Date().toISOString();
     if(ld[tenant][idx].botActive!==false){
       if(body.trim().toLowerCase()==='/reset'){ld[tenant].splice(idx,1);await tWrite(F.leads,tenant,ld[tenant]);console.log('[RESET] Lead eliminado para',from,'— listo para nuevo ingreso');return;}
       const allUsersWH=await tRead(F.users,tenant);
@@ -1147,7 +1149,7 @@ app.post('/webhook',async(req,res)=>{
     }
     ld[tenant][idx].lastInteraction=new Date().toISOString();
     ld[tenant][idx].lastClientTs=new Date().toISOString();
-    ld[tenant][idx].unread=true;ld[tenant][idx].lastClientTs=Date.now();
+    ld[tenant][idx].unread=true;ld[tenant][idx].lastClientTs=new Date().toISOString();
     ld[tenant][idx].alertLevel=calcAlert(ld[tenant][idx]);
     await write(F.leads,ld);
     console.log('[WH-SAVED] Lead guardado:',ld[tenant][idx].name,'phone:',from,'idx:',idx);
