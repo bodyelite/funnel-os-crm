@@ -599,9 +599,33 @@ function checkNotifications(){
   _updateBadge(count);
 }
 
-function requestNotifPermission(){
-  if(typeof Notification!=='undefined'&&Notification.permission==='default')
-    Notification.requestPermission();
+function urlBase64ToUint8Array(base64String) {
+  const padding = '='.repeat((4 - base64String.length % 4) % 4);
+  const base64 = (base64String + padding).replace(/\-/g, '+').replace(/_/g, '/');
+  const rawData = window.atob(base64);
+  const outputArray = new Uint8Array(rawData.length);
+  for (let i = 0; i < rawData.length; ++i) { outputArray[i] = rawData.charCodeAt(i); }
+  return outputArray;
+}
+async function requestNotifPermission(){
+  if(typeof Notification!=='undefined' && Notification.permission==='default'){
+    await Notification.requestPermission();
+  }
+  if(typeof Notification!=='undefined' && Notification.permission==='granted' && 'serviceWorker' in navigator){
+    navigator.serviceWorker.ready.then(async reg => {
+      try {
+        let sub = await reg.pushManager.getSubscription();
+        if(!sub){
+           const r = await fetch('/api/push/vapid-public-key', {headers:{'X-Auth-Token':S.token}});
+           if(!r.ok) return;
+           const d = await r.json();
+           const convertedVapidKey = urlBase64ToUint8Array(d.publicKey);
+           sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: convertedVapidKey });
+        }
+        if(S.token) api('POST', '/api/push/subscribe', { subscription: sub }).catch(()=>{});
+      } catch(e) { console.log('Push sub error', e); }
+    });
+  }
 }
 // ═══════════════════════════════════════════════════
 
@@ -1495,7 +1519,7 @@ document.getElementById('nlBg')?.addEventListener('click', function(e){
 <script>
 if('serviceWorker' in navigator){
   window.addEventListener('load',()=>{
-    Promise.reject('SW Desactivado por Gerencia')
+    navigator.serviceWorker.register('/sw.js')
       .then(r=>console.log('[SW] Registrado:',r.scope))
       .catch(e=>console.log('[SW] Error:',e));
   });
