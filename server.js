@@ -290,7 +290,7 @@ async function marcela(tenant, history, msg, notes, assignedName) {
     if (notes && notes.length) {
       sysPromptProcessed += '\nNOTAS INTERNAS:\n' + notes.slice(-5).map(n => '- ' + n.author + ': ' + n.content).join('\n');
     }
-    sysPromptProcessed += '\n\nRESPONDE SOLO EN FORMATO JSON (sin markdown, sin texto adicional):\n{"reply":"<texto con emojis>","intent_signal":"NONE"|"BLUE"|"YELLOW","intent_reason":"<nota corta>","schedule_detected":true|false,"schedule_text":"<hora si aplica>"}';
+    sysPromptProcessed += '\n\nHORA ACTUAL: ' + new Date().toLocaleString('es-CL', {timeZone: 'America/Santiago'}) + '. Saluda con "Buenos dias", "Buenas tardes" o "Buenas noches" segun corresponda. REGLA DE CIERRE: Si el cliente se despide (ej. "gracias", "ok", "listo") y la gestion ya termino o se agendo, DEBES marcar "end_conversation": true y dejar "reply" vacio ("") para NO repetir respuestas y cerrar el ciclo.\n\nRESPONDE SOLO EN FORMATO JSON (sin markdown, sin texto adicional):\n{"reply":"<texto o vacio>","intent_signal":"NONE"|"BLUE"|"YELLOW","intent_reason":"<nota>","schedule_detected":true|false,"schedule_text":"<hora/resumen>","end_conversation":true|false}';
 
     const completion = await openai.chat.completions.create({
       model: 'gpt-4o-mini',
@@ -303,14 +303,14 @@ async function marcela(tenant, history, msg, notes, assignedName) {
       ].flat()
     });
     let p = parseJ(completion.choices?.[0]?.message?.content || '');
-    if (!p) p = { reply: '\u00a1Perdona! Algo fall\u00f3 \ud83d\ude05 \u00bfMe repites?', intent_signal: 'NONE', intent_reason: 'fallback', schedule_detected: false, schedule_text: '' };
+    if (!p) p = { reply: '\u00a1Perdona! Algo fall\u00f3 \ud83d\ude05 \u00bfMe repites?', intent_signal: 'NONE', intent_reason: 'fallback', schedule_detected: false, schedule_text: '', end_conversation: false };
     if (p.schedule_detected && fueraH(p.schedule_text)) { p.reply += '\n\n(Nuestro horario es 09:30-18:30 \u23f0 \u00bfTe acomoda que te contactemos ma\u00f1ana a las 09:30?)'; p.intent_signal = 'YELLOW'; }
     return p;
   } catch(e) {
     console.error('[Marcela ERROR]', e.message);
     if (e.stack) console.error(e.stack.split('\n').slice(0,5).join('\n'));
     if (e.response) console.error('[OpenAI status]', e.response.status, e.response.data);
-    return { reply: 'Tuve un problemita t\u00e9cnico \ud83d\ude05 \u00bfPuedes repetir?', intent_signal: 'NONE', intent_reason: 'error', schedule_detected: false, schedule_text: '' };
+    return { reply: 'Tuve un problemita t\u00e9cnico \ud83d\ude05 \u00bfPuedes repetir?', intent_signal: 'NONE', intent_reason: 'error', schedule_detected: false, schedule_text: '', end_conversation: false };
   }
 }
 
@@ -658,8 +658,21 @@ app.post('/api/chat',async(req,res)=>{
     const assignedUserChat=allUsers.find(u=>u.username===leads[idx].assignedTo)||RMG_VENDORS.find(v=>v.username===leads[idx].assignedTo);
     const assignedNameChat=leads[idx].botPersona||assignedUserChat?.name||'Cata';
     const p=await marcela(tenant,leads[idx].chatHistory.slice(0,-1),message,leads[idx].notes,assignedNameChat);
-    leads[idx].chatHistory.push({role:'bot',content:p.reply,ts:Date.now()});
     applySignal(leads[idx],p);
+    
+    if(p.schedule_detected && p.schedule_text) {
+        leads[idx].notes = Array.isArray(leads[idx].notes) ? leads[idx].notes : [];
+        leads[idx].notes.push({content: '🚨 CITA AGENDADA POR IA: ' + p.schedule_text, author: 'Sistema', ts: Date.now()});
+        leads[idx].intentSignal = 'BLUE';
+        leads[idx].nextAction = {text: '📞 Llamar al cliente: ' + p.schedule_text, date: new Date(Date.now()+60000).toISOString(), createdAt: new Date().toISOString(), delegateToIA: false, iaCompleted: false};
+    }
+
+    if(p.end_conversation || !p.reply || p.reply.trim() === '') {
+        leads[idx].notes = Array.isArray(leads[idx].notes) ? leads[idx].notes : [];
+        leads[idx].notes.push({content: '🤫 IA detectó fin de conversación.', author: 'Sistema', ts: Date.now()});
+    } else {
+        leads[idx].chatHistory.push({role:'bot',content:p.reply,ts:Date.now()});
+    }
     if(esKeywordCalif(message)&&!leads[idx].keywordAlertSent){
       leads[idx].keywordAlertSent=true;
       leads[idx].intentSignal='BLUE';
@@ -1125,8 +1138,25 @@ app.post('/webhook',async(req,res)=>{
       const assignedUserWH=allUsersWH.find(u=>u.username===ld[tenant][idx].assignedTo)||RMG_VENDORS.find(v=>v.username===ld[tenant][idx].assignedTo);
       const assignedNameWH=ld[tenant][idx].botPersona||assignedUserWH?.name||'Cata';
       const p=await marcela(tenant,ld[tenant][idx].chatHistory.slice(0,-1),body,ld[tenant][idx].notes,assignedNameWH);
-      ld[tenant][idx].chatHistory.push({role:'bot',content:p.reply,ts:Date.now()});applySignal(ld[tenant][idx],p);
-      if(p.reply&&p.reply.indexOf('rmgautos.cl')!==-1&&!(ld[tenant][idx].nextAction&&!ld[tenant][idx].nextAction.iaCompleted)){ld[tenant][idx].nextAction={text:'¿Pudiste ver la ficha en el enlace? Fíjate en los detalles del equipamiento 👀 ¿Qué te pareció?',date:new Date(Date.now()+2*60000).toISOString(),createdAt:new Date().toISOString(),delegateToIA:true,iaCompleted:false};}
+      applySignal(ld[tenant][idx],p);
+      
+      if(p.schedule_detected && p.schedule_text) {
+          ld[tenant][idx].notes = Array.isArray(ld[tenant][idx].notes) ? ld[tenant][idx].notes : [];
+          ld[tenant][idx].notes.push({content: '🚨 CITA AGENDADA POR IA: ' + p.schedule_text, author: 'Sistema', ts: Date.now()});
+          ld[tenant][idx].intentSignal = 'BLUE';
+          // Clavamos la cita en la agenda del vendedor
+          ld[tenant][idx].nextAction = {text: '📞 Llamar al cliente: ' + p.schedule_text, date: new Date(Date.now()+60000).toISOString(), createdAt: new Date().toISOString(), delegateToIA: false, iaCompleted: false};
+      }
+
+      let _isEnd = false;
+      if(p.end_conversation || !p.reply || p.reply.trim() === '') {
+          ld[tenant][idx].notes = Array.isArray(ld[tenant][idx].notes) ? ld[tenant][idx].notes : [];
+          ld[tenant][idx].notes.push({content: '🤫 IA detectó fin de conversación y no respondió para evitar repeticiones.', author: 'Sistema', ts: Date.now()});
+          _isEnd = true;
+      } else {
+          ld[tenant][idx].chatHistory.push({role:'bot',content:p.reply,ts:Date.now()});
+          if(p.reply.indexOf('rmgautos.cl')!==-1&&!(ld[tenant][idx].nextAction&&!ld[tenant][idx].nextAction.iaCompleted)){ld[tenant][idx].nextAction={text:'¿Pudiste ver la ficha en el enlace? Fíjate en los detalles del equipamiento 👀 ¿Qué te pareció?',date:new Date(Date.now()+2*60000).toISOString(),createdAt:new Date().toISOString(),delegateToIA:true,iaCompleted:false};}
+      }
       if(esKeywordCalif(body)&&!ld[tenant][idx].keywordAlertSent){
         ld[tenant][idx].keywordAlertSent=true;
         ld[tenant][idx].intentSignal='BLUE';
@@ -1143,7 +1173,7 @@ app.post('/webhook',async(req,res)=>{
           if(assignedUserWH?.phone)sendWA(assignedUserWH.phone,'✅ Lead Asignado: '+ld[tenant][idx].name+'. Revisa la bitácora del CRM.').catch(()=>{});
         }
       }
-      await sendWA(from,p.reply);
+      if(!_isEnd) await sendWA(from,p.reply);
     }
     ld[tenant][idx].lastInteraction=new Date().toISOString();
     ld[tenant][idx].lastClientTs=new Date().toISOString();
