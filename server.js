@@ -286,7 +286,7 @@ async function marcela(tenant, history, msg, notes, assignedName) {
 
     const baseSysPrompt = (botCfg && botCfg.systemPrompt) || 'Eres Marcela, asesora de ventas de Automotora Andes. Responde de forma calida y profesional en espanol chileno.';
     let sysPromptProcessed = baseSysPrompt.replace(/\{nombreIA\}/g, assignedName || 'Cata');
-    sysPromptProcessed += '\n\nINVENTARIO DISPONIBLE:\n' + (invS || '(sin inventario disponible temporalmente)');
+    sysPromptProcessed += '\n\nREGLA DE BUSQUEDA: Se extremadamente flexible al comparar el auto que pide el cliente con el inventario. El orden de las palabras, el ano o la version (ej. "Mokka 2022 GT" vs "Mokka GT 2022") no importan. Si los terminos clave coinciden, asume que es el mismo vehiculo y confirma amablemente que SI esta disponible.\n\nINVENTARIO DISPONIBLE:\n' + (invS || '(sin inventario disponible temporalmente)');
     if (notes && notes.length) {
       sysPromptProcessed += '\nNOTAS INTERNAS:\n' + notes.slice(-5).map(n => '- ' + n.author + ': ' + n.content).join('\n');
     }
