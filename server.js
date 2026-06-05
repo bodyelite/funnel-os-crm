@@ -70,8 +70,8 @@ const validT=t=>TENANTS.includes(t)?t:TENANTS[0];
 
 // ── Vendedores RMG — pool fijo para ruleta ─────────────────
 const RMG_VENDORS = [
-  {username:'daniela',name:'Daniela Narváez',role:'vendedor',phone:'56900000001',status:'Activo'},
-  {username:'carlos', name:'Carlos Fracachan',role:'vendedor',phone:'56900000002',status:'Activo'},
+  {username:'Dnarvaez',name:'Daniela Narvaez',role:'vendedor',phone:'56922117391',status:'Activo'},
+  {username:'Cfracachan',name:'Carlos Fracachan',role:'vendedor',phone:'56984926769',status:'Activo'},
 ];
 
 // ── Web Scraper Heurístico — rmgautos.cl/usados/ ───────────
