@@ -1186,7 +1186,19 @@ function renderModal(){const l=findLead(S.mid);if(!l){closeModal();return;}$('mT
 
 }
 function renderModalCtx(l){const ctx=$('mCtx');if(!l.interest&&!l.ai_summary){ctx.style.display='none';return;}ctx.style.display='block';ctx.innerHTML=`${l.interest?`<div class="ctx-row"><span class="ctx-key">🚗 Interés</span><span class="ctx-val">${esc(l.interest)}</span></div>`:''}${l.source?`<div class="ctx-row"><span class="ctx-key">📡 Canal</span><span class="ctx-val">${cSrc(l.source)}</span></div>`:''}${l.lastClientTs?`<div class="ctx-row"><span class="ctx-key">📅 Origen</span><span class="ctx-val">${fDT(l.lastClientTs)}</span></div>`:''}${l.ai_summary?`<div class="ctx-row" style="margin-top:4px"><span class="ctx-key" style="color:var(--ac)">🧠 Nota IA</span><span class="ctx-note" style="color:var(--ts);font-style:normal">${esc(l.ai_summary)}</span></div>`:''}`;};;
-function renderModalChat(l){const h=Array.isArray(l.chatHistory)?l.chatHistory:[];if(!h.length){$('mChat').innerHTML='<div class="che">Sin historial aún.</div>';return;}$('mChat').innerHTML=h.map(m=>{const cls=m.role==='user'?'us':m.role==='agent'?'an':'bo';const tag=m.role==='agent'?`<span class="at">👤 ${esc(m.agentName||m.agent||'Agente')}</span>`:'';return`<div class="bb ${cls}">${tag}${esc(m.content)}${m.ts?`<span class="ts3">${fTM(m.ts)}</span>`:''}</div>`;}).join('');$('mChat').scrollTop=$('mChat').scrollHeight;}
+function renderModalChat(l){const h=Array.isArray(l.chatHistory)?l.chatHistory:[];if(!h.length){$('mChat').innerHTML='<div class="che">Sin historial aún.</div>';return;}const newHtml = h.map(m=>{const cls=m.role==='user'?'us':m.role==='agent'?'an':'bo';const tag=m.role==='agent'?`<span class="at">👤 ${esc(m.agentName||m.agent||'Agente')}</span>`:'';return`<div class="bb ${cls}">${tag}${esc(m.content)}${m.ts?`<span class="ts3">${fTM(m.ts)}</span>`:''}</div>`;}).join('');
+  const _mc = $('mChat');
+  if (_mc._lastHtml !== newHtml) {
+      const _isScrolledUp = _mc.scrollHeight - _mc.scrollTop > _mc.clientHeight + 30;
+      const _oldScroll = _mc.scrollTop;
+      _mc.innerHTML = newHtml;
+      _mc._lastHtml = newHtml;
+      if (!_isScrolledUp) {
+          _mc.scrollTop = _mc.scrollHeight;
+      } else {
+          _mc.scrollTop = _oldScroll;
+      }
+  }}
 function renderModalNotes(l){const n=Array.isArray(l.notes)?l.notes:[];$('mNts').innerHTML=n.length?n.slice().reverse().map(x=>`<div class="ni">${esc(x.content)}<div class="nm">${esc(x.author||'—')} · ${fDT(x.ts)}</div></div>`).join(''):'<div class="nn">Sin notas.</div>';}
 
 
