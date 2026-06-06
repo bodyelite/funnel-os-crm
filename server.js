@@ -1192,7 +1192,7 @@ app.post('/webhook',async(req,res)=>{
       }
 
       let _isEnd = false;
-      if(p.end_conversation || !p.reply || p.reply.trim() === '') {
+      if(!p.reply || p.reply.trim() === '') {
           ld[tenant][idx].notes = Array.isArray(ld[tenant][idx].notes) ? ld[tenant][idx].notes : [];
           ld[tenant][idx].notes.push({content: '🤫 IA detectó fin de conversación y no respondió para evitar repeticiones.', author: 'Sistema', ts: Date.now()});
           _isEnd = true;
