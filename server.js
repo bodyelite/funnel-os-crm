@@ -290,7 +290,7 @@ async function marcela(tenant, history, msg, notes, assignedName) {
     if (notes && notes.length) {
       sysPromptProcessed += '\nNOTAS INTERNAS:\n' + notes.slice(-5).map(n => '- ' + n.author + ': ' + n.content).join('\n');
     }
-    sysPromptProcessed += '\n\nHORA ACTUAL: ' + new Date().toLocaleString('es-CL', {timeZone: 'America/Santiago'}) + '. Saluda con "Buenos dias", "Buenas tardes" o "Buenas noches" segun corresponda. REGLA DE CIERRE: Si el cliente se despide (ej. "gracias", "ok", "listo") y la gestion ya termino o se agendo, DEBES marcar "end_conversation": true y dejar "reply" vacio ("") para NO repetir respuestas y cerrar el ciclo.\n\nRESPONDE SOLO EN FORMATO JSON (sin markdown, sin texto adicional):\n{"reply":"<texto o vacio>","intent_signal":"NONE"|"BLUE"|"YELLOW","intent_reason":"<nota>","schedule_detected":true|false,"schedule_text":"<hora/resumen>","end_conversation":true|false}';
+    sysPromptProcessed += '\n\nHORA ACTUAL: ' + new Date().toLocaleString('es-CL', {timeZone: 'America/Santiago'}) + '. Saluda con "Buenos dias", "Buenas tardes" o "Buenas noches" segun corresponda. REGLA DE CIERRE: Si el cliente se despide (ej. "gracias", "ok", "listo") y la gestion ya termino o se agendo, DEBES marcar "end_conversation": true y dejar "reply" vacio ("") para NO repetir respuestas y cerrar el ciclo.\n\nRESPONDE SOLO EN FORMATO JSON (sin markdown, sin texto adicional):\n{"reply":"<texto o vacio>","intent_signal":"NONE"|"BLUE"|"YELLOW","intent_reason":"<nota>","schedule_detected":true|false,"schedule_text":"<hora/resumen>","end_conversation":false}';
 
     const completion = await openai.chat.completions.create({
       model: 'gpt-4o-mini',
