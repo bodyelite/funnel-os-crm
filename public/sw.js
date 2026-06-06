@@ -1,6 +1,15 @@
-const CACHE='rmg-crm-v4';
+const CACHE='rmg-crm-stable';
 const ASSETS=['/','/index.html','/icon-192.svg','/manifest.json'];
 self.addEventListener('install',e=>{e.waitUntil(caches.open(CACHE).then(c=>c.addAll(ASSETS)).then(()=>self.skipWaiting()));});
+self.addEventListener('message',e=>{
+  if(e.data&&e.data.type==='PING_SUB'){
+    // re-suscripcion-silenciosa
+    self.registration.pushManager.getSubscription().then(sub=>{
+      if(sub) e.source.postMessage({type:'SUB_OK',endpoint:sub.endpoint});
+      else e.source.postMessage({type:'SUB_MISSING'});
+    });
+  }
+});
 self.addEventListener('activate',e=>{e.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k!==CACHE).map(k=>caches.delete(k)))).then(()=>self.clients.claim()));});
 self.addEventListener('fetch',e=>{if(e.request.method!=='GET'||e.request.url.includes('/api/'))return;e.respondWith(fetch(e.request).then(res=>{const c=res.clone();caches.open(CACHE).then(ca=>ca.put(e.request,c));return res;}).catch(()=>caches.match(e.request)));});
 self.addEventListener('push',e=>{
