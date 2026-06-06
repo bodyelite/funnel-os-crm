@@ -687,7 +687,7 @@ app.post('/api/chat',async(req,res)=>{
         leads[idx].nextAction = {text: '📞 Llamar al cliente: ' + p.schedule_text, date: new Date(Date.now()+60000).toISOString(), createdAt: new Date().toISOString(), delegateToIA: false, iaCompleted: false};
     }
 
-    if(p.end_conversation || !p.reply || p.reply.trim() === '') {
+    if(!p.reply || p.reply.trim() === '') {
         leads[idx].notes = Array.isArray(leads[idx].notes) ? leads[idx].notes : [];
         leads[idx].notes.push({content: '🤫 IA detectó fin de conversación.', author: 'Sistema', ts: Date.now()});
     } else {
