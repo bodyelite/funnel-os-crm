@@ -1386,6 +1386,12 @@ app.put('/api/config/password',auth('admin'),async(req,res)=>{
 });
 
 app.use(express.static(path.join(__dirname,'public')));
+app.get('/api/push/vapid-public-key',(req,res)=>{
+  const key=process.env.VAPID_PUBLIC_KEY;
+  if(!key)return res.status(503).json({error:'VAPID no configurado'});
+  res.json({publicKey:key});
+});
+
 app.get('*',(req,res)=>res.sendFile(path.join(__dirname,'public','index.html')));
 setInterval(async()=>{for(const t of TENANTS){try{await applySlaRules(t);}catch(e){console.error('SLA',t,e.message);}}},60000);
 
@@ -1475,11 +1481,6 @@ app.patch('/api/leads/:id/tradein', async (req, res) => {
 
 
 // ── PUSH endpoints ────────────────────────────────────────────────
-app.get('/api/push/vapid-public-key',(req,res)=>{
-  const key=process.env.VAPID_PUBLIC_KEY;
-  if(!key)return res.status(503).json({error:'VAPID no configurado'});
-  res.json({publicKey:key});
-});
 app.post('/api/push/subscribe',auth(),async(req,res)=>{
   const{subscription}=req.body;
   if(!subscription||!subscription.endpoint)return res.status(400).json({error:'subscription requerida'});
