@@ -1619,24 +1619,7 @@ window.addEventListener('focus', () => {
 
 // ══ WEB PUSH ═════════════════════════════════════════════════════
 async function initWebPush(){
-  try{
-    if(!('serviceWorker' in navigator)||!('PushManager' in window))return;
-    const reg=await navigator.serviceWorker.ready;
-    let perm=Notification.permission;
-    if(perm==='default')perm=await Notification.requestPermission();
-    if(perm!=='granted')return;
-    const vRes=await fetch('/api/push/vapid-public-key').catch(()=>null);
-    if(!vRes||!vRes.ok)return;
-    const{publicKey}=await vRes.json();
-    const appKey=(b64=>{const p='='.repeat((4-b64.length%4)%4),b=(b64+p).replace(/-/g,'+').replace(/_/g,'/'),r=atob(b);return Uint8Array.from([...r].map(c=>c.charCodeAt(0)));})(publicKey);
-    let sub=await reg.pushManager.getSubscription();
-    if(!sub)sub=await reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:appKey});
-    const h={'Content-Type':'application/json'};
-    if(S.token)h['X-Auth-Token']=S.token;
-    await fetch('/api/push/subscribe',{method:'POST',headers:h,body:JSON.stringify({subscription:sub.toJSON()})});
-    navigator.serviceWorker.addEventListener('message',e=>{if(e.data&&e.data.type==='NOTIF_CLICK'){const btn=document.querySelector('.sb nav button[data-view="leads"]');if(btn)btn.click();}});
-    console.log('[PUSH] OK');
-  }catch(err){console.warn('[PUSH]',err);}
+  
 }
 function clearBadgeIfAllRead(){
   const unreads=typeof _getUnreads==='function'?_getUnreads():[];
