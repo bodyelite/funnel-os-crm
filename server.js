@@ -523,7 +523,12 @@ app.patch('/api/leads/:id',auth(),async(req,res)=>{
   if(patch.status!==undefined&&!VALID_ST.has(patch.status))return res.status(400).json({error:'Status inválido'});
   if(req.body.note&&String(req.body.note).trim()){leads[idx].notes=Array.isArray(leads[idx].notes)?leads[idx].notes:[];leads[idx].notes.push({content:String(req.body.note).trim(),author:req.user.name||req.user.username,ts:Date.now()});}
   if(patch.status==='Reservado'&&leads[idx].status!=='Reservado')patch.reservadoAt=new Date().toISOString();
-  if(patch.status==='Nuevo' && (leads[idx].status==='esperando_respuesta_chileautos'||leads[idx].status==='esperando_respuesta_general')) patch.lastClientTs=new Date().toISOString();
+  if(patch.status==='Nuevo' && (leads[idx].status==='esperando_respuesta_chileautos'||leads[idx].status==='esperando_respuesta_general')){
+  const now=new Date().toISOString();
+  patch.lastClientTs=now;
+  patch.lastInteraction=now;
+  patch.alertLevel='none';
+}
   Object.assign(leads[idx],patch);
   leads[idx].lastInteraction=new Date().toISOString();leads[idx].unread=false;leads[idx].alertLevel=calcAlert(leads[idx]);
   await tWrite(F.leads,req.tenant,leads);res.json(leads[idx]);
@@ -784,7 +789,7 @@ app.post('/api/leads/manual', auth('admin','vendedor'), async (req, res) => {
       status, botActive: status === 'Nuevo',
       alertLevel: 'none', intentSignal: 'NONE', unread: true,
       assignedTo: asignado || req.user?.username || 'vendedor1',
-      lastInteraction: n, lastClientTs: new Date(0).toISOString(),
+      lastInteraction: n, lastClientTs: status === 'Nuevo' ? n : new Date(0).toISOString(), createdAt: n,
       notes: initNotes, chatHistory: [], media: []
     };
     leads.unshift(lead);
@@ -996,6 +1001,17 @@ app.get('/api/media/:mediaId', async (req, res) => {
 });
 // --- FIN PROXY ---
 
+function detectSource(text){
+  if(!text) return null;
+  const t = text.toLowerCase();
+  if(t.includes('chileautos')) return 'Chileautos';
+  if(t.includes('yapo')) return 'Yapo';
+  if(t.includes('mercadolibre')||t.includes('mercado libre')) return 'MercadoLibre';
+  if(t.includes('facebook')||t.includes('meta')||t.includes('instagram')) return 'Meta Ads';
+  if(t.includes('autocasion')||t.includes('auto casion')) return 'Autocasion';
+  if(t.includes('dercocenter')||t.includes('derco')) return 'Derco';
+  return null;
+}
 app.post('/webhook',async(req,res)=>{
   if(!req.body.object)return res.sendStatus(404);res.sendStatus(200);
   try{
@@ -1094,9 +1110,9 @@ app.post('/webhook',async(req,res)=>{
       let detectedInterest = body.slice(0, 80);
       let portalNote = null;
 
-      const yapoMatch = body.match(/Me interesa el anuncio\s*"([^"]+)"/i);
-      const mlMatch   = body.match(/publicaci[oó]n en Mercado Libre[^:\-]*[:\-]?\s*(.{0,60})/i);
-      const caMatch   = body.match(/auto en Chileautos[^:\-]*[:\-]?\s*(.{0,60})/i);
+      const yapoMatch = body.match(/(?:Me interesa el anuncio\s*"([^"]+)"|hola[^.]*(?:yapo|anuncio)[^.]*?([A-Z][A-Z0-9 ]{5,40}))/i);
+      const mlMatch   = body.match(/(?:publicaci[oó]n en Mercado Libre[^:\-]*[:\-]?\s*(.{0,60})|MLC-\d+|mercado libre[^.]*?([A-Z][A-Z0-9 ]{5,40}))/i);
+      const caMatch   = body.match(/(?:auto en Chileautos[^:\-]*[:\-]?\s*(.{0,60})|chileautos[^.]*?([A-Z][A-Z0-9 ]{5,40}))/i);
       const metaMatch = body.match(/anuncio en Meta|vi su anuncio en Meta|anuncio de RMG en Meta|anuncio RMG Meta/i);
 
       if (metaMatch) {
@@ -1146,7 +1162,11 @@ app.post('/webhook',async(req,res)=>{
       const prevSrc = ld[tenant][idx].status==='esperando_respuesta_chileautos' ? 'Chileautos' : (ld[tenant][idx].source||'Canal');
       ld[tenant][idx].status='Nuevo';
       ld[tenant][idx].botActive=true;
-      ld[tenant][idx].unread=true;ld[tenant][idx].lastClientTs=new Date().toISOString();
+      ld[tenant][idx].unread=true;
+      const _nowActivated=new Date().toISOString();
+      ld[tenant][idx].lastClientTs=_nowActivated;
+      ld[tenant][idx].lastInteraction=_nowActivated;
+      ld[tenant][idx].alertLevel='none';
       ld[tenant][idx].notes=(ld[tenant][idx].notes||[]).concat({content:'✅ Cliente respondió. Activado en embudo desde sala de espera ('+prevSrc+').',author:'Sistema',ts:Date.now()});
       const _au=await tRead(F.users,tenant);
       const _av=_au.find(u=>u.username===ld[tenant][idx].assignedTo)||RMG_VENDORS.find(v=>v.username===ld[tenant][idx].assignedTo);
