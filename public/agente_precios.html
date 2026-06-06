@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RMG — Agente de Precios</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=IBM+Plex+Mono:wght@400;500&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --ink:#0a0a0a;--paper:#f5f4f0;--white:#fff;
+  --green:#1a7a4a;--green-l:#e8f5ed;
+  --red:#c0392b;--red-l:#fdecea;
+  --yellow:#c47f00;--yellow-l:#fdf3e0;
+  --blue:#1a5fa8;--blue-l:#e8f0fb;
+  --border:#dddbd4;
+  --mono:'IBM Plex Mono',monospace;
+  --sans:'DM Sans',sans-serif;
+  --display:'Syne',sans-serif;
+}
+body{font-family:var(--sans);background:var(--paper);color:var(--ink);min-height:100vh}
+
+/* HEADER */
+.header{background:var(--ink);color:#fff;padding:18px 28px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px}
+.h-title{font-family:var(--display);font-size:18px;font-weight:800;letter-spacing:-.02em}
+.h-sub{font-family:var(--mono);font-size:10px;opacity:.5;letter-spacing:.06em;margin-top:2px}
+.h-actions{display:flex;gap:8px;align-items:center}
+.btn{font-family:var(--mono);font-size:11px;padding:7px 14px;border-radius:4px;border:1.5px solid;cursor:pointer;transition:all .15s;letter-spacing:.02em}
+.btn-primary{background:#fff;color:var(--ink);border-color:#fff}
+.btn-primary:hover{background:#e0e0e0}
+.btn-ghost{background:transparent;color:#fff;border-color:rgba(255,255,255,.3)}
+.btn-ghost:hover{border-color:#fff}
+.status-dot{width:8px;height:8px;border-radius:50%;display:inline-block;margin-right:6px}
+.status-ok{background:#4ade80;animation:pulse 2s infinite}
+.status-loading{background:#fbbf24;animation:pulse 1s infinite}
+.status-error{background:#f87171}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+
+/* FILTROS */
+.filters{padding:16px 28px;border-bottom:1.5px solid var(--border);background:var(--white);display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.f-label{font-family:var(--mono);font-size:10px;color:#888;letter-spacing:.04em;margin-right:4px}
+.chip{font-family:var(--mono);font-size:10px;padding:5px 12px;border-radius:3px;border:1.5px solid var(--border);cursor:pointer;color:#666;background:var(--white);transition:all .15s}
+.chip:hover{border-color:var(--ink);color:var(--ink)}
+.chip.on{background:var(--ink);border-color:var(--ink);color:#fff}
+.f-search{font-family:var(--mono);font-size:11px;padding:6px 12px;border:1.5px solid var(--border);border-radius:4px;background:var(--white);color:var(--ink);outline:none;width:200px}
+.f-search:focus{border-color:var(--ink)}
+
+/* KPI BAR */
+.kpi-bar{display:grid;grid-template-columns:repeat(4,1fr);gap:0;border-bottom:1.5px solid var(--border);background:var(--white)}
+.kpi{padding:14px 20px;border-right:1.5px solid var(--border);text-align:center}
+.kpi:last-child{border-right:none}
+.kpi-n{font-family:var(--display);font-size:22px;font-weight:800;line-height:1}
+.kpi-l{font-family:var(--mono);font-size:10px;color:#888;margin-top:3px;letter-spacing:.04em}
+
+/* TABLA */
+.table-wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;background:var(--white)}
+thead th{font-family:var(--mono);font-size:10px;color:#888;letter-spacing:.05em;text-transform:uppercase;padding:10px 16px;border-bottom:1.5px solid var(--border);text-align:left;white-space:nowrap;cursor:pointer;user-select:none;position:sticky;top:0;background:var(--white);z-index:2}
+thead th:hover{color:var(--ink)}
+thead th.sorted{color:var(--ink)}
+.sort-arrow{font-size:9px;margin-left:3px}
+tbody tr{border-bottom:1px solid var(--border);transition:background .12s;cursor:pointer}
+tbody tr:hover{background:#fafaf8}
+tbody tr.expanded{background:#f5f8ff}
+td{padding:11px 16px;font-size:12px;vertical-align:middle}
+.td-model{font-family:var(--display);font-size:13px;font-weight:700;letter-spacing:-.01em}
+.td-sub{font-family:var(--mono);font-size:10px;color:#888;margin-top:1px}
+.td-price{font-family:var(--mono);font-size:12px;font-weight:500}
+.badge{font-family:var(--mono);font-size:9px;padding:2px 7px;border-radius:2px;font-weight:500;letter-spacing:.02em;display:inline-block}
+.badge-verde{background:var(--green-l);color:var(--green)}
+.badge-rojo{background:var(--red-l);color:var(--red)}
+.badge-amarillo{background:var(--yellow-l);color:var(--yellow)}
+.badge-gris{background:#f0ede8;color:#666}
+
+/* EXPAND ROW */
+.expand-row{display:none}
+.expand-row.open{display:table-row}
+.expand-content{padding:16px 20px 20px;background:#f5f8ff;border-bottom:1.5px solid var(--border)}
+.exp-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:14px}
+.exp-card{background:var(--white);border:1.5px solid var(--border);border-radius:6px;padding:12px 14px}
+.exp-card-title{font-family:var(--mono);font-size:9px;color:#888;letter-spacing:.05em;text-transform:uppercase;margin-bottom:8px}
+.exp-row{display:flex;justify-content:space-between;align-items:center;padding:3px 0;border-bottom:1px solid #f0ede8}
+.exp-row:last-child{border:none}
+.exp-l{font-size:11px;color:#666}
+.exp-r{font-family:var(--mono);font-size:11px;font-weight:500}
+.price-bar{height:8px;border-radius:2px;margin-top:4px;background:var(--border);position:relative;overflow:hidden}
+.price-fill{height:100%;border-radius:2px;transition:width .6s ease}
+.exp-actions{display:flex;gap:8px;margin-top:12px}
+.btn-sm{font-family:var(--mono);font-size:10px;padding:5px 12px;border-radius:3px;border:1.5px solid var(--border);cursor:pointer;background:var(--white);color:var(--ink);text-decoration:none;display:inline-block;transition:all .15s}
+.btn-sm:hover{border-color:var(--ink)}
+
+/* LOADING / EMPTY */
+.loading{padding:60px;text-align:center}
+.loading-icon{font-size:32px;animation:spin 1s linear infinite;display:inline-block;margin-bottom:12px}
+@keyframes spin{from{transform:rotate(0)}to{transform:rotate(360deg)}}
+.loading-txt{font-family:var(--mono);font-size:11px;color:#888;line-height:1.7}
+.empty{padding:60px;text-align:center}
+.empty-icon{font-size:36px;margin-bottom:10px}
+.empty-txt{font-family:var(--mono);font-size:11px;color:#888}
+
+/* GRAFICO */
+.chart-section{padding:20px 28px;background:var(--white);border-bottom:1.5px solid var(--border)}
+.chart-title{font-family:var(--display);font-size:14px;font-weight:700;margin-bottom:14px;letter-spacing:-.01em}
+.bar-chart{display:flex;flex-direction:column;gap:8px}
+.bar-row{display:flex;align-items:center;gap:10px}
+.bar-label{font-family:var(--mono);font-size:10px;color:#666;width:180px;flex-shrink:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.bar-track{flex:1;height:16px;background:#f0ede8;border-radius:2px;position:relative;overflow:hidden}
+.bar-fill{height:100%;border-radius:2px;transition:width .5s ease}
+.bar-val{font-family:var(--mono);font-size:10px;width:80px;flex-shrink:0;text-align:right}
+
+/* CACHE INFO */
+.cache-info{font-family:var(--mono);font-size:10px;color:#888;padding:10px 28px;border-top:1px solid var(--border);background:var(--paper)}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div>
+    <div class="h-title">Agente de Precios — RMG Autos</div>
+    <div class="h-sub">MONITOREO DE MERCADO · CHILEAUTOS + YAPO + MERCADO LIBRE</div>
+  </div>
+  <div class="h-actions">
+    <span style="font-family:var(--mono);font-size:11px;color:rgba(255,255,255,.7)">
+      <span class="status-dot status-loading" id="statusDot"></span>
+      <span id="statusTxt">Cargando...</span>
+    </span>
+    <button class="btn btn-ghost" onclick="refreshData()">↻ Actualizar mercado</button>
+    <button class="btn btn-primary" onclick="exportCSV()">↓ Exportar CSV</button>
+  </div>
+</div>
+
+<div class="filters">
+  <span class="f-label">Posición:</span>
+  <button class="chip on" onclick="setFilter('all',this)">Todos</button>
+  <button class="chip" onclick="setFilter('bajo mercado',this)">🟢 Bajo mercado</button>
+  <button class="chip" onclick="setFilter('en mercado',this)">🟡 En mercado</button>
+  <button class="chip" onclick="setFilter('sobre mercado',this)">🔴 Sobre mercado</button>
+  <button class="chip" onclick="setFilter('sin datos',this)">⬜ Sin datos</button>
+  <div style="flex:1"></div>
+  <input class="f-search" type="text" placeholder="Buscar modelo..." oninput="setSearch(this.value)" id="searchInput">
+</div>
+
+<div class="kpi-bar">
+  <div class="kpi"><div class="kpi-n" id="kpiTotal">—</div><div class="kpi-l">Total inventario</div></div>
+  <div class="kpi"><div class="kpi-n" style="color:var(--green)" id="kpiBajo">—</div><div class="kpi-l">Bajo mercado</div></div>
+  <div class="kpi"><div class="kpi-n" style="color:var(--yellow)" id="kpiEn">—</div><div class="kpi-l">En mercado</div></div>
+  <div class="kpi"><div class="kpi-n" style="color:var(--red)" id="kpiSobre">—</div><div class="kpi-l">Sobre mercado</div></div>
+</div>
+
+<div class="chart-section" id="chartSection" style="display:none">
+  <div class="chart-title">Posición de precio vs mercado</div>
+  <div class="bar-chart" id="barChart"></div>
+</div>
+
+<div class="table-wrap">
+  <table id="mainTable">
+    <thead>
+      <tr>
+        <th onclick="sortBy('model')">Modelo <span class="sort-arrow" id="sort-model"></span></th>
+        <th onclick="sortBy('year')">Año <span class="sort-arrow" id="sort-year"></span></th>
+        <th onclick="sortBy('precio_lista')">Precio Lista <span class="sort-arrow" id="sort-precio_lista"></span></th>
+        <th onclick="sortBy('mercado_ref')">Ref. Mercado <span class="sort-arrow" id="sort-mercado_ref"></span></th>
+        <th onclick="sortBy('diff_pct')">Diferencia <span class="sort-arrow" id="sort-diff_pct"></span></th>
+        <th>Posición</th>
+        <th>Fuentes</th>
+      </tr>
+    </thead>
+    <tbody id="tableBody">
+      <tr><td colspan="7"><div class="loading"><div class="loading-icon">⟳</div><div class="loading-txt">Consultando inventario RMG...<br>Scrapeando Chileautos y Yapo...<br>Este proceso toma 30–60 segundos.</div></div></td></tr>
+    </tbody>
+  </table>
+</div>
+
+<div class="cache-info" id="cacheInfo">— Conectando al servidor RMG...</div>
+
+<script>
+const CRM_URL = window.location.origin.includes('localhost') ? 'http://localhost:3000' : 'https://body-elite-giftcards.onrender.com';
+let allData = [];
+let currentFilter = 'all';
+let currentSearch = '';
+let currentSort = { field: 'diff_pct', dir: 1 };
+let expandedId = null;
+
+// ─── AUTH ───
+function getToken(){return localStorage.getItem('rmg_token')||'';}
+function getHeaders(){return{'Content-Type':'application/json','X-Auth-Token':getToken()};}
+
+// ─── FETCH ───
+async function loadData(refresh=false){
+  setStatus('loading','Consultando mercado...');
+  document.getElementById('tableBody').innerHTML='<tr><td colspan="7"><div class="loading"><div class="loading-icon">⟳</div><div class="loading-txt">Consultando inventario RMG...<br>Scrapeando Chileautos y Yapo...</div></div></td></tr>';
+
+  try{
+    const url=CRM_URL+'/api/precios/mercado'+(refresh?'?refresh=1':'');
+    const r=await fetch(url,{headers:getHeaders()});
+    if(r.status===401){setStatus('error','Sin autenticación');showAuthMsg();return;}
+    if(!r.ok) throw new Error('HTTP '+r.status);
+    const json=await r.json();
+    allData=json.data||[];
+    const ts=json.cache_ts?new Date(json.cache_ts).toLocaleString('es-CL'):'—';
+    document.getElementById('cacheInfo').textContent='Última actualización: '+ts+' · '+allData.length+' modelos · Datos: Chileautos + Yapo';
+    setStatus('ok','Datos actualizados');
+    renderAll();
+  }catch(e){
+    setStatus('error','Error: '+e.message);
+    // Modo demo con datos estáticos
+    loadDemoData();
+  }
+}
+
+function loadDemoData(){
+  allData=[
+    {id:'RMG-1',brand:'FORD',model:'FORD FOCUS 2.0 SE',year:2014,precio_lista:6190000,precio_credito:6190000,km:'62.945 km',link:'https://rmgautos.cl/product/ford-focus-2014/',mercado:{chileautos:{min:5200000,max:8900000,median:6800000,count:18},yapo:{min:4900000,max:9200000,median:6500000,count:24}},mercado_ref:6650000,diff_pct:-7,posicion:'bajo mercado',ts:new Date().toISOString()},
+    {id:'RMG-2',brand:'MITSUBISHI',model:'MITSUBISHI MONTERO SPORT',year:2014,precio_lista:11590000,precio_credito:11590000,km:'187.000 km',link:'https://rmgautos.cl/product/mitsubishi-montero/',mercado:{chileautos:{min:9500000,max:14000000,median:11200000,count:12},yapo:{min:8800000,max:13500000,median:10900000,count:15}},mercado_ref:11050000,diff_pct:5,posicion:'en mercado',ts:new Date().toISOString()},
+    {id:'RMG-4',brand:'OPEL',model:'OPEL MOKKA GS LINE 1.2T',year:2024,precio_lista:14990000,precio_credito:14490000,km:'42.500 km',link:'https://rmgautos.cl/product/opel-mokka-3',mercado:{chileautos:{min:13500000,max:17800000,median:15800000,count:8},yapo:{min:13200000,max:17000000,median:15400000,count:11}},mercado_ref:15600000,diff_pct:-4,posicion:'bajo mercado',ts:new Date().toISOString()},
+    {id:'RMG-5',brand:'OPEL',model:'OPEL MOKKA ELEGANCE 1.2T',year:2023,precio_lista:12890000,precio_credito:12490000,km:'36.100 km',link:'https://rmgautos.cl/product/opel-mokka-2',mercado:{chileautos:{min:11000000,max:15500000,median:13200000,count:9}},mercado_ref:13200000,diff_pct:-2,posicion:'en mercado',ts:new Date().toISOString()},
+    {id:'RMG-6',brand:'PEUGEOT',model:'PEUGEOT 3008 GT HYBRID',year:2025,precio_lista:26990000,precio_credito:26990000,km:'4.340 km',link:'https://rmgautos.cl/product/peugeot-3008/',mercado:{chileautos:{min:24000000,max:30000000,median:27500000,count:5}},mercado_ref:27500000,diff_pct:-2,posicion:'en mercado',ts:new Date().toISOString()},
+    {id:'RMG-7',brand:'CITROEN',model:'CITROEN C3 AIRCROSS LIVE',year:2019,precio_lista:7990000,precio_credito:7990000,km:'120.000 km',link:'https://rmgautos.cl/product/citroen-c3-aircross/',mercado:{chileautos:{min:6500000,max:10200000,median:8400000,count:14},yapo:{min:6200000,max:9800000,median:8100000,count:19}},mercado_ref:8250000,diff_pct:-3,posicion:'en mercado',ts:new Date().toISOString()},
+    {id:'RMG-9',brand:'CHEVROLET',model:'CHEVROLET SILVERADO LT',year:2023,precio_lista:35990000,precio_credito:35990000,km:'29.500 km',link:'https://rmgautos.cl/product/chevrolet-silverado/',mercado:{chileautos:{min:32000000,max:42000000,median:37000000,count:6}},mercado_ref:37000000,diff_pct:-3,posicion:'en mercado',ts:new Date().toISOString()},
+    {id:'RMG-10',brand:'RAM',model:'RAM 700 DCAB SLT',year:2018,precio_lista:7390000,precio_credito:7390000,km:'160.579 km',link:'https://rmgautos.cl/product/ram-700/',mercado:{chileautos:{min:6500000,max:9800000,median:8100000,count:10},yapo:{min:6200000,max:9400000,median:7800000,count:13}},mercado_ref:7950000,diff_pct:-7,posicion:'bajo mercado',ts:new Date().toISOString()},
+    {id:'RMG-11',brand:'SUZUKI',model:'SUZUKI BALENO GLS 1.5',year:2025,precio_lista:12790000,precio_credito:12790000,km:'17.000 km',link:'https://rmgautos.cl/product/suzuki-baleno/',mercado:{chileautos:{min:11500000,max:14500000,median:13400000,count:7}},mercado_ref:13400000,diff_pct:-5,posicion:'bajo mercado',ts:new Date().toISOString()},
+    {id:'RMG-12',brand:'CHERY',model:'CHERY ARRIZO 3 GLS',year:2018,precio_lista:4790000,precio_credito:4790000,km:'88.000 km',link:'https://rmgautos.cl/product/chery-arrizo/',mercado:{chileautos:{min:3800000,max:6200000,median:5100000,count:11},yapo:{min:3500000,max:5900000,median:4800000,count:16}},mercado_ref:4950000,diff_pct:-3,posicion:'en mercado',ts:new Date().toISOString()},
+  ];
+  document.getElementById('cacheInfo').textContent='Modo demo — datos de referencia · Para datos reales conecta el CRM';
+  setStatus('ok','Modo demo');
+  renderAll();
+}
+
+function setStatus(type,txt){
+  const dot=document.getElementById('statusDot');
+  const span=document.getElementById('statusTxt');
+  dot.className='status-dot status-'+type;
+  span.textContent=txt;
+}
+
+function showAuthMsg(){
+  document.getElementById('tableBody').innerHTML='<tr><td colspan="7"><div class="empty"><div class="empty-icon">🔐</div><div class="empty-txt">Necesitas iniciar sesión en el CRM para ver datos reales.<br>Por ahora se muestra modo demo.</div></div></td></tr>';
+  loadDemoData();
+}
+
+// ─── RENDER ───
+function getFiltered(){
+  return allData.filter(d=>{
+    const mf=currentFilter==='all'||d.posicion===currentFilter;
+    const ms=!currentSearch||d.model.toLowerCase().includes(currentSearch.toLowerCase())||d.brand.toLowerCase().includes(currentSearch.toLowerCase());
+    return mf&&ms;
+  }).sort((a,b)=>{
+    const av=a[currentSort.field]??-999,bv=b[currentSort.field]??-999;
+    return currentSort.dir*(av>bv?1:av<bv?-1:0);
+  });
+}
+
+function renderAll(){
+  const data=getFiltered();
+  updateKPIs();
+  renderChart(data);
+  renderTable(data);
+}
+
+function updateKPIs(){
+  document.getElementById('kpiTotal').textContent=allData.length;
+  document.getElementById('kpiBajo').textContent=allData.filter(d=>d.posicion==='bajo mercado').length;
+  document.getElementById('kpiEn').textContent=allData.filter(d=>d.posicion==='en mercado').length;
+  document.getElementById('kpiSobre').textContent=allData.filter(d=>d.posicion==='sobre mercado').length;
+}
+
+function renderChart(data){
+  const sec=document.getElementById('chartSection');
+  const chart=document.getElementById('barChart');
+  const withData=data.filter(d=>d.diff_pct!==null).slice(0,12);
+  if(!withData.length){sec.style.display='none';return;}
+  sec.style.display='block';
+  const maxAbs=Math.max(...withData.map(d=>Math.abs(d.diff_pct||0)),1);
+  chart.innerHTML=withData.map(d=>{
+    const pct=d.diff_pct||0;
+    const color=pct<-5?'var(--green)':pct>5?'var(--red)':'var(--yellow)';
+    const w=Math.round(Math.abs(pct)/maxAbs*100);
+    const label=pct<0?'−'+Math.abs(pct)+'%':'+'+pct+'%';
+    const name=(d.brand+' '+d.model).substring(0,30);
+    return `<div class="bar-row">
+      <div class="bar-label" title="${name}">${name}</div>
+      <div class="bar-track"><div class="bar-fill" style="width:${w}%;background:${color}"></div></div>
+      <div class="bar-val" style="color:${color};font-family:var(--mono);font-size:10px;font-weight:500">${label} vs mercado</div>
+    </div>`;
+  }).join('');
+}
+
+function renderTable(data){
+  const tbody=document.getElementById('tableBody');
+  if(!data.length){tbody.innerHTML='<tr><td colspan="7"><div class="empty"><div class="empty-icon">🔍</div><div class="empty-txt">Sin resultados para este filtro.</div></div></td></tr>';return;}
+
+  const fmt=n=>n?'$'+(n/1000000).toFixed(1)+'M':'—';
+  const badgePos=pos=>{
+    if(pos==='bajo mercado')return'<span class="badge badge-verde">↓ Bajo mercado</span>';
+    if(pos==='sobre mercado')return'<span class="badge badge-rojo">↑ Sobre mercado</span>';
+    if(pos==='en mercado')return'<span class="badge badge-amarillo">↔ En mercado</span>';
+    return'<span class="badge badge-gris">Sin datos</span>';
+  };
+  const fuentesHtml=m=>{
+    const fuentes=[];
+    if(m?.chileautos?.count)fuentes.push(`<span class="badge badge-gris">CA ${m.chileautos.count}</span>`);
+    if(m?.yapo?.count)fuentes.push(`<span class="badge badge-gris">YP ${m.yapo.count}</span>`);
+    return fuentes.join(' ')||'<span style="color:#aaa;font-size:10px;font-family:var(--mono)">—</span>';
+  };
+
+  tbody.innerHTML=data.flatMap(d=>{
+    const diffTxt=d.diff_pct!==null?(d.diff_pct<0?'−':'+')+(Math.abs(d.diff_pct))+'%':'—';
+    const diffColor=d.diff_pct<-5?'var(--green)':d.diff_pct>5?'var(--red)':'var(--yellow)';
+    const isExp=d.id===expandedId;
+
+    const mainRow=`<tr onclick="toggleExpand('${d.id}')" style="${isExp?'background:#f5f8ff':''}">
+      <td><div class="td-model">${d.brand} ${d.model}</div><div class="td-sub">${d.km}</div></td>
+      <td style="font-family:var(--mono);font-size:11px">${d.year||'—'}</td>
+      <td><div class="td-price">${fmt(d.precio_lista)}</div>${d.precio_credito&&d.precio_credito!==d.precio_lista?`<div style="font-family:var(--mono);font-size:10px;color:var(--green)">Crédito: ${fmt(d.precio_credito)}</div>`:''}</td>
+      <td style="font-family:var(--mono);font-size:11px">${fmt(d.mercado_ref)}</td>
+      <td style="font-family:var(--mono);font-size:12px;font-weight:500;color:${diffColor}">${diffTxt}</td>
+      <td>${badgePos(d.posicion)}</td>
+      <td>${fuentesHtml(d.mercado)}</td>
+    </tr>`;
+
+    const chileautos=d.mercado?.chileautos;
+    const yapo=d.mercado?.yapo;
+    const expandRow=`<tr class="expand-row${isExp?' open':''}"><td colspan="7">
+      <div class="expand-content">
+        <div class="exp-grid">
+          ${chileautos?`<div class="exp-card">
+            <div class="exp-card-title">Chileautos (${chileautos.count} avisos)</div>
+            <div class="exp-row"><span class="exp-l">Mínimo</span><span class="exp-r">${fmt(chileautos.min)}</span></div>
+            <div class="exp-row"><span class="exp-l">Mediana</span><span class="exp-r">${fmt(chileautos.median)}</span></div>
+            <div class="exp-row"><span class="exp-l">Máximo</span><span class="exp-r">${fmt(chileautos.max)}</span></div>
+            <div class="price-bar" style="margin-top:8px">
+              <div class="price-fill" style="width:${Math.round((d.precio_lista-chileautos.min)/(chileautos.max-chileautos.min+1)*100)}%;background:${d.precio_lista<=chileautos.median?'var(--green)':'var(--red)'}"></div>
+            </div>
+            <div style="font-family:var(--mono);font-size:9px;color:#888;margin-top:4px">Tu precio en el rango</div>
+          </div>`:'<div class="exp-card"><div class="exp-card-title">Chileautos</div><div style="font-family:var(--mono);font-size:10px;color:#aaa;padding:10px 0">Sin datos disponibles</div></div>'}
+          ${yapo?`<div class="exp-card">
+            <div class="exp-card-title">Yapo (${yapo.count} avisos)</div>
+            <div class="exp-row"><span class="exp-l">Mínimo</span><span class="exp-r">${fmt(yapo.min)}</span></div>
+            <div class="exp-row"><span class="exp-l">Mediana</span><span class="exp-r">${fmt(yapo.median)}</span></div>
+            <div class="exp-row"><span class="exp-l">Máximo</span><span class="exp-r">${fmt(yapo.max)}</span></div>
+            <div class="price-bar" style="margin-top:8px">
+              <div class="price-fill" style="width:${Math.round((d.precio_lista-yapo.min)/(yapo.max-yapo.min+1)*100)}%;background:${d.precio_lista<=yapo.median?'var(--green)':'var(--red)'}"></div>
+            </div>
+            <div style="font-family:var(--mono);font-size:9px;color:#888;margin-top:4px">Tu precio en el rango</div>
+          </div>`:'<div class="exp-card"><div class="exp-card-title">Yapo</div><div style="font-family:var(--mono);font-size:10px;color:#aaa;padding:10px 0">Sin datos disponibles</div></div>'}
+          <div class="exp-card">
+            <div class="exp-card-title">Resumen RMG</div>
+            <div class="exp-row"><span class="exp-l">Tu precio lista</span><span class="exp-r">${fmt(d.precio_lista)}</span></div>
+            <div class="exp-row"><span class="exp-l">Tu precio crédito</span><span class="exp-r" style="color:var(--green)">${fmt(d.precio_credito)}</span></div>
+            <div class="exp-row"><span class="exp-l">Ref. mercado</span><span class="exp-r">${fmt(d.mercado_ref)}</span></div>
+            <div class="exp-row"><span class="exp-l">Diferencia</span><span class="exp-r" style="color:${d.diff_pct<0?'var(--green)':'var(--red)'}">${d.diff_pct!==null?(d.diff_pct<0?'−':'+')+(Math.abs(d.diff_pct))+'%':'—'}</span></div>
+          </div>
+        </div>
+        <div class="exp-actions">
+          <a class="btn-sm" href="${d.link}" target="_blank">Ver ficha RMG ↗</a>
+          <a class="btn-sm" href="https://www.chileautos.cl/vehiculos/?q=${encodeURIComponent(d.brand+' '+d.model)}" target="_blank">Ver en Chileautos ↗</a>
+          <a class="btn-sm" href="https://www.yapo.cl/chile/autos_y_camionetas?q=${encodeURIComponent(d.brand+' '+d.model)}" target="_blank">Ver en Yapo ↗</a>
+        </div>
+      </div>
+    </td></tr>`;
+
+    return [mainRow, expandRow];
+  }).join('');
+}
+
+// ─── CONTROLES ───
+function setFilter(f,btn){
+  currentFilter=f;
+  document.querySelectorAll('.chip').forEach(c=>c.classList.remove('on'));
+  btn.classList.add('on');
+  renderAll();
+}
+
+function setSearch(v){currentSearch=v;renderAll();}
+
+function sortBy(field){
+  if(currentSort.field===field) currentSort.dir*=-1;
+  else{currentSort.field=field;currentSort.dir=1;}
+  document.querySelectorAll('.sort-arrow').forEach(s=>s.textContent='');
+  document.getElementById('sort-'+field).textContent=currentSort.dir===1?'↑':'↓';
+  document.querySelector('th.sorted')?.classList.remove('sorted');
+  renderAll();
+}
+
+function toggleExpand(id){
+  expandedId=expandedId===id?null:id;
+  renderAll();
+}
+
+function refreshData(){loadData(true);}
+
+function exportCSV(){
+  const rows=[['ID','Marca','Modelo','Año','Km','Precio Lista','Precio Crédito','Ref Mercado','Diferencia %','Posición']];
+  allData.forEach(d=>rows.push([d.id,d.brand,d.model,d.year||'',d.km||'',d.precio_lista,d.precio_credito,d.mercado_ref||'',d.diff_pct!=null?d.diff_pct+'%':'',d.posicion]));
+  const csv=rows.map(r=>r.join(',')).join('\n');
+  const a=document.createElement('a');
+  a.href='data:text/csv;charset=utf-8,'+encodeURIComponent(csv);
+  a.download='rmg_precios_'+new Date().toISOString().slice(0,10)+'.csv';
+  a.click();
+}
+
+// ─── INIT ───
+loadData();
+</script>
+</body>
+</html>

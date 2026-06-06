@@ -1,0 +1,588 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RMG — Inteligencia de Mercado</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=IBM+Plex+Mono:wght@400;500&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --ink:#0a0a0a;--paper:#f5f4f0;--white:#ffffff;
+  --green:#1a7a4a;--yellow:#d4820a;--red:#c0392b;--blue:#1a5fa8;
+  --green-light:#e8f5ed;--yellow-light:#fdf3e0;--red-light:#fdecea;--blue-light:#e8f0fb;
+  --mono:'IBM Plex Mono',monospace;--sans:'DM Sans',sans-serif;--display:'Syne',sans-serif;
+  --sidebar:380px;--border:#dddbd4;
+}
+html,body{height:100%;overflow:hidden;font-family:var(--sans);background:var(--paper);color:var(--ink)}
+.shell{display:flex;height:100vh}
+
+/* SIDEBAR */
+.sidebar{width:var(--sidebar);min-width:var(--sidebar);height:100%;background:var(--white);display:flex;flex-direction:column;border-right:1.5px solid var(--border);z-index:10;overflow:hidden}
+.s-header{padding:18px 20px 14px;border-bottom:1.5px solid var(--border);background:var(--ink);color:var(--white)}
+.s-logo{font-family:var(--display);font-size:20px;font-weight:800;letter-spacing:-.02em;margin-bottom:2px}
+.s-sub{font-family:var(--mono);font-size:10px;opacity:.55;letter-spacing:.08em}
+.s-tabs{display:flex;border-bottom:1.5px solid var(--border)}
+.s-tab{flex:1;padding:10px 8px;font-family:var(--display);font-size:11px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;cursor:pointer;border:none;background:none;color:#888;border-bottom:2.5px solid transparent;transition:all .18s}
+.s-tab.on{color:var(--ink);border-bottom-color:var(--ink)}
+.s-filters{padding:12px 16px;border-bottom:1px solid var(--border);display:flex;gap:6px;flex-wrap:wrap}
+.chip{font-family:var(--mono);font-size:10px;padding:4px 10px;border-radius:3px;border:1.5px solid var(--border);cursor:pointer;color:#666;background:var(--white);transition:all .15s;letter-spacing:.02em}
+.chip:hover{border-color:var(--ink);color:var(--ink)}
+.chip.on{background:var(--ink);border-color:var(--ink);color:#fff}
+.chip.reg-chip.on{background:var(--blue);border-color:var(--blue)}
+.s-body{flex:1;overflow-y:auto}
+.s-body::-webkit-scrollbar{width:3px}
+.s-body::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
+.s-count{font-family:var(--mono);font-size:10px;color:#888;padding:8px 16px;border-bottom:1px solid var(--border);background:#fafaf8}
+
+/* ZONE CARDS */
+.z-card{border-bottom:1.5px solid var(--border);cursor:pointer;transition:background .12s}
+.z-card:hover{background:#fafaf8}
+.z-card.active{background:#f0f8f4;border-left:3px solid var(--green)}
+.z-card.active.opp-media{background:#fdf8ef;border-left-color:var(--yellow)}
+.z-card.active.opp-baja{background:#fdf0ef;border-left-color:var(--red)}
+.z-main{display:flex;gap:12px;align-items:flex-start;padding:14px 16px}
+.z-badge{width:34px;height:34px;border-radius:4px;display:flex;align-items:center;justify-content:center;font-family:var(--display);font-size:13px;font-weight:800;color:#fff;flex-shrink:0;letter-spacing:-.01em}
+.z-info{flex:1;min-width:0}
+.z-name{font-family:var(--display);font-size:13px;font-weight:700;margin-bottom:1px;letter-spacing:-.01em}
+.z-region{font-family:var(--mono);font-size:10px;color:#888;margin-bottom:5px;letter-spacing:.03em}
+.z-pills{display:flex;gap:5px;flex-wrap:wrap}
+.zpill{font-family:var(--mono);font-size:9px;padding:2px 7px;border-radius:2px;font-weight:500;letter-spacing:.02em}
+.z-detail{display:none;padding:0 16px 14px 62px;border-top:1px dashed var(--border)}
+.z-card.active .z-detail{display:block}
+.z-desc{font-size:12px;color:#555;line-height:1.6;margin-bottom:10px;margin-top:10px}
+.z-stats{display:flex;gap:6px;margin-bottom:10px}
+.z-stat{flex:1;background:#f8f7f4;border:1px solid var(--border);border-radius:4px;padding:7px 8px;text-align:center}
+.z-stat-n{font-family:var(--display);font-size:14px;font-weight:800;line-height:1}
+.z-stat-l{font-family:var(--mono);font-size:9px;color:#888;margin-top:2px;letter-spacing:.02em}
+.comp-section-title{font-family:var(--mono);font-size:9px;color:#888;letter-spacing:.06em;text-transform:uppercase;margin-bottom:6px}
+.comp-row{display:flex;align-items:center;justify-content:space-between;padding:6px 9px;background:var(--white);border:1px solid var(--border);border-radius:4px;margin-bottom:4px;cursor:pointer;transition:border-color .13s}
+.comp-row:hover{border-color:#999}
+.comp-row.hl{border-color:var(--blue);background:var(--blue-light)}
+.cr-left{display:flex;align-items:center;gap:7px;min-width:0}
+.cr-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.cr-name{font-size:11px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cr-right{display:flex;align-items:center;gap:5px;flex-shrink:0}
+.cr-stars{color:#f59e0b;font-size:9px}
+.cr-tag{font-family:var(--mono);font-size:9px;padding:1px 5px;border-radius:2px}
+.no-comp{background:#f0fdf4;border:1px solid #bbf7d0;border-radius:4px;padding:8px 10px;font-size:11px;color:#166534;font-family:var(--mono);letter-spacing:.02em}
+
+/* PRECIO PANEL */
+.p-panel{padding:14px 16px}
+.p-model-select{width:100%;padding:8px 10px;border:1.5px solid var(--border);border-radius:4px;font-family:var(--mono);font-size:11px;background:var(--white);color:var(--ink);margin-bottom:10px;cursor:pointer}
+.p-model-select:focus{outline:none;border-color:var(--ink)}
+.p-search-note{font-family:var(--mono);font-size:10px;color:#888;margin-bottom:12px;line-height:1.5;padding:8px 10px;background:#f8f7f4;border-radius:4px;border-left:2px solid var(--ink)}
+.p-card{border:1.5px solid var(--border);border-radius:6px;padding:12px 14px;margin-bottom:8px;background:var(--white);transition:border-color .13s}
+.p-card:hover{border-color:#999}
+.p-car-name{font-family:var(--display);font-size:13px;font-weight:700;margin-bottom:4px;letter-spacing:-.01em}
+.p-car-sub{font-family:var(--mono);font-size:10px;color:#888;margin-bottom:8px}
+.p-prices{display:flex;gap:8px;margin-bottom:6px}
+.p-price-box{flex:1;background:#f8f7f4;border-radius:4px;padding:7px 9px;text-align:center}
+.p-price-lbl{font-family:var(--mono);font-size:9px;color:#888;margin-bottom:2px}
+.p-price-val{font-family:var(--display);font-size:14px;font-weight:800;color:var(--ink)}
+.p-price-val.credito{color:var(--green)}
+.p-comp-bar{margin-top:8px}
+.p-comp-title{font-family:var(--mono);font-size:9px;color:#888;letter-spacing:.05em;margin-bottom:5px}
+.p-comp-item{display:flex;align-items:center;justify-content:space-between;font-size:11px;padding:4px 0;border-bottom:1px solid #f0ede8}
+.p-comp-item:last-child{border-bottom:none}
+.p-comp-name{color:#555;font-size:10px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:160px}
+.p-comp-price{font-family:var(--mono);font-size:10px;font-weight:500}
+.p-comp-price.cheaper{color:var(--red)}
+.p-comp-price.pricier{color:var(--green)}
+.p-comp-price.similar{color:#888}
+.p-empty{padding:40px 16px;text-align:center}
+.p-empty-icon{font-size:32px;margin-bottom:8px}
+.p-empty-txt{font-family:var(--mono);font-size:11px;color:#888;line-height:1.6}
+
+/* MAP */
+.map-wrap{flex:1;position:relative;overflow:hidden}
+#map{width:100%;height:100%}
+.map-overlay{position:absolute;top:14px;left:14px;z-index:800;display:flex;flex-direction:column;gap:8px}
+.map-kpi{background:var(--white);border:1.5px solid var(--border);border-radius:6px;padding:10px 16px;display:flex;gap:14px;box-shadow:0 2px 12px rgba(0,0,0,.07)}
+.mk-item{text-align:center}
+.mk-n{font-family:var(--display);font-size:18px;font-weight:800;line-height:1}
+.mk-l{font-family:var(--mono);font-size:9px;color:#888;margin-top:2px;letter-spacing:.04em}
+.mk-div{width:1px;background:var(--border)}
+.map-legend{background:var(--white);border:1.5px solid var(--border);border-radius:6px;padding:10px 14px;box-shadow:0 2px 12px rgba(0,0,0,.07)}
+.ml-title{font-family:var(--mono);font-size:9px;color:#888;letter-spacing:.06em;text-transform:uppercase;margin-bottom:7px}
+.ml-row{display:flex;align-items:center;gap:7px;margin-bottom:4px;font-family:var(--mono);font-size:10px;color:#555}
+.ml-row:last-child{margin-bottom:0}
+.ml-dot{width:9px;height:9px;border-radius:2px;flex-shrink:0}
+.map-hint{position:absolute;top:14px;right:14px;background:var(--white);border:1.5px solid var(--border);border-radius:6px;padding:8px 12px;font-family:var(--mono);font-size:10px;color:#888;z-index:800;box-shadow:0 2px 8px rgba(0,0,0,.06)}
+
+/* TOOLTIP COMPETIDOR */
+.comp-tt{position:absolute;z-index:1200;background:var(--white);border:1.5px solid var(--border);border-radius:8px;padding:13px 15px;min-width:230px;max-width:270px;box-shadow:0 8px 30px rgba(0,0,0,.12);pointer-events:none;display:none}
+.comp-tt.vis{display:block}
+.ct-name{font-family:var(--display);font-size:13px;font-weight:700;margin-bottom:2px}
+.ct-addr{font-family:var(--mono);font-size:10px;color:#888;margin-bottom:8px}
+.ct-row{display:flex;justify-content:space-between;font-size:11px;padding:3px 0;border-bottom:1px solid #f0ede8}
+.ct-row:last-of-type{border:none}
+.ct-l{color:#888;font-family:var(--mono);font-size:10px}
+.ct-r{font-weight:500;font-family:var(--mono);font-size:10px}
+.ct-note{margin-top:8px;font-size:11px;color:#555;line-height:1.6;background:#f8f7f4;border-radius:4px;padding:7px 9px}
+</style>
+</head>
+<body>
+<div class="shell">
+<aside class="sidebar">
+  <div class="s-header">
+    <div class="s-logo">RMG — Intel. Mercado</div>
+    <div class="s-sub">SANTIAGO · V REGIÓN · VI REGIÓN · v4.0</div>
+  </div>
+  <div class="s-tabs">
+    <button class="s-tab on" id="tabZonas" onclick="switchTab('zonas')">Zonas</button>
+    <button class="s-tab" id="tabPrecios" onclick="switchTab('precios')">Precios</button>
+  </div>
+  <div id="panelZonas">
+    <div class="s-filters">
+      <button class="chip on" onclick="setFilter('all',this)">Todas</button>
+      <button class="chip" onclick="setFilter('alta',this)">🟢 Alta</button>
+      <button class="chip" onclick="setFilter('media',this)">🟡 Media</button>
+      <button class="chip reg-chip" onclick="setFilter('rm',this)">RM</button>
+      <button class="chip reg-chip" onclick="setFilter('v',this)">V Región</button>
+      <button class="chip reg-chip" onclick="setFilter('vi',this)">VI Región</button>
+    </div>
+    <div class="s-count" id="countLbl">— zonas</div>
+    <div class="s-body" id="zonaList"></div>
+  </div>
+  <div id="panelPrecios" style="display:none;overflow-y:auto;flex:1">
+    <div class="p-panel">
+      <select class="p-model-select" id="modelSelect" onchange="renderPrecios()">
+        <option value="">— Selecciona un modelo —</option>
+      </select>
+      <div class="p-search-note">Selecciona un auto del inventario RMG para ver cómo compite en precio contra el mercado por zona.</div>
+    </div>
+    <div id="preciosList"></div>
+  </div>
+</aside>
+
+<div class="map-wrap">
+  <div id="map"></div>
+  <div class="map-overlay">
+    <div class="map-kpi">
+      <div class="mk-item"><div class="mk-n" style="color:var(--green)" id="kpiAlta">—</div><div class="mk-l">Alta oport.</div></div>
+      <div class="mk-div"></div>
+      <div class="mk-item"><div class="mk-n" style="color:var(--yellow)" id="kpiMedia">—</div><div class="mk-l">Media</div></div>
+      <div class="mk-div"></div>
+      <div class="mk-item"><div class="mk-n" style="color:var(--red)" id="kpiEvitar">—</div><div class="mk-l">Evitar</div></div>
+      <div class="mk-div"></div>
+      <div class="mk-item"><div class="mk-n" style="color:var(--blue)" id="kpiComp">—</div><div class="mk-l">Competidores</div></div>
+    </div>
+    <div class="map-legend">
+      <div class="ml-title">Oportunidad</div>
+      <div class="ml-row"><div class="ml-dot" style="background:var(--green)"></div>Alta (score 80–95)</div>
+      <div class="ml-row"><div class="ml-dot" style="background:var(--yellow)"></div>Media (score 70–79)</div>
+      <div class="ml-row"><div class="ml-dot" style="background:var(--red)"></div>Saturada / Evitar</div>
+      <div class="ml-row"><div class="ml-dot" style="background:var(--red);border-radius:50%"></div>Competidor fuerte</div>
+      <div class="ml-row"><div class="ml-dot" style="background:var(--yellow);border-radius:50%"></div>Competidor débil</div>
+      <div class="ml-row"><div class="ml-dot" style="background:var(--blue);border-radius:50%"></div>★ Zona ideal</div>
+    </div>
+  </div>
+  <div class="map-hint" id="mapHint">👆 Clic en zona para analizar</div>
+  <div class="comp-tt" id="compTt"></div>
+</div>
+</div>
+
+<script>
+// ══════════════════════════════════════════════
+// INVENTARIO RMG (cargado desde API o estático)
+// ══════════════════════════════════════════════
+const INVENTARIO_RMG = [
+  {id:'RMG-1',brand:'FORD',model:'FORD FOCUS 2.0 SE 4X2 AT 4P',year:2014,precio_lista:6190000,precio_credito:6190000,km:'62.945 km',link:'https://rmgautos.cl/product/ford-focus-2014/'},
+  {id:'RMG-2',brand:'MITSUBISHI',model:'MITSUBISHI MONTERO SPORT 2.5 AT',year:2014,precio_lista:11590000,precio_credito:11590000,km:'187.000 km',link:'https://rmgautos.cl/product/mitsubishi-montero/'},
+  {id:'RMG-3',brand:'PEUGEOT',model:'PEUGEOT PARTNER L1 BLUE HDI',year:2024,precio_lista:12390000,precio_credito:12390000,km:'43.000 km',link:'https://rmgautos.cl/product/peugeot-partner/'},
+  {id:'RMG-4',brand:'OPEL',model:'OPEL MOKKA GS LINE 1.2T AT',year:2024,precio_lista:14990000,precio_credito:14490000,km:'42.500 km',link:'https://rmgautos.cl/product/opel-mokka-3'},
+  {id:'RMG-5',brand:'OPEL',model:'OPEL MOKKA ELEGANCE 1.2T AT',year:2023,precio_lista:12890000,precio_credito:12490000,km:'36.100 km',link:'https://rmgautos.cl/product/opel-mokka-2'},
+  {id:'RMG-6',brand:'PEUGEOT',model:'PEUGEOT 3008 P64 GT HYBRID',year:2025,precio_lista:26990000,precio_credito:26990000,km:'4.340 km',link:'https://rmgautos.cl/product/peugeot-3008/'},
+  {id:'RMG-7',brand:'CITROEN',model:'CITROEN C3 AIRCROSS LIVE 1.2T',year:2019,precio_lista:7990000,precio_credito:7990000,km:'120.000 km',link:'https://rmgautos.cl/product/citroen-c3-aircross/'},
+  {id:'RMG-8',brand:'MG',model:'MG 3 HATCH BACK 1.5 STD MT AC',year:2016,precio_lista:4390000,precio_credito:4390000,km:'112.000 km',link:'https://rmgautos.cl/product/mg-3/'},
+  {id:'RMG-9',brand:'CHEVROLET',model:'CHEVROLET SILVERADO LT TRAILBOSS Z71',year:2023,precio_lista:35990000,precio_credito:35990000,km:'29.500 km',link:'https://rmgautos.cl/product/chevrolet-silverado/'},
+  {id:'RMG-10',brand:'RAM',model:'RAM 700 DCAB SLT 1.4 2018',year:2018,precio_lista:7390000,precio_credito:7390000,km:'160.579 km',link:'https://rmgautos.cl/product/ram-700/'},
+  {id:'RMG-11',brand:'SUZUKI',model:'SUZUKI BALENO GLS HB 1.5 AC MT',year:2025,precio_lista:12790000,precio_credito:12790000,km:'17.000 km',link:'https://rmgautos.cl/product/suzuki-baleno/'},
+  {id:'RMG-12',brand:'CHERY',model:'CHERY ARRIZO 3 GLS 1.5 MT AC',year:2018,precio_lista:4790000,precio_credito:4790000,km:'88.000 km',link:'https://rmgautos.cl/product/chery-arrizo/'},
+];
+
+// ══════════════════════════════════════════════
+// ZONAS — RM + V + VI REGIÓN
+// ══════════════════════════════════════════════
+const ZONAS = [
+  // ─── REGIÓN METROPOLITANA ───
+  {id:'A',name:'Quilicura / Huechuraba',region:'RM',sub:'Vespucio Norte',lat:-33.358,lng:-70.697,radius:2400,score:91,opp:'alta',color:'#1a7a4a',arriendo:'$3.5–5M',comp:'Baja',desc:'Corredor en expansión. Baja competencia formal. Zona de máxima oportunidad.',stats:[{l:'Flujo',v:'92%'},{l:'Arriendo',v:'$3.5–5M'},{l:'Score',v:'91'}],
+    precios_zona:{ford_focus:5800000,opel_mokka:13500000,citroen_c3:7200000,peugeot_3008:25000000},
+    competidores:[
+      {name:'Autocenter Quilicura',addr:'Av. Vespucio 1855',lat:-33.3719,lng:-70.7086,rating:3.7,reviews:389,tag:'Denuncias fraude',tagColor:'#c0392b',nivel:'debil',nota:'Rating bajo con denuncias graves. Competencia débil.'},
+      {name:'Automotriz Vespucio Norte',addr:'Av. Vespucio 1900',lat:-33.3673,lng:-70.6825,rating:2.9,reviews:19,tag:'Muy mal servicio',tagColor:'#c0392b',nivel:'debil',nota:'Rating 2.9. Competencia extremadamente débil.'},
+      {name:'ZONA IDEAL',addr:'Av. Frei Montalva 9500+',lat:-33.3420,lng:-70.7180,rating:null,reviews:null,tag:'★ Instalar aquí',tagColor:'#1a5fa8',nivel:'ideal',nota:'Sin competidores. Alta densidad residencial. Arriendos $2.5–4.5M.'},
+    ]},
+  {id:'B',name:'Maipú (sector poniente)',region:'RM',sub:'Av. Pajaritos / Vespucio',lat:-33.510,lng:-70.758,radius:2800,score:87,opp:'alta',color:'#1a7a4a',arriendo:'$4–6M',comp:'Media-baja',desc:'Mayor densidad poblacional de Santiago. Alta demanda $8–20M.',stats:[{l:'Flujo',v:'88%'},{l:'Arriendo',v:'$4–6M'},{l:'Score',v:'87'}],
+    precios_zona:{ford_focus:5500000,opel_mokka:14200000,citroen_c3:7800000,suzuki_baleno:11900000},
+    competidores:[
+      {name:'Dercocenter Maipú',addr:'Av. Pajaritos 3690',lat:-33.5120,lng:-70.7650,rating:4.1,reviews:890,tag:'Competencia activa',tagColor:'#c0392b',nivel:'fuerte',nota:'Concesionario grande. Foco en nuevos principalmente.'},
+      {name:'Autoplaza Maipú',addr:'Av. Vespucio 399',lat:-33.5050,lng:-70.7520,rating:3.8,reviews:210,tag:'Competencia media',tagColor:'#d4820a',nivel:'medio',nota:'Presencia consolidada pero mejorable en servicio.'},
+    ]},
+  {id:'C',name:'Pudahuel',region:'RM',sub:'Av. El Sol / Ruta 68',lat:-33.430,lng:-70.810,radius:2200,score:84,opp:'alta',color:'#1a7a4a',arriendo:'$2.5–4M',comp:'Baja',desc:'Zona aeroportuaria en expansión. Clientela emergente sin oferta formal.',stats:[{l:'Flujo',v:'80%'},{l:'Arriendo',v:'$2.5–4M'},{l:'Score',v:'84'}],
+    precios_zona:{ford_focus:6000000,opel_mokka:14000000,ram_700:7000000},
+    competidores:[]},
+  {id:'D',name:'Conchalí / Recoleta',region:'RM',sub:'Av. Independencia / El Salto',lat:-33.390,lng:-70.665,radius:1800,score:82,opp:'alta',color:'#1a7a4a',arriendo:'$3–5M',comp:'Baja',desc:'Alta circulación. Pocos actores formales. Borde norte del cluster.',stats:[{l:'Flujo',v:'78%'},{l:'Arriendo',v:'$3–5M'},{l:'Score',v:'82'}],
+    precios_zona:{ford_focus:5700000,opel_mokka:13800000,mitsubishi_montero:11000000},
+    competidores:[
+      {name:'Automotora G. Morales',addr:'Av. Vespucio 1001',lat:-33.3753,lng:-70.6580,rating:4.0,reviews:423,tag:'Quejas postventa',tagColor:'#d4820a',nivel:'medio',nota:'Gran volumen pero quejas de postventa. Oportunidad de captura.'},
+      {name:'Rosselot Huechuraba',addr:'Av. Vespucio 981',lat:-33.3761,lng:-70.6561,rating:3.3,reviews:92,tag:'Mal servicio',tagColor:'#c0392b',nivel:'debil',nota:'Rating 3.3. Actor vulnerable.'},
+    ]},
+  {id:'E',name:'Peñaflor / Talagante',region:'RM',sub:'Av. Ortúzar / Ruta 78',lat:-33.615,lng:-70.890,radius:3000,score:80,opp:'alta',color:'#1a7a4a',arriendo:'$1.5–3M',comp:'Muy baja',desc:'Municipios en expansión. Costos mínimos. Mercado casi virgen.',stats:[{l:'Flujo',v:'65%'},{l:'Arriendo',v:'$1.5–3M'},{l:'Score',v:'80'}],
+    precios_zona:{ford_focus:6200000,chery_arrizo:4500000,ram_700:7200000},
+    competidores:[]},
+  {id:'F',name:'Puente Alto / San Bernardo',region:'RM',sub:'Gran Avenida Sur',lat:-33.615,lng:-70.615,radius:3000,score:74,opp:'media',color:'#d4820a',arriendo:'$4.5–7M',comp:'Media-alta',desc:'Zona populosa pero saturada. Arriendos altos.',stats:[{l:'Flujo',v:'90%'},{l:'Arriendo',v:'$4.5–7M'},{l:'Score',v:'74'}],
+    precios_zona:{ford_focus:5900000,opel_mokka:14800000,chevrolet_silverado:34000000},
+    competidores:[
+      {name:'Dercocenter Puente Alto',addr:'Concha y Toro 2960',lat:-33.6100,lng:-70.6130,rating:4.3,reviews:1200,tag:'Actor fuerte',tagColor:'#c0392b',nivel:'fuerte',nota:'Gran concesionario consolidado. Difícil competir directamente.'},
+      {name:'Salco Automotora',addr:'Gabriela Ote. 2755',lat:-33.6180,lng:-70.6080,rating:3.9,reviews:540,tag:'Competencia activa',tagColor:'#d4820a',nivel:'medio',nota:'Presencia local en usados económicos.'},
+    ]},
+  {id:'G',name:'Las Condes / Vitacura',region:'RM',sub:'Av. Las Condes / Kennedy',lat:-33.395,lng:-70.565,radius:2000,score:68,opp:'baja',color:'#c0392b',arriendo:'$8–15M',comp:'Alta',desc:'Zona de alto poder adquisitivo pero arriendos prohibitivos y competencia de concesionarios premium.',stats:[{l:'Flujo',v:'85%'},{l:'Arriendo',v:'$8–15M'},{l:'Score',v:'68'}],
+    precios_zona:{peugeot_3008:28000000,chevrolet_silverado:38000000},
+    competidores:[
+      {name:'BMW Las Condes',addr:'Av. Kennedy 7220',lat:-33.3980,lng:-70.5620,rating:4.5,reviews:2100,tag:'Premium',tagColor:'#c0392b',nivel:'fuerte',nota:'Concesionario premium consolidado. Mercado diferente.'},
+    ]},
+
+  // ─── V REGIÓN ───
+  {id:'V1',name:'Viña del Mar Centro',region:'V',sub:'Av. Libertad / 15 Norte',lat:-33.024,lng:-71.551,radius:2500,score:88,opp:'alta',color:'#1a7a4a',arriendo:'$3–5M',comp:'Media-baja',desc:'Ciudad turística con alta movilidad. Demanda estacional y permanente. Poca competencia formal en usados.',stats:[{l:'Flujo',v:'86%'},{l:'Arriendo',v:'$3–5M'},{l:'Score',v:'88'}],
+    precios_zona:{ford_focus:6400000,opel_mokka:15200000,citroen_c3:8300000,suzuki_baleno:13100000},
+    competidores:[
+      {name:'Automotora Hnos. García',addr:'Av. Libertad 1200, Viña',lat:-33.0260,lng:-71.5530,rating:3.8,reviews:145,tag:'Competencia media',tagColor:'#d4820a',nivel:'medio',nota:'Actor local con volumen moderado. Sin diferenciación clara.'},
+    ]},
+  {id:'V2',name:'Valparaíso / Placilla',region:'V',sub:'Ruta 68 / Av. Argentina',lat:-33.058,lng:-71.620,radius:2800,score:85,opp:'alta',color:'#1a7a4a',arriendo:'$2–4M',comp:'Baja',desc:'Puerto y ciudad universitaria. Arriendos accesibles. Alta demanda de autos económicos $5–15M.',stats:[{l:'Flujo',v:'82%'},{l:'Arriendo',v:'$2–4M'},{l:'Score',v:'85'}],
+    precios_zona:{ford_focus:6100000,chery_arrizo:4800000,mg_3:4200000,ram_700:7500000},
+    competidores:[
+      {name:'AutoVina',addr:'Av. Argentina 455, Valpo',lat:-33.0490,lng:-71.6100,rating:3.5,reviews:89,tag:'Baja calificación',tagColor:'#c0392b',nivel:'debil',nota:'Rating bajo. Oportunidad de diferenciarse en servicio.'},
+    ]},
+  {id:'V3',name:'Quillota / La Calera',region:'V',sub:'Ruta 60 / Av. Yungay',lat:-32.879,lng:-71.248,radius:3000,score:83,opp:'alta',color:'#1a7a4a',arriendo:'$1.5–3M',comp:'Muy baja',desc:'Zona industrial en crecimiento. Demanda de vehículos comerciales y doble cabina. Casi sin oferta formal.',stats:[{l:'Flujo',v:'72%'},{l:'Arriendo',v:'$1.5–3M'},{l:'Score',v:'83'}],
+    precios_zona:{mitsubishi_montero:12000000,ram_700:7800000,chevrolet_silverado:37000000},
+    competidores:[]},
+  {id:'V4',name:'San Antonio / Cartagena',region:'V',sub:'Ruta 78 / Litoral',lat:-33.594,lng:-71.621,radius:2500,score:79,opp:'media',color:'#d4820a',arriendo:'$1.5–2.5M',comp:'Baja',desc:'Ciudad portuaria costera. Demanda estable. Arriendos muy bajos pero menor volumen de mercado.',stats:[{l:'Flujo',v:'60%'},{l:'Arriendo',v:'$1.5–2.5M'},{l:'Score',v:'79'}],
+    precios_zona:{ford_focus:6300000,citroen_c3:7900000},
+    competidores:[]},
+
+  // ─── VI REGIÓN ───
+  {id:'VI1',name:'Rancagua Centro',region:'VI',sub:'Av. O\'Higgins / Millán',lat:-34.170,lng:-70.740,radius:3000,score:90,opp:'alta',color:'#1a7a4a',arriendo:'$2–4M',comp:'Baja',desc:'Capital regional en explosivo crecimiento. Poca oferta formal de usados. Mercado virgen con alta demanda reprimida.',stats:[{l:'Flujo',v:'89%'},{l:'Arriendo',v:'$2–4M'},{l:'Score',v:'90'}],
+    precios_zona:{ford_focus:6600000,opel_mokka:15500000,suzuki_baleno:13400000,peugeot_3008:27500000},
+    competidores:[
+      {name:'Derco Rancagua',addr:'Av. O\'Higgins 850',lat:-34.1690,lng:-70.7380,rating:4.0,reviews:320,tag:'Competencia activa',tagColor:'#d4820a',nivel:'medio',nota:'Presencia de concesionario oficial pero foco en nuevos.'},
+    ]},
+  {id:'VI2',name:'Machalí / Graneros',region:'VI',sub:'Ruta 5 Sur / Sector Industrial',lat:-34.178,lng:-70.698,radius:2500,score:87,opp:'alta',color:'#1a7a4a',arriendo:'$1.5–3M',comp:'Muy baja',desc:'Zona industrial y residencial en expansión. Sin oferta formal de autos usados. Oportunidad única.',stats:[{l:'Flujo',v:'78%'},{l:'Arriendo',v:'$1.5–3M'},{l:'Score',v:'87'}],
+    precios_zona:{mitsubishi_montero:11500000,ram_700:7600000,opel_mokka:14800000},
+    competidores:[]},
+  {id:'VI3',name:'San Fernando',region:'VI',sub:'Ruta 5 Sur km 140',lat:-34.585,lng:-70.979,radius:2800,score:82,opp:'alta',color:'#1a7a4a',arriendo:'$1.2–2.5M',comp:'Muy baja',desc:'Ciudad intermedia. Zona agrícola y de paso. Alta demanda de camionetas y vehículos 4x4. Mercado desatendido.',stats:[{l:'Flujo',v:'70%'},{l:'Arriendo',v:'$1.2–2.5M'},{l:'Score',v:'82'}],
+    precios_zona:{mitsubishi_montero:12200000,chevrolet_silverado:36500000,ram_700:7900000},
+    competidores:[]},
+  {id:'VI4',name:'Santa Cruz',region:'VI',sub:'Zona vitivinícola / Colchagua',lat:-34.640,lng:-71.360,radius:2000,score:76,opp:'media',color:'#d4820a',arriendo:'$1–2M',comp:'Mínima',desc:'Zona turística y vitivinícola. Demanda de autos ejecutivos y SUV. Mercado pequeño pero sin competencia.',stats:[{l:'Flujo',v:'55%'},{l:'Arriendo',v:'$1–2M'},{l:'Score',v:'76'}],
+    precios_zona:{opel_mokka:15000000,peugeot_3008:26500000},
+    competidores:[]},
+];
+
+// ══════════════════════════════════════════════
+// PRECIOS DE MERCADO POR MODELO (referencia portales)
+// ══════════════════════════════════════════════
+const PRECIOS_MERCADO = {
+  'ford_focus':    {label:'Ford Focus 2014',rmg_id:'RMG-1',mercado:[
+    {zona:'RM',precio:5900000,fuente:'Chileautos'},
+    {zona:'V',precio:6300000,fuente:'Yapo'},
+    {zona:'VI',precio:6700000,fuente:'Mercado Libre'},
+  ]},
+  'opel_mokka':    {label:'Opel Mokka 2024',rmg_id:'RMG-4',mercado:[
+    {zona:'RM',precio:15200000,fuente:'Chileautos'},
+    {zona:'V',precio:15800000,fuente:'Yapo'},
+    {zona:'VI',precio:16200000,fuente:'Chileautos'},
+  ]},
+  'citroen_c3':    {label:'Citroën C3 Aircross 2019',rmg_id:'RMG-7',mercado:[
+    {zona:'RM',precio:8200000,fuente:'Chileautos'},
+    {zona:'V',precio:8600000,fuente:'Yapo'},
+    {zona:'VI',precio:8900000,fuente:'Mercado Libre'},
+  ]},
+  'mitsubishi_montero':{label:'Mitsubishi Montero Sport 2014',rmg_id:'RMG-2',mercado:[
+    {zona:'RM',precio:12500000,fuente:'Chileautos'},
+    {zona:'V',precio:12900000,fuente:'Yapo'},
+    {zona:'VI',precio:13400000,fuente:'Chileautos'},
+  ]},
+  'peugeot_3008':  {label:'Peugeot 3008 GT Hybrid 2025',rmg_id:'RMG-6',mercado:[
+    {zona:'RM',precio:28500000,fuente:'Chileautos'},
+    {zona:'V',precio:29200000,fuente:'Yapo'},
+    {zona:'VI',precio:29800000,fuente:'Mercado Libre'},
+  ]},
+  'chevrolet_silverado':{label:'Chevrolet Silverado 2023',rmg_id:'RMG-9',mercado:[
+    {zona:'RM',precio:37000000,fuente:'Chileautos'},
+    {zona:'V',precio:38500000,fuente:'Yapo'},
+    {zona:'VI',precio:39000000,fuente:'Chileautos'},
+  ]},
+  'ram_700':       {label:'RAM 700 DCAB 2018',rmg_id:'RMG-10',mercado:[
+    {zona:'RM',precio:8100000,fuente:'Chileautos'},
+    {zona:'V',precio:8400000,fuente:'Yapo'},
+    {zona:'VI',precio:8700000,fuente:'Mercado Libre'},
+  ]},
+  'suzuki_baleno': {label:'Suzuki Baleno 2025',rmg_id:'RMG-11',mercado:[
+    {zona:'RM',precio:13500000,fuente:'Chileautos'},
+    {zona:'V',precio:13900000,fuente:'Yapo'},
+    {zona:'VI',precio:14200000,fuente:'Chileautos'},
+  ]},
+  'chery_arrizo':  {label:'Chery Arrizo 2018',rmg_id:'RMG-12',mercado:[
+    {zona:'RM',precio:5200000,fuente:'Chileautos'},
+    {zona:'V',precio:5500000,fuente:'Yapo'},
+    {zona:'VI',precio:5700000,fuente:'Mercado Libre'},
+  ]},
+  'mg_3':          {label:'MG 3 Hatchback 2016',rmg_id:'RMG-8',mercado:[
+    {zona:'RM',precio:4800000,fuente:'Chileautos'},
+    {zona:'V',precio:5100000,fuente:'Yapo'},
+    {zona:'VI',precio:5300000,fuente:'Mercado Libre'},
+  ]},
+};
+
+// ══════════════════════════════════════════════
+// MAP SETUP
+// ══════════════════════════════════════════════
+const map = L.map('map',{center:[-33.6,-70.9],zoom:8,zoomControl:false});
+L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',{attribution:'© OpenStreetMap © CARTO',maxZoom:19}).addTo(map);
+L.control.zoom({position:'bottomright'}).addTo(map);
+
+let activeZona=null;
+const circles={}, zMarkers={}, cMarkers={};
+
+function compColor(n){return n==='fuerte'?'#c0392b':n==='medio'?'#d4820a':n==='ideal'?'#1a5fa8':'#1a7a4a';}
+
+ZONAS.forEach(z=>{
+  const circle=L.circle([z.lat,z.lng],{radius:z.radius,color:z.color,fillColor:z.color,fillOpacity:0.10,weight:2,dashArray:z.opp!=='alta'?'6 4':null}).addTo(map);
+  circle.on('click',()=>selectZona(z.id,true));
+  circles[z.id]=circle;
+
+  const icon=L.divIcon({html:`<div style="background:${z.color};color:#fff;width:30px;height:30px;border-radius:4px;display:flex;align-items:center;justify-content:center;font-family:Syne,sans-serif;font-size:11px;font-weight:800;box-shadow:0 3px 10px rgba(0,0,0,.25);border:2px solid #fff;cursor:pointer;letter-spacing:-.01em">${z.id}</div>`,className:'',iconSize:[30,30],iconAnchor:[15,15]});
+  const m=L.marker([z.lat,z.lng],{icon}).addTo(map);
+  m.on('click',()=>selectZona(z.id,true));
+  zMarkers[z.id]=m;
+  cMarkers[z.id]=[];
+});
+
+function showCMarkers(zid){
+  const z=ZONAS.find(x=>x.id===zid); if(!z) return;
+  z.competidores.forEach((c,i)=>{
+    const col=compColor(c.nivel);
+    const isIdeal=c.nivel==='ideal';
+    const html=isIdeal?`<div style="background:#1a5fa8;color:#fff;width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:16px;box-shadow:0 0 0 3px rgba(26,95,168,.3),0 4px 14px rgba(0,0,0,.3);border:2px solid #fff;cursor:pointer">★</div>`:
+      `<div style="background:${col};width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:Syne,sans-serif;font-size:10px;font-weight:800;color:#fff;box-shadow:0 3px 10px rgba(0,0,0,.3);border:2px solid #fff;cursor:pointer">${i+1}</div>`;
+    const mk=L.marker([c.lat,c.lng],{icon:L.divIcon({html,className:'',iconSize:[isIdeal?34:26,isIdeal?34:26],iconAnchor:[isIdeal?17:13,isIdeal?17:13]}),zIndexOffset:1000}).addTo(map);
+    mk.on('click',(e)=>{L.DomEvent.stopPropagation(e);showTT(c,e.originalEvent.clientX,e.originalEvent.clientY);
+      document.querySelectorAll('.comp-row').forEach(r=>r.classList.remove('hl'));
+      const row=document.getElementById(`cr-${zid}-${i}`);
+      if(row){row.classList.add('hl');row.scrollIntoView({behavior:'smooth',block:'nearest'});}
+    });
+    cMarkers[zid].push(mk);
+  });
+}
+function hideCMarkers(zid){(cMarkers[zid]||[]).forEach(m=>map.removeLayer(m));cMarkers[zid]=[];}
+
+function showTT(c,cx,cy){
+  const tt=document.getElementById('compTt');
+  const col=compColor(c.nivel);
+  tt.innerHTML=`<div style="display:flex;align-items:center;gap:8px;margin-bottom:5px"><div style="width:9px;height:9px;border-radius:50%;background:${col};flex-shrink:0"></div><div class="ct-name">${c.name}</div></div><div class="ct-addr">${c.addr}</div>${c.rating?`<div class="ct-row"><span class="ct-l">Rating</span><span class="ct-r">${c.rating} ★ (${c.reviews} reseñas)</span></div>`:''}<div class="ct-row"><span class="ct-l">Nivel</span><span class="ct-r" style="color:${col}">${c.tag}</span></div><div class="ct-note">${c.nota}</div>`;
+  const mapEl=document.getElementById('map');const rect=mapEl.getBoundingClientRect();
+  const relX=cx-rect.left,relY=cy-rect.top;
+  const left=relX+280>rect.width?relX-275:relX+14;
+  const top=relY+180>rect.height?relY-180:relY;
+  tt.style.left=left+'px';tt.style.top=top+'px';tt.classList.add('vis');
+}
+
+map.on('click',()=>document.getElementById('compTt').classList.remove('vis'));
+
+// ══════════════════════════════════════════════
+// KPIs
+// ══════════════════════════════════════════════
+function updateKPIs(){
+  const visible=ZONAS.filter(z=>!circles[z.id]||map.hasLayer(circles[z.id]));
+  document.getElementById('kpiAlta').textContent=ZONAS.filter(z=>z.opp==='alta').length;
+  document.getElementById('kpiMedia').textContent=ZONAS.filter(z=>z.opp==='media').length;
+  document.getElementById('kpiEvitar').textContent=ZONAS.filter(z=>z.opp==='baja').length;
+  document.getElementById('kpiComp').textContent=ZONAS.reduce((a,z)=>a+z.competidores.length,0);
+}
+updateKPIs();
+
+// ══════════════════════════════════════════════
+// SIDEBAR ZONAS
+// ══════════════════════════════════════════════
+let currentFilter='all';
+
+function renderZonas(filter){
+  currentFilter=filter;
+  const items=ZONAS.filter(z=>{
+    if(filter==='alta') return z.opp==='alta';
+    if(filter==='media') return z.opp==='media';
+    if(filter==='rm') return z.region==='RM';
+    if(filter==='v') return z.region==='V';
+    if(filter==='vi') return z.region==='VI';
+    return true;
+  });
+  document.getElementById('countLbl').textContent=`${items.length} zona${items.length!==1?'s':''}`;
+
+  const regionLabels={RM:'Región Metropolitana',V:'V Región — Valparaíso',VI:'VI Región — O\'Higgins'};
+  const sc=v=>v>=85?'var(--green)':v>=75?'var(--yellow)':'var(--red)';
+
+  document.getElementById('zonaList').innerHTML=items.flatMap(z=>{
+    const isAct=z.id===activeZona;
+    const compPills=z.competidores.length?z.competidores.map((c,i)=>`
+      <div class="comp-row${isAct?'':''}" id="cr-${z.id}-${i}" onclick="focusComp('${z.id}',${i})">
+        <div class="cr-left"><div class="cr-dot" style="background:${compColor(c.nivel)}"></div><span class="cr-name">${c.name}</span></div>
+        <div class="cr-right">${c.rating?`<span class="cr-stars">★</span><span style="font-family:var(--mono);font-size:10px;font-weight:500">${c.rating}</span>`:''}<span class="cr-tag" style="background:${c.tagColor}18;color:${c.tagColor}">${c.tag}</span></div>
+      </div>`).join(''):`<div class="no-comp">✓ Sin competidores — zona libre</div>`;
+
+    const statBoxes=z.stats.map(s=>`<div class="z-stat"><div class="z-stat-n">${s.v}</div><div class="z-stat-l">${s.l}</div></div>`).join('');
+
+    return[`<div class="z-card${isAct?' active':''} opp-${z.opp}" id="zc-${z.id}" onclick="selectZona('${z.id}')">
+      <div class="z-main">
+        <div class="z-badge" style="background:${z.color}">${z.id}</div>
+        <div class="z-info">
+          <div class="z-name">${z.name}</div>
+          <div class="z-region">${regionLabels[z.region]} · ${z.sub}</div>
+          <div class="z-pills">
+            <span class="zpill" style="background:${sc(z.score)}18;color:${sc(z.score)}">Score ${z.score}</span>
+            <span class="zpill" style="background:#f0ede8;color:#666">${z.arriendo}/mes</span>
+            <span class="zpill" style="background:#f0ede8;color:#666">Comp. ${z.comp}</span>
+          </div>
+        </div>
+      </div>
+      <div class="z-detail">
+        <div class="z-desc">${z.desc}</div>
+        <div class="z-stats">${statBoxes}</div>
+        <div class="comp-section-title">Competidores en zona (${z.competidores.length})</div>
+        ${compPills}
+      </div>
+    </div>`];
+  }).join('');
+}
+
+function setFilter(f,btn){
+  if(activeZona){hideCMarkers(activeZona);activeZona=null;}
+  document.getElementById('compTt').classList.remove('vis');
+  document.getElementById('mapHint').style.display='block';
+  document.querySelectorAll('.chip').forEach(c=>c.classList.remove('on'));
+  btn.classList.add('on');
+  renderZonas(f);
+  // Ajustar vista del mapa según región
+  if(f==='v') map.flyTo([-33.04,-71.59],10,{duration:1.2});
+  else if(f==='vi') map.flyTo([-34.3,-70.85],10,{duration:1.2});
+  else if(f==='rm') map.flyTo([-33.48,-70.72],11,{duration:1.2});
+  else map.flyTo([-33.6,-70.9],8,{duration:1.2});
+}
+
+function selectZona(id,fromMap=false){
+  const prev=activeZona;
+  if(prev) hideCMarkers(prev);
+  activeZona=prev===id?null:id;
+  if(activeZona){
+    showCMarkers(activeZona);
+    const z=ZONAS.find(x=>x.id===activeZona);
+    if(z&&!fromMap) map.flyTo([z.lat,z.lng],12,{duration:1});
+    if(z&&fromMap){const el=document.getElementById(`zc-${id}`);if(el)el.scrollIntoView({behavior:'smooth',block:'nearest'});}
+    document.getElementById('mapHint').style.display='none';
+  } else {
+    document.getElementById('mapHint').style.display='block';
+  }
+  document.getElementById('compTt').classList.remove('vis');
+  renderZonas(currentFilter);
+}
+
+function focusComp(zid,idx){
+  const z=ZONAS.find(x=>x.id===zid); if(!z) return;
+  const c=z.competidores[idx]; if(!c) return;
+  map.flyTo([c.lat,c.lng],15,{duration:0.8});
+  document.querySelectorAll('.comp-row').forEach(r=>r.classList.remove('hl'));
+  const row=document.getElementById(`cr-${zid}-${idx}`);
+  if(row) row.classList.add('hl');
+}
+
+// ══════════════════════════════════════════════
+// PANEL PRECIOS
+// ══════════════════════════════════════════════
+function initModelSelect(){
+  const sel=document.getElementById('modelSelect');
+  Object.entries(PRECIOS_MERCADO).forEach(([k,v])=>{
+    const o=document.createElement('option');
+    o.value=k; o.textContent=v.label;
+    sel.appendChild(o);
+  });
+}
+
+function renderPrecios(){
+  const key=document.getElementById('modelSelect').value;
+  const cont=document.getElementById('preciosList');
+  if(!key){cont.innerHTML=`<div class="p-empty"><div class="p-empty-icon">🔍</div><div class="p-empty-txt">Selecciona un modelo del inventario RMG para ver análisis de precios por región.</div></div>`;return;}
+
+  const pm=PRECIOS_MERCADO[key];
+  const rmg=INVENTARIO_RMG.find(x=>x.id===pm.rmg_id);
+  if(!rmg){cont.innerHTML='<div class="p-empty"><div class="p-empty-txt">Auto no encontrado.</div></div>';return;}
+
+  const regionNames={RM:'Región Metropolitana',V:'V Región — Valparaíso',VI:'VI Región — O\'Higgins'};
+  const fmt=n=>'$'+Math.round(n/1000)*1000>=1000000?'$'+Math.round(n/100000)/10+'M':'$'+n.toLocaleString('es-CL');
+
+  let html=`<div class="p-panel">
+    <div class="p-card">
+      <div class="p-car-name">${rmg.model}</div>
+      <div class="p-car-sub">Año ${rmg.year} · ${rmg.km} · Inventario RMG</div>
+      <div class="p-prices">
+        <div class="p-price-box"><div class="p-price-lbl">Precio Lista</div><div class="p-price-val">$${(rmg.precio_lista/1000000).toFixed(1)}M</div></div>
+        <div class="p-price-box"><div class="p-price-lbl">Precio Crédito</div><div class="p-price-val credito">$${(rmg.precio_credito/1000000).toFixed(1)}M</div></div>
+      </div>
+    </div>`;
+
+  pm.mercado.forEach(m=>{
+    const diff=rmg.precio_lista-m.precio;
+    const pct=Math.round(Math.abs(diff)/m.precio*100);
+    const cls=diff>0?'cheaper':diff<0?'pricier':'similar';
+    const label=diff>0?`${pct}% más barato que el mercado`:diff<0?`${pct}% más caro que el mercado`:'Similar al mercado';
+
+    // Zonas de esta región con precio local
+    const zonasRegion=ZONAS.filter(z=>z.region===m.zona&&z.precios_zona[key]);
+    const zonaItems=zonasRegion.map(z=>{
+      const zprecio=z.precios_zona[key];
+      const zdiff=rmg.precio_lista-zprecio;
+      const zpct=Math.round(Math.abs(zdiff)/zprecio*100);
+      const zcls=zdiff>0?'pricier':zdiff<0?'cheaper':'similar';
+      const zlabel=zdiff>0?`+${zpct}% vs RMG`:zdiff<0?`-${zpct}% vs RMG`:'Igual';
+      return `<div class="p-comp-item">
+        <span class="p-comp-name">${z.name}</span>
+        <span class="p-comp-price ${zcls}">$${(zprecio/1000000).toFixed(1)}M — ${zlabel}</span>
+      </div>`;
+    }).join('');
+
+    html+=`<div class="p-card">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+        <span style="font-family:var(--mono);font-size:10px;background:#f0ede8;padding:3px 8px;border-radius:3px;letter-spacing:.03em">${regionNames[m.zona]}</span>
+        <span class="p-comp-price ${cls}" style="font-size:11px">${label}</span>
+      </div>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+        <div><div style="font-family:var(--mono);font-size:9px;color:#888">Precio mercado (${m.fuente})</div><div style="font-family:var(--display);font-size:16px;font-weight:800">$${(m.precio/1000000).toFixed(1)}M</div></div>
+        <div style="text-align:right"><div style="font-family:var(--mono);font-size:9px;color:#888">Tu precio RMG</div><div style="font-family:var(--display);font-size:16px;font-weight:800;color:${diff>0?'var(--green)':'var(--red)'}">$${(rmg.precio_lista/1000000).toFixed(1)}M</div></div>
+      </div>
+      ${zonasRegion.length?`<div class="p-comp-bar"><div class="p-comp-title">Precio estimado por zona</div>${zonaItems}</div>`:''}
+    </div>`;
+  });
+
+  html+=`</div>`;
+  cont.innerHTML=html;
+}
+
+// ══════════════════════════════════════════════
+// TABS
+// ══════════════════════════════════════════════
+function switchTab(tab){
+  document.getElementById('tabZonas').classList.toggle('on',tab==='zonas');
+  document.getElementById('tabPrecios').classList.toggle('on',tab==='precios');
+  document.getElementById('panelZonas').style.display=tab==='zonas'?'flex':'none';
+  document.getElementById('panelPrecios').style.display=tab==='precios'?'flex':'none';
+  if(tab==='zonas') document.getElementById('panelZonas').style.flexDirection='column';
+  if(tab==='precios') renderPrecios();
+}
+
+// INIT
+initModelSelect();
+renderZonas('all');
+</script>
+</body>
+</html>
