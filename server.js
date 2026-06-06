@@ -42,7 +42,7 @@ async function notifyTenantPush(tenant,leads){
     if(!unreads.length)return;
     const last=unreads[unreads.length-1];
     const msg=(last.chatHistory||[]).filter(m=>m.role==='user').slice(-1)[0];
-    const payload={title:'RMG CRM — '+last.name,body:msg?msg.content.slice(0,80):'Nuevo mensaje',count:unreads.length};
+    const payload={title:'RMG CRM — '+last.name,body:msg?msg.content.slice(0,80):'Nuevo mensaje',count:unreads.length,leadId:last.id};
     for(const k of Object.keys(_pushSubs).filter(k=>k.startsWith(tenant+':'))){
       await sendWebPush(tenant,k.split(':')[1],payload);
     }
