@@ -647,6 +647,31 @@ function renderSlaPanel(type){const lm={fresh:'fresh',risk:'risk',crit:'critical
 const FM={nuevos:{sts:['Nuevo'],label:'🆕 Nuevos',color:'var(--tx)'},gestion:{sts:['En Proceso','Contactado'],label:'💬 En Contacto',color:'var(--ac)'},agenda:{sts:['Agendado','Calificado'],label:'📅 Agendados/Calif.',color:'var(--wn)'},cerrado:{sts:['Cerrado'],label:'✅ Cerrados',color:'var(--ok)'},perdido:{sts:['Abandonado','Perdido'],label:'❌ Perdidos',color:'var(--bd2)'}};
 function renderFunnel(){const leads=S.leads,tot=leads.length||1;const cnts={};for(const[k,c]of Object.entries(FM))cnts[k]=leads.filter(l=>c.sts.includes(l.status));const ic={nuevos:'🆕',gestion:'💬',agenda:'📅',cerrado:'✅',perdido:'❌'};const lb={nuevos:'Nuevos',gestion:'En Contacto',agenda:'Agendados/Calif.',cerrado:'Cerrados',perdido:'Perdidos'};const pv={nuevos:tot,gestion:cnts.nuevos.length,agenda:cnts.gestion.length,cerrado:cnts.agenda.length,perdido:tot};const pct=(n,d)=>d?((n/d)*100).toFixed(0)+'%':'—';const ac=S.funOpen;$('fG').innerHTML=Object.keys(FM).map(k=>{const arr=cnts[k],n=arr.length,col=FM[k].color;const fr=arr.filter(l=>l.alertLevel==='fresh').length,ri=arr.filter(l=>l.alertLevel==='risk').length,cr=arr.filter(l=>l.alertLevel==='critical').length;const ms=(fr>0||ri>0||cr>0)?`<div class="fs"><span style="color:var(--ok)">🟢 ${fr}</span><span style="color:var(--wn)">🟡 ${ri}</span><span style="color:var(--bd2)">🔴 ${cr}</span></div>`:'<div style="height:22px;margin-top:8px"></div>';return`<div class="fc ${ac===k?'af':''}" onclick="toggleFunPanel('${k}')" style="border-color:${ac===k?'var(--ac)':col+'22'}"><div class="fi">${ic[k]}</div><div class="fv" style="color:${col}">${n}</div><div class="fl">${lb[k]}</div><div class="fp">${pct(n,pv[k])} de anterior</div>${ms}<div class="fh">👆 Ver detalle</div></div>`;}).join('');}
 function toggleFunPanel(type){if(S.slaOpen){S.slaOpen=null;$('slaX').classList.remove('open');document.querySelectorAll('.sb2').forEach(c=>c.classList.remove('as'));}if(S.funOpen===type){S.funOpen=null;$('funX').classList.remove('open');renderFunnel();return;}S.funOpen=type;$('funX').classList.add('open');renderFunnel();renderFunPanel(type);setTimeout(()=>$('funX').scrollIntoView({behavior:'smooth',block:'nearest'}),100);}
+function renderBIPanel(){
+  const c=document.getElementById('mainContent');
+  if(!c)return;
+  c.innerHTML=`<div style="height:calc(100vh - 60px);display:flex;flex-direction:column;background:#0a0a0a">
+    <div style="display:flex;gap:0;border-bottom:1px solid #222;background:#111;padding:0 20px">
+      <button onclick="loadBI('mapa')" id="biTabMapa" style="font-family:inherit;font-size:11px;font-weight:700;padding:12px 18px;border:none;background:none;color:#4ade80;border-bottom:2px solid #4ade80;cursor:pointer;letter-spacing:.04em">🗺️ MAPA ZONAS</button>
+      <button onclick="loadBI('precios')" id="biTabPrecios" style="font-family:inherit;font-size:11px;font-weight:700;padding:12px 18px;border:none;background:none;color:#888;border-bottom:2px solid transparent;cursor:pointer;letter-spacing:.04em">💰 AGENTE PRECIOS</button>
+    </div>
+    <iframe id="biFrame" src="/mapa_zonas_v4.html" style="flex:1;border:none;width:100%;height:100%"></iframe>
+  </div>`;
+}
+function loadBI(tab){
+  const frame=document.getElementById('biFrame');
+  const btnMapa=document.getElementById('biTabMapa');
+  const btnPrecios=document.getElementById('biTabPrecios');
+  if(tab==='mapa'){
+    frame.src='/mapa_zonas_v4.html';
+    btnMapa.style.color='#4ade80';btnMapa.style.borderBottomColor='#4ade80';
+    btnPrecios.style.color='#888';btnPrecios.style.borderBottomColor='transparent';
+  }else{
+    frame.src='/agente_precios.html';
+    btnPrecios.style.color='#4ade80';btnPrecios.style.borderBottomColor='#4ade80';
+    btnMapa.style.color='#888';btnMapa.style.borderBottomColor='transparent';
+  }
+}
 function renderFunPanel(type){const cfg=FM[type];if(!cfg)return;const all=S.leads.filter(l=>cfg.sts.includes(l.status));const items=[...all.filter(l=>l.unread).sort((a,b)=>new Date(b.lastClientTs||0)-new Date(a.lastClientTs||0)),...all.filter(l=>!l.unread).sort((a,b)=>new Date(b.lastClientTs||0)-new Date(a.lastClientTs||0))];$('funXT').textContent=cfg.label+' ('+items.length+') — sin responder primero';$('funXB').innerHTML=renderXRows(items,l=>fDT(l.lastClientTs||l.lastInteraction));bindXRows($('funXB'));}
 function renderPerfTable(){}
 function renderDash(){renderSlaCards();renderFunnel();renderPerfTable();}
