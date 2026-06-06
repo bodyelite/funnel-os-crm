@@ -1392,6 +1392,55 @@ app.get('/api/push/vapid-public-key',(req,res)=>{
   res.json({publicKey:key});
 });
 
+
+// ═══════════════════════════════════════════════════
+// AGENTE PRECIOS MERCADO — scraper Chileautos + Yapo
+// ═══════════════════════════════════════════════════
+let precioCache={ts:0,data:{}};
+const PRECIO_TTL=6*60*60*1000;
+
+async function scrapePreciosMercado(modelos){
+  const now=Date.now();
+  if(Object.keys(precioCache.data).length&&(now-precioCache.ts)<PRECIO_TTL)return precioCache.data;
+  const res2={};
+  for(const m of modelos){
+    try{
+      const q=encodeURIComponent(m.query);
+      const r1=await fetch('https://www.chileautos.cl/vehiculos/?q='+q+'&sort=precio_asc',{signal:AbortSignal.timeout(12000),headers:{'User-Agent':'Mozilla/5.0'}});
+      if(r1.ok){const h=await r1.text();const pp=[];const re=/[$]\s?([\d.]+)/g;let x;while((x=re.exec(h))!==null){const v=parseInt(x[1].replace(/\./g,''),10);if(v>=2000000&&v<=80000000)pp.push(v);}if(pp.length){pp.sort((a,b)=>a-b);res2[m.id]=res2[m.id]||{};res2[m.id].chileautos={min:pp[0],max:pp[pp.length-1],median:pp[Math.floor(pp.length/2)],count:pp.length};}}
+      await new Promise(r=>setTimeout(r,1100));
+      const r2=await fetch('https://www.yapo.cl/chile/autos_y_camionetas?q='+q+'&order=price_asc',{signal:AbortSignal.timeout(12000),headers:{'User-Agent':'Mozilla/5.0'}});
+      if(r2.ok){const h=await r2.text();const pp=[];const re=/[$]\s?([\d.]+)/g;let x;while((x=re.exec(h))!==null){const v=parseInt(x[1].replace(/\./g,''),10);if(v>=2000000&&v<=80000000)pp.push(v);}if(pp.length){pp.sort((a,b)=>a-b);res2[m.id]=res2[m.id]||{};res2[m.id].yapo={min:pp[0],max:pp[pp.length-1],median:pp[Math.floor(pp.length/2)],count:pp.length};}}
+      await new Promise(r=>setTimeout(r,1100));
+    }catch(e){console.warn('[PrecioAgent]',m.id,e.message);}
+  }
+  precioCache={ts:Date.now(),data:res2};
+  console.log('[PrecioAgent] OK:',Object.keys(res2).length,'modelos');
+  return res2;
+}
+
+app.get('/api/precios/mercado',auth('admin','vendedor'),async(req,res)=>{
+  try{
+    if(req.query.refresh==='1')precioCache.ts=0;
+    await scrapeRMG();
+    const inv=(scrapeCache.items&&scrapeCache.items.length)?scrapeCache.items:[];
+    const modelos=inv.map(i=>({id:i.id,brand:i.brand,model:i.model,year:i.year,precio_lista:i.precio_lista,precio_credito:i.precio_credito,km:i.km,link:i.link,query:(i.brand+' '+(i.model||'').split(' ').slice(0,2).join(' ')+' '+(i.year||'')).trim()}));
+    const precios=await scrapePreciosMercado(modelos);
+    const data=modelos.map(m=>{
+      const p=precios[m.id]||{};
+      const ref=p.chileautos?.median||p.yapo?.median||null;
+      const diff=ref?Math.round((m.precio_lista-ref)/ref*100):null;
+      return{...m,mercado:p,mercado_ref:ref,diff_pct:diff,posicion:diff===null?'sin datos':diff<-5?'bajo mercado':diff>5?'sobre mercado':'en mercado',ts:new Date(precioCache.ts||Date.now()).toISOString()};
+    });
+    res.json({ok:true,count:data.length,data,cache_ts:precioCache.ts});
+  }catch(e){res.status(500).json({error:e.message});}
+});
+
+app.get('/api/precios/inventario',auth('admin','vendedor'),async(req,res)=>{
+  try{await scrapeRMG();const inv=(scrapeCache.items&&scrapeCache.items.length)?scrapeCache.items:[];res.json({ok:true,count:inv.length,data:inv,ts:scrapeCache.ts});}
+  catch(e){res.status(500).json({error:e.message});}
+});
+
 app.get('*',(req,res)=>res.sendFile(path.join(__dirname,'public','index.html')));
 setInterval(async()=>{for(const t of TENANTS){try{await applySlaRules(t);}catch(e){console.error('SLA',t,e.message);}}},60000);
 
