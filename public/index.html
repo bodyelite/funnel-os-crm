@@ -1745,7 +1745,61 @@ window.completeCurrentTask = async function(id) {
         }
     }, 2500);
     </script>
-    </body>
+    
+<style>
+.agenda-pend{border-left:3px solid #22c55e;background:#f0fdf4;padding:5px 8px;border-radius:4px;margin-bottom:4px}
+.agenda-exec{border-left:3px solid #3b82f6;background:#eff6ff;padding:5px 8px;border-radius:4px;margin-bottom:4px}
+.agenda-venc{border-left:3px solid #ef4444;background:#fef2f2;padding:5px 8px;border-radius:4px;margin-bottom:4px}
+.agenda-pend .ag-st{color:#16a34a;font-weight:600;font-size:10px}
+.agenda-exec .ag-st{color:#2563eb;font-weight:600;font-size:10px}
+.agenda-venc .ag-st{color:#dc2626;font-weight:600;font-size:10px}
+</style>
+
+
+<script>
+window.renderAgendaDetails = function(l) {
+  const info = document.getElementById('agendaInfo');
+  const hist = document.getElementById('agendaHistory');
+  if(!info) return;
+  if(l.nextAction) {
+    const na = l.nextAction;
+    const isExec = (na.iaCompleted || na.done);
+    const isVenc = (na.date && new Date(na.date) < new Date());
+    const aClass = isExec ? 'agenda-exec' : (isVenc ? 'agenda-venc' : 'agenda-pend');
+    const aLabel = isExec ? '✅ Ejecutada' : (isVenc ? '🔴 Vencida' : '🟢 Pendiente');
+    
+    info.className = aClass;
+    info.innerHTML = '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px"><span class="ag-st">'+aLabel+'</span>' +
+      '<button onclick="completeCurrentTask('+l.id+')" style="background:#22c55e;color:#fff;border:none;padding:4px 10px;border-radius:6px;font-size:11px;cursor:pointer;font-weight:bold;box-shadow:0 2px 4px rgba(0,0,0,0.1);transition:transform 0.1s">✅ Completar Tarea</button></div>' +
+      '<div style="font-size:12px;color:var(--tx);line-height:1.4"><strong>Tarea:</strong> '+esc(na.text||'')+'</div>' +
+      (na.date ? '<div style="font-size:11px;color:var(--tm);margin-top:4px">📅 '+new Date(na.date).toLocaleString('es-CL',{dateStyle:'short',timeStyle:'short'})+'</div>' : '');
+    
+    const aTxt = document.getElementById('agendaText');
+    const aDat = document.getElementById('agendaDate');
+    if(aTxt) aTxt.value = na.text||'';
+    if(aDat) aDat.value = na.date ? na.date.slice(0,16) : '';
+  } else {
+    info.className = '';
+    info.innerHTML = '<div style="color:var(--tm);font-size:11px;font-style:italic">No hay tareas pendientes.</div>';
+    const aTxt = document.getElementById('agendaText');
+    const aDat = document.getElementById('agendaDate');
+    if(aTxt) aTxt.value = '';
+    if(aDat) aDat.value = '';
+  }
+  if(hist) {
+    if(l.pastActions && l.pastActions.length) {
+      hist.style.display = 'flex';
+      hist.innerHTML = '<strong style="font-size:10px;color:var(--tm);text-transform:uppercase;letter-spacing:0.05em">Historial de Tareas:</strong>' +
+        l.pastActions.slice().reverse().map(pa => '<div style="font-size:11.5px;color:var(--ts);background:var(--p3);padding:8px 10px;border-radius:6px;border-left:3px solid #64748b;line-height:1.4">✅ '+esc(pa.text)+' <div style="color:var(--tm);font-size:10px;margin-top:4px">Completada el '+fDT(pa.doneAt)+'</div></div>').join('');
+    } else {
+      hist.style.display = 'none';
+      hist.innerHTML = '';
+    }
+  }
+};
+</script>
+
+</body>
 </html>
 
 
