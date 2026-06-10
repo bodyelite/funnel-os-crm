@@ -284,7 +284,7 @@ async function marcela(tenant, history, msg, notes, assignedName) {
       }
     }
 
-    const baseSysPrompt = (botCfg && botCfg.systemPrompt) || 'Eres Marcela, asesora de ventas de Automotora Andes. Responde de forma calida y profesional en espanol chileno.';
+    const baseSysPrompt = (botCfg && botCfg.systemPrompt) || 'Eres Cata, asesora de ventas de Automotora Andes. REGLAS ESTRICTAS E INQUEBRANTABLES:\n1. IDENTIDAD: Tu nombre es Cata, NUNCA uses otro nombre.\n2. FORMATO: Responde 100% humana y conversacional. NUNCA envíes listas estilo ferretería con todos los modelos de golpe.\n3. LÓGICA SUV/CAMIONETA: Si el aviso original era pickup, entiende camioneta como pickup. En cualquier otro caso, asume que camioneta significa SUV.\n4. FLUJO DE VENTA: Si te piden SUV/Camioneta, menciona SOLO nombres de modelos, año y precio. Luego PREGUNTA: '¿Cuál te interesaría?'. SOLO cuando el cliente elija un modelo, le envías el link.\n5. EMPRESA: Dirección: Av. Macul 3758, Macul, RM. Horarios: Lunes a Viernes 10:00-18:30 y Sábados 10:00-14:00. Si piden teléfono, indica que se comunican a este mismo número con Cata.';
     let sysPromptProcessed = baseSysPrompt.replace(/\{nombreIA\}/g, assignedName || 'Cata');
     sysPromptProcessed += '\n\nREGLA DE MATCHING OBLIGATORIA: Los nombres de los autos que llegan de portales (MercadoLibre, Yapo, Chileautos) suelen venir mal escritos, duplicados o incompletos (ej. "Mg Mg3 1.5 Std Mt"). En nuestro inventario pueden estar más detallados (ej. "MG 3 HATCH BACK 1.5 STD MT AC"). TU DEBER ES UNIRLOS. Ignora palabras extra como "Hatchback", "Sedan", "SUV", letras extra o repeticiones de marca. Si la marca y el número/modelo principal coinciden, ES EL MISMO AUTO. ¡NUNCA digas que no lo tienes en el primer mensaje! Responde con entusiasmo: "¡Sí, claro! Te cuento sobre el [Nombre exacto del inventario]" y dale los detalles y el link.\n\nINVENTARIO DISPONIBLE:\n' + (invS || '(sin inventario disponible temporalmente)');
     if (notes && notes.length) {
@@ -417,6 +417,38 @@ function parseDateRange(start,end){let s=null,e=null;if(start){const d=new Date(
 function inRange(lead,s,e){if(s===null&&e===null)return true;const ts=new Date(lead.lastInteraction||0).getTime();return(s===null||ts>=s)&&(e===null||ts<=e);}
 
 async function seed(){
+
+  try {
+    const db = JSON.parse(fs.readFileSync(F.leads, 'utf8'));
+    let modified = false;
+    for (const t in db) {
+      for (const l of db[t]) {
+        ['lastInteraction','lastClientTs','createdAt','reservadoAt'].forEach(k => {
+          if (l[k] && typeof l[k] === 'string' && (l[k].includes('12-31') || l[k].includes('31-12'))) {
+            l[k] = new Date().toISOString(); modified = true;
+          }
+        });
+      }
+    }
+    if (modified) fs.writeFileSync(F.leads, JSON.stringify(db, null, 2));
+  } catch(e) {}
+
+
+  try {
+    const db = JSON.parse(fs.readFileSync(F.leads, 'utf8'));
+    let modified = false;
+    for (const t in db) {
+      for (const l of db[t]) {
+        ['lastInteraction','lastClientTs','createdAt','reservadoAt'].forEach(k => {
+          if (l[k] && typeof l[k] === 'string' && (l[k].includes('12-31') || l[k].includes('31-12'))) {
+            l[k] = new Date().toISOString(); modified = true;
+          }
+        });
+      }
+    }
+    if (modified) fs.writeFileSync(F.leads, JSON.stringify(db, null, 2));
+  } catch(e) {}
+
   // GUARD: nunca sobreescribir leads si ya existen en disco
   try {
     const existing = JSON.parse(fs.readFileSync ? require('fs').readFileSync(F.leads,'utf8') : '{}');
@@ -709,7 +741,7 @@ app.post('/api/chat',async(req,res)=>{
         if(assignedUserChat?.phone)sendWA(assignedUserChat.phone,'✅ Lead Asignado: '+leads[idx].name+'. Lee el resumen en la bitácora del CRM.').catch(()=>{});
       }
     }
-    if(p.reply&&p.reply.indexOf('rmgautos.cl')!==-1){leads[idx].nextAction={text:'¿Pudiste ver la ficha en el enlace? Fíjate en los detalles del equipamiento 👀 ¿Qué te pareció?',date:new Date(Date.now()+2*60000).toISOString(),createdAt:new Date().toISOString(),delegateToIA:true,iaCompleted:false};}
+    if(p.reply&&p.reply.indexOf('rmgautos.cl')!==-1){leads[idx].nextAction={text:'¿Pudiste ver la ficha en el enlace? Fíjate en los detalles del equipamiento 👀 ¿Qué te pareció?',date:new Date(Date.now()+3*60000).toISOString(),createdAt:new Date().toISOString(),delegateToIA:true,iaCompleted:false};}
     leads[idx].alertLevel=calcAlert(leads[idx]);
     await tWrite(F.leads,tenant,leads);
     return res.json({reply:p.reply,sessionId,leadCaptured:captured,leadId,intentSignal:leads[idx].intentSignal,status:leads[idx].status});
@@ -1198,7 +1230,7 @@ app.post('/webhook',async(req,res)=>{
           _isEnd = true;
       } else {
           ld[tenant][idx].chatHistory.push({role:'bot',content:p.reply,ts:Date.now()});
-          if(p.reply.indexOf('rmgautos.cl')!==-1&&!(ld[tenant][idx].nextAction&&!ld[tenant][idx].nextAction.iaCompleted)){ld[tenant][idx].nextAction={text:'¿Pudiste ver la ficha en el enlace? Fíjate en los detalles del equipamiento 👀 ¿Qué te pareció?',date:new Date(Date.now()+2*60000).toISOString(),createdAt:new Date().toISOString(),delegateToIA:true,iaCompleted:false};}
+          if(p.reply.indexOf('rmgautos.cl')!==-1&&!(ld[tenant][idx].nextAction&&!ld[tenant][idx].nextAction.iaCompleted)){ld[tenant][idx].nextAction={text:'¿Pudiste ver la ficha en el enlace? Fíjate en los detalles del equipamiento 👀 ¿Qué te pareció?',date:new Date(Date.now()+3*60000).toISOString(),createdAt:new Date().toISOString(),delegateToIA:true,iaCompleted:false};}
       }
       if(esKeywordCalif(body)&&!ld[tenant][idx].keywordAlertSent){
         ld[tenant][idx].keywordAlertSent=true;
@@ -1335,7 +1367,7 @@ setInterval(async () => {
             const last = lead.chatHistory[lead.chatHistory.length - 1];
             const isLastFromBot = last.role === 'bot' || last.role === 'ia_proactiva';
             const minsDesdeLink = (Date.now() - lastLinkTs) / 60000;
-            if (isLastFromBot && minsDesdeLink >= 2) {
+            if (isLastFromBot && minsDesdeLink >= 3) {
               const phone = (lead.phone || '').replace(/\D/g, '');
               if (phone) {
                 const followUp = '¿Pudiste ver la ficha en el enlace? 👀 Fíjate en el equipamiento, ¡es lo que más preguntan! ¿Qué te pareció?';
