@@ -543,7 +543,7 @@ app.patch('/api/leads/:id',auth(),async(req,res)=>{
   const leads=await tRead(F.leads,req.tenant);const idx=leads.findIndex(x=>x.id==req.params.id);
   if(idx===-1)return res.status(404).json({error:'No encontrado'});
   if(req.user.role==='vendedor'&&leads[idx].assignedTo!==req.user.username)return res.status(403).json({error:'Sin permisos'});
-  const ALLOWED=['status','interest','name','phone','botActive','nextAction'];if(req.user.role!=='vendedor')ALLOWED.push('assignedTo');
+  const ALLOWED=['status','interest','name','phone','botActive','nextAction','pastActions'];if(req.user.role!=='vendedor')ALLOWED.push('assignedTo');
   // Borrado individual via patch status '_delete_'
   if(req.body.status==='_delete_'){
     const before=leads.length;
@@ -822,8 +822,7 @@ app.post('/api/leads/manual', auth('admin','vendedor'), async (req, res) => {
       alertLevel: 'none', intentSignal: 'NONE', unread: true,
       assignedTo: asignado || req.user?.username || 'vendedor1',
       lastInteraction: n, lastClientTs: status === 'Nuevo' ? n : new Date(0).toISOString(), createdAt: n,
-      notes: initNotes, chatHistory: [], media: []
-    };
+      notes: initNotes, chatHistory: [], media: [], pastActions: [], nextAction: { text: '📞 Llamar al cliente (Plantilla WA enviada)', date: new Date(Date.now() + 30 * 60000).toISOString(), createdAt: n, delegateToIA: false, iaCompleted: false } };
     leads.unshift(lead);
     await tWrite(F.leads, tenant, leads);
     const token = process.env.WA_TOKEN, phoneId = process.env.WA_PHONE_ID;

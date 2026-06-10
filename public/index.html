@@ -210,7 +210,7 @@ document.addEventListener('visibilitychange', () => {
 <aside class="sb"><h1 id="bizName">FunnelOS</h1><div class="who" id="uBadge">—</div><nav><button class="active" data-view="dashboard">📊 Operación</button><button data-view="leads">📋 Leads</button><button data-view="chileautos" id="navCA" style="background:#e8f5e9;color:#2e7d32;font-weight:700">🏷 Chileautos</button><button data-view="espera-general" id="navEG" style="background:#ede9fe;color:#6d28d9;font-weight:700;display:none">⏳ En Espera</button><button data-view="pipeline">🗂 Pipeline</button><button data-view="analytics" id="navA">📈 Analítica</button><button data-view="team" id="navT">👥 Equipo</button><button data-view="inventario" id="navInv">🚗 Inventario</button><button id="btnSyncInv" style="background:linear-gradient(135deg,#16a34a,#15803d);color:#fff;border:none;border-radius:8px;padding:7px 13px;font-size:12px;font-weight:700;cursor:pointer;margin-left:4px" onclick="syncInventario()">🔄 Sync RMG</button><button data-view="bi" id="navBI" style="background:linear-gradient(135deg,#1a1a2e,#16213e);color:#a78bfa;border:none;border-radius:8px;padding:7px 13px;font-size:12px;font-weight:700;cursor:pointer;margin-left:4px;font-family:inherit">🧠 BI</button><button data-view="config" id="navC">⚙️ Config</button></nav><button id="btnInstallApp" onclick="installApp()" style="display:none;margin-top:8px;background:linear-gradient(135deg,#D4A843,#F2C955);color:#0f172a;border:none;border-radius:8px;padding:8px 12px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;align-items:center;gap:6px;letter-spacing:.04em">📲 Instalar App</button>
 <button class="lout" id="loutB">Cerrar sesión</button></aside>
 <main class="mn">
-<div class="tb" id="mainTb"><span class="lbl">Rango</span><div class="qk"><button data-q="all">Todo</button><button data-q="today">Hoy</button><button data-q="yesterday">Ayer</button><button data-q="7d">7d</button><button data-q="30d">30d</button></div><span class="lbl">Desde</span><input type="date" id="dS"><span class="lbl">Hasta</span><input type="date" id="dE"><button class="clr" id="dC">Limpiar</button><button id="btnFastForward" class="clr" style="color:var(--wn); border-color:var(--wn); font-weight:700;">⏳ Forzar SLA 30m</button><span class="lbl" id="lblS">Vendedor</span><select id="selF"><option value="">Todos</option></select><span class="ri" id="rI">Sin filtro</span></div>
+<div class="tb" id="mainTb"><span class="lbl">Rango</span><div class="qk"><button data-q="all">Todo</button><button data-q="today">Hoy</button><button data-q="yesterday">Ayer</button><button data-q="7d">7d</button><button data-q="30d">30d</button></div><span class="lbl">Desde</span><input type="date" id="dS"><span class="lbl">Hasta</span><input type="date" id="dE"><button class="clr" id="dC">Limpiar</button><span class="lbl" id="lblS">Vendedor</span><select id="selF"><option value="">Todos</option></select><span class="ri" id="rI">Sin filtro</span></div>
 <section id="view-dashboard" class="view active">
 <div class="st">Dashboard Operativo</div>
 <div class="bt">① SLA Primera Respuesta — leads Nuevos</div>
@@ -386,6 +386,7 @@ document.addEventListener('visibilitychange', () => {
       <button id="agendaBtn" class="bp" style="padding:6px 12px;font-size:12px;white-space:nowrap">Agendar</button>
     </div>
     <div id="agendaInfo" style="margin-top:6px;font-size:11px;color:var(--tm)"></div>
+<div id="agendaHistory" style="margin-top:10px;max-height:160px;overflow-y:auto;display:none;flex-direction:column;gap:6px;border-top:1px solid var(--bd);padding-top:10px"></div>
   </div>
 </div>
 <button class="pm" id="btnResumen" style="background:var(--as);color:var(--ac);border:1px solid var(--ac);margin-bottom:8px">🧠 Generar Resumen IA</button>
@@ -1086,7 +1087,7 @@ function renderModalHistory(l){
 function closeModal(){S.mid=null;$('mbg').classList.remove('show');$('mNt').value='';$('aMsg').value='';}
 function refreshModalSilent(){const l=findLead(S.mid);if(!l)return;renderModalChat(l);renderModalNotes(l);renderModalCtx(l);}
 function renderModal(){const l=findLead(S.mid);if(!l){closeModal();return;}$('mTit').innerHTML='<span style="cursor:pointer;border-bottom:1px dashed var(--tm)" onclick="const nn=prompt(\'Editar nombre del cliente:\', \''+esc(l.name)+'\'); if(nn&&nn.trim()&&nn!==l.name){api(\'PATCH\',\'/api/leads/\'+l.id,{name:nn.trim()}).then(()=>{l.name=nn.trim();this.innerHTML=esc(nn.trim())+\' ✏️\';refresh();});}" title="Editar Nombre">'+esc(l.name)+' ✏️</span>' + (l.phone?' <span style="color:var(--tm);font-size:0.9em">· '+esc(l.phone)+'</span>':'');const sla=l.alertLevel==='critical'?'<span style="color:var(--bd2);font-weight:700">🔴 > 60 min (Alerta)</span>':l.alertLevel==='risk'?'<span style="color:var(--wn);font-weight:700">🟡 20-30 min (Riesgo)</span>':l.alertLevel==='fresh'?'<span style="color:var(--ok)">🟢 < 20 min (Verde)</span>':'';$('mMet').innerHTML=`${cSrc(l.source)} ${cUsr(l.assignedTo)} <span style="color:var(--tm)">📅 ${fDT(l.lastClientTs||l.lastInteraction)}</span> ${sbdg(l.intentSignal||'NONE')} ${sla} ${l.unread?'<span style="color:var(--bd2);font-size:11px;font-weight:600">● Sin respuesta</span>':''}`;$('mSt').innerHTML=(l.status==='esperando_respuesta_chileautos'?['esperando_respuesta_chileautos','esperando_respuesta_general',...ALL_ST.filter(x=>x!=='esperando_respuesta_chileautos'&&x!=='esperando_respuesta_general')]:ALL_ST).map(s=>`<option value="${esc(s)}" ${s===l.status?'selected':''}>${s==='esperando_respuesta_chileautos'?'🏷 En Espera Chileautos':s==='esperando_respuesta_general'?'⏳ En Espera General':esc(s)}</option>`).join('');const bOn=l.botActive!==false;$('bChk').checked=bOn;$('bTxt').textContent=bOn?'ON':'OFF';$('bTxt').className='bst '+(bOn?'on':'of');$('aMsg').value=''; const isW=(l.status==='esperando_respuesta_chileautos'||l.status==='esperando_respuesta_general'); const cR=isW&&l.chatHistory?.some(m=>m.role==='user'); const blk=isW&&!cR; $('aMsg').disabled=blk; $('aSnd').disabled=blk; $('aMsg').placeholder=blk?'⏳ Bloqueado: Esperando respuesta...':'Escribe un mensaje...';
-  if(l.nextAction){const na=l.nextAction;$('agendaInfo').textContent='Tarea pendiente: '+esc(na.text||'')+(na.date?' — '+new Date(na.date).toLocaleString('es-CL',{dateStyle:'short',timeStyle:'short'}):'');$('agendaText').value=na.text||'';$('agendaDate').value=na.date?na.date.slice(0,16):'';}else{$('agendaInfo').textContent='';$('agendaText').value='';$('agendaDate').value='';}
+  renderAgendaDetails(l);
   renderModalCtx(l);renderModalChat(l);renderModalNotes(l);
   renderModalHistory(l);var _ab=$("mAssignBlock"),_ms=$("mAssign");if(_ab&&S.user&&S.user.role==="admin"){_ab.style.display="block";_ms.innerHTML=(S.users||[]).filter(function(u){return u.role==="vendedor";}).map(function(u){return'<option value="'+esc(u.username)+'"'+(u.username===l.assignedTo?' selected':'')+'>'+esc(u.name)+'</option>';}).join("");}else if(_ab){_ab.style.display="none";}
     // ── SPRINT 4: Sección Retoma / Tasación ──────────────────────────────────
@@ -1633,6 +1634,54 @@ function clearBadgeIfAllRead(){
   }
 }
 // ══ fin WEB PUSH ══════════════════════════════════════════════════
+
+
+window.renderAgendaDetails = function(l) {
+  const info = $('agendaInfo');
+  const hist = $('agendaHistory');
+  if(l.nextAction) {
+    const na = l.nextAction;
+    info.className = agendaClass(na);
+    info.innerHTML = '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px"><span class="ag-st">'+agendaLabel(na)+'</span>' +
+      '<button onclick="completeCurrentTask('+l.id+')" style="background:#22c55e;color:#fff;border:none;padding:4px 10px;border-radius:6px;font-size:11px;cursor:pointer;font-weight:bold;box-shadow:0 2px 4px rgba(0,0,0,0.1);transition:transform 0.1s">✅ Completar Tarea</button></div>' +
+      '<div style="font-size:12px;color:var(--tx);line-height:1.4"><strong>Tarea:</strong> '+esc(na.text||'')+'</div>' +
+      (na.date ? '<div style="font-size:11px;color:var(--tm);margin-top:4px">📅 '+new Date(na.date).toLocaleString('es-CL',{dateStyle:'short',timeStyle:'short'})+'</div>' : '');
+    $('agendaText').value = na.text||'';
+    $('agendaDate').value = na.date ? na.date.slice(0,16) : '';
+  } else {
+    info.className = '';
+    info.innerHTML = '<div style="color:var(--tm);font-size:11px;font-style:italic">No hay tareas pendientes.</div>';
+    $('agendaText').value = '';
+    $('agendaDate').value = '';
+  }
+  if(hist) {
+    if(l.pastActions && l.pastActions.length) {
+      hist.style.display = 'flex';
+      hist.innerHTML = '<strong style="font-size:10px;color:var(--tm);text-transform:uppercase;letter-spacing:0.05em">Historial de Tareas:</strong>' +
+        l.pastActions.slice().reverse().map(pa => '<div style="font-size:11.5px;color:var(--ts);background:var(--p3);padding:8px 10px;border-radius:6px;border-left:3px solid #64748b;line-height:1.4">✅ '+esc(pa.text)+' <div style="color:var(--tm);font-size:10px;margin-top:4px">Completada el '+fDT(pa.doneAt)+'</div></div>').join('');
+    } else {
+      hist.style.display = 'none';
+      hist.innerHTML = '';
+    }
+  }
+};
+
+window.completeCurrentTask = async function(id) {
+  const l = findLead(id);
+  if(!l || !l.nextAction) return;
+  const past = l.pastActions || [];
+  past.push({ ...l.nextAction, doneAt: new Date().toISOString() });
+  try {
+    const up = await api('PATCH', '/api/leads/'+l.id, { nextAction: null, pastActions: past });
+    const idx = S.leads.findIndex(x=>x.id===l.id);
+    if(idx!==-1) S.leads[idx] = {...S.leads[idx],...up};
+    toast('Tarea completada ✅');
+    refreshModalSilent();
+    refresh();
+  } catch(e) {
+    toast('Error: ' + e.message, true);
+  }
+};
 
 </script>
 </body>
