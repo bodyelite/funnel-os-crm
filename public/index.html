@@ -1665,22 +1665,33 @@ function clearBadgeIfAllRead(){
 
 
 window.renderAgendaDetails = function(l) {
-  const info = $('agendaInfo');
-  const hist = $('agendaHistory');
+  const info = document.getElementById('agendaInfo');
+  const hist = document.getElementById('agendaHistory');
+  if(!info) return;
   if(l.nextAction) {
     const na = l.nextAction;
-    info.className = agendaClass(na);
-    info.innerHTML = '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px"><span class="ag-st">'+agendaLabel(na)+'</span>' +
+    const isExec = (na.iaCompleted || na.done);
+    const isVenc = (na.date && new Date(na.date) < new Date());
+    const aClass = isExec ? 'agenda-exec' : (isVenc ? 'agenda-venc' : 'agenda-pend');
+    const aLabel = isExec ? '✅ Ejecutada' : (isVenc ? '🔴 Vencida' : '🟢 Pendiente');
+    
+    info.className = aClass;
+    info.innerHTML = '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px"><span class="ag-st">'+aLabel+'</span>' +
       '<button onclick="completeCurrentTask('+l.id+')" style="background:#22c55e;color:#fff;border:none;padding:4px 10px;border-radius:6px;font-size:11px;cursor:pointer;font-weight:bold;box-shadow:0 2px 4px rgba(0,0,0,0.1);transition:transform 0.1s">✅ Completar Tarea</button></div>' +
       '<div style="font-size:12px;color:var(--tx);line-height:1.4"><strong>Tarea:</strong> '+esc(na.text||'')+'</div>' +
       (na.date ? '<div style="font-size:11px;color:var(--tm);margin-top:4px">📅 '+new Date(na.date).toLocaleString('es-CL',{dateStyle:'short',timeStyle:'short'})+'</div>' : '');
-    $('agendaText').value = na.text||'';
-    $('agendaDate').value = na.date ? na.date.slice(0,16) : '';
+    
+    const aTxt = document.getElementById('agendaText');
+    const aDat = document.getElementById('agendaDate');
+    if(aTxt) aTxt.value = na.text||'';
+    if(aDat) aDat.value = na.date ? na.date.slice(0,16) : '';
   } else {
     info.className = '';
     info.innerHTML = '<div style="color:var(--tm);font-size:11px;font-style:italic">No hay tareas pendientes.</div>';
-    $('agendaText').value = '';
-    $('agendaDate').value = '';
+    const aTxt = document.getElementById('agendaText');
+    const aDat = document.getElementById('agendaDate');
+    if(aTxt) aTxt.value = '';
+    if(aDat) aDat.value = '';
   }
   if(hist) {
     if(l.pastActions && l.pastActions.length) {
