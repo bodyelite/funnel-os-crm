@@ -655,19 +655,47 @@ function renderDash(){renderSlaCards();renderFunnel();renderPerfTable();}
 function renderXRows(items,timeFn){if(!items.length)return'<div class="xe2">Sin leads.</div>';const gc='grid-template-columns:10px 1fr 1fr 1fr 1fr auto';const hd=`<div class="xlr" style="${gc};cursor:default;background:var(--p2)"><div></div><div style="font-size:10px;font-weight:700;color:var(--tm);text-transform:uppercase">Nombre</div><div style="font-size:10px;font-weight:700;color:var(--tm);text-transform:uppercase">Canal</div><div style="font-size:10px;font-weight:700;color:var(--tm);text-transform:uppercase">Vendedor</div><div style="font-size:10px;font-weight:700;color:var(--tm);text-transform:uppercase">Estado</div><div style="font-size:10px;font-weight:700;color:var(--tm);text-transform:uppercase">Última</div></div>`;return hd+items.map(l=>`<div class="xlr" data-id="${l.id}" style="${gc}">${adot(l.alertLevel)}<div><div class="lrn">${esc(l.name)}</div><div class="lrs">${l.unread?'● Sin resp · ':''}${esc(l.phone||'')}</div></div><div>${cSrc(l.source)}</div><div>${cUsr(l.assignedTo)}</div><div>${stpl(l.status)}</div><div class="lrt" style="color:var(--tm)">${timeFn(l)}</div></div>`).join('');}
 function bindXRows(c){c.querySelectorAll('.xlr[data-id]').forEach(el=>el.addEventListener('click',()=>openModal(+el.dataset.id)));}
 function renderLeads(){
-  const gc='grid-template-columns:22px 8px 8px 11px 1.3fr .9fr 1.1fr .85fr .85fr 1.2fr .75fr';
+  const gc='grid-template-columns:22px 14px 10px 11px 1.4fr .9fr 1.1fr .85fr .85fr 1.2fr .75fr';
   const hd=`<div class="tr2 hd" style="${gc}"><div></div><div></div><div></div><div></div><div>Nombre</div><div>Tel.</div><div>Interés</div><div>Canal</div><div>Asignado</div><div>Estado</div><div>Última</div></div>`;
   const filtCanal = document.getElementById('filtCanal')?.value || '';
-  const filtEstado = document.getElementById('filtEstado')?.value || ''; const filtSearch = document.getElementById('filtSearch')?.value.toLowerCase().trim() || '';
+  const filtEstado = document.getElementById('filtEstado')?.value || '';
+  const filtSearch = document.getElementById('filtSearch')?.value.toLowerCase().trim() || '';
   let leads = S.leads || [];
   if(filtCanal) leads = leads.filter(l => (l.source||'') === filtCanal);
   if(filtEstado) leads = leads.filter(l => (l.status||'') === filtEstado);
   if(filtSearch) leads = leads.filter(l => (l.name||'').toLowerCase().includes(filtSearch) || (l.phone||'').includes(filtSearch) || (l.interest||'').toLowerCase().includes(filtSearch));
+  
+  // ORDENAMIENTO ESTRICTO: No leídos arriba, ordenados por fecha.
+  leads.sort((a,b) => {
+    if(a.unread && !b.unread) return -1;
+    if(!a.unread && b.unread) return 1;
+    return new Date(b.lastClientTs||b.lastInteraction||0) - new Date(a.lastClientTs||a.lastInteraction||0);
+  });
+
   const countEl = document.getElementById('filtCount');
-  if(countEl) countEl.textContent = (filtCanal||filtEstado) ? `${leads.length} resultado${leads.length!==1?'s':''}` : `${leads.length} leads`;
+  if(countEl) countEl.textContent = (filtCanal||filtEstado||filtSearch) ? `${leads.length} resultado${leads.length!==1?'s':''}` : `${leads.length} leads`;
   window.selBulk = window.selBulk || new Set();
   const isAdmin = S.user && S.user.role === 'admin';
-  const rows = leads.length ? leads.map(l=>`<div class="tr2" style="${gc}" data-id="${l.id}">${isAdmin ? '<div style="display:flex;align-items:center;justify-content:center"><input type="checkbox" class="blk-chk" value="'+l.id+'" '+(window.selBulk.has(String(l.id))?'checked':'')+' style="accent-color:var(--bd2);cursor:pointer;width:14px;height:14px" onclick="event.stopPropagation(); if(this.checked) window.selBulk.add(this.value); else window.selBulk.delete(this.value);"></div>' : '<div></div>'}${l.unread?'<div class="ud"></div>':'<div></div>'}${adot(l.alertLevel)}${sdot(l.intentSignal||'NONE')}<div><strong>${esc(l.name)}</strong></div><div style="font-size:11.5px;color:var(--tm)">${esc(l.phone||'—')}</div><div style="font-size:11.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(l.interest||'—')}</div><div>${cSrc(l.source)}</div><div>${cUsr(l.assignedTo)}</div><div>${stpl(l.status)}</div><div style="font-size:11px;color:var(--tm)">${fDT(l.lastClientTs||l.lastInteraction)}</div></div>`).join('') : '<div class="ke" style="padding:16px">Sin leads para este filtro.</div>';
+  
+  const rows = leads.length ? leads.map(l=>{
+    const chk = isAdmin ? '<div style="display:flex;align-items:center;justify-content:center"><input type="checkbox" class="blk-chk" value="'+l.id+'" '+(window.selBulk.has(String(l.id))?'checked':'')+' style="accent-color:var(--bd2);cursor:pointer;width:14px;height:14px" onclick="event.stopPropagation(); if(this.checked) window.selBulk.add(this.value); else window.selBulk.delete(this.value);"></div>' : '<div></div>';
+    const unreadDot = l.unread ? '<div class="ud" style="width:12px;height:12px;background:#ef4444;box-shadow:0 0 8px rgba(239,68,68,0.8);animation:pl 1.2s infinite;margin:auto"></div>' : '<div></div>';
+    const nameStyle = l.unread ? 'color:var(--tx);font-weight:800;font-size:13px' : 'color:var(--ts);font-weight:600';
+    const unreadTag = l.unread ? '<span style="background:#fef2f2;color:#ef4444;border:1px solid #fca5a5;font-size:9px;padding:2px 6px;border-radius:10px;margin-left:6px;font-weight:800;letter-spacing:0.05em">NUEVO</span>' : '';
+    const rowBg = l.unread ? 'background:rgba(239,68,68,0.04)' : '';
+    
+    return `<div class="tr2" style="${gc};${rowBg}" data-id="${l.id}">
+      ${chk}${unreadDot}${adot(l.alertLevel)}${sdot(l.intentSignal||'NONE')}
+      <div style="display:flex;align-items:center;overflow:hidden"><strong style="${nameStyle};white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(l.name)}</strong>${unreadTag}</div>
+      <div style="font-size:11.5px;color:var(--tm)">${esc(l.phone||'—')}</div>
+      <div style="font-size:11.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(l.interest||'—')}</div>
+      <div>${cSrc(l.source)}</div>
+      <div>${cUsr(l.assignedTo)}</div>
+      <div>${stpl(l.status)}</div>
+      <div style="font-size:11px;color:var(--tm);font-weight:${l.unread?'700':'400'}">${fDT(l.lastClientTs||l.lastInteraction)}</div>
+    </div>`;
+  }).join('') : '<div class="ke" style="padding:16px">Sin leads para este filtro.</div>';
+  
   $('lTbl').innerHTML=hd+rows;
   $('lTbl').querySelectorAll('.tr2[data-id]').forEach(el=>el.addEventListener('click',()=>openModal(+el.dataset.id)));
 }
