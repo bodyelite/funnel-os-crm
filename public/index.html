@@ -664,8 +664,7 @@ function renderLeads(){
   if(filtCanal) leads = leads.filter(l => (l.source||'') === filtCanal);
   if(filtEstado) leads = leads.filter(l => (l.status||'') === filtEstado);
   if(filtSearch) leads = leads.filter(l => (l.name||'').toLowerCase().includes(filtSearch) || (l.phone||'').includes(filtSearch) || (l.interest||'').toLowerCase().includes(filtSearch));
-  
-  // ORDENAMIENTO ESTRICTO: No leídos arriba, ordenados por fecha.
+
   leads.sort((a,b) => {
     if(a.unread && !b.unread) return -1;
     if(!a.unread && b.unread) return 1;
@@ -676,14 +675,14 @@ function renderLeads(){
   if(countEl) countEl.textContent = (filtCanal||filtEstado||filtSearch) ? `${leads.length} resultado${leads.length!==1?'s':''}` : `${leads.length} leads`;
   window.selBulk = window.selBulk || new Set();
   const isAdmin = S.user && S.user.role === 'admin';
-  
+
   const rows = leads.length ? leads.map(l=>{
     const chk = isAdmin ? '<div style="display:flex;align-items:center;justify-content:center"><input type="checkbox" class="blk-chk" value="'+l.id+'" '+(window.selBulk.has(String(l.id))?'checked':'')+' style="accent-color:var(--bd2);cursor:pointer;width:14px;height:14px" onclick="event.stopPropagation(); if(this.checked) window.selBulk.add(this.value); else window.selBulk.delete(this.value);"></div>' : '<div></div>';
     const unreadDot = l.unread ? '<div class="ud" style="width:12px;height:12px;background:#ef4444;box-shadow:0 0 8px rgba(239,68,68,0.8);animation:pl 1.2s infinite;margin:auto"></div>' : '<div></div>';
     const nameStyle = l.unread ? 'color:var(--tx);font-weight:800;font-size:13px' : 'color:var(--ts);font-weight:600';
     const unreadTag = l.unread ? '<span style="background:#fef2f2;color:#ef4444;border:1px solid #fca5a5;font-size:9px;padding:2px 6px;border-radius:10px;margin-left:6px;font-weight:800;letter-spacing:0.05em">NUEVO</span>' : '';
     const rowBg = l.unread ? 'background:rgba(239,68,68,0.04)' : '';
-    
+
     return `<div class="tr2" style="${gc};${rowBg};cursor:pointer" data-id="${l.id}">
       ${chk}${unreadDot}
       <div style="display:flex;align-items:center;overflow:hidden"><strong style="${nameStyle};white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(l.name)}</strong>${unreadTag}</div>
@@ -695,10 +694,11 @@ function renderLeads(){
       <div style="font-size:11px;color:var(--tm);font-weight:${l.unread?'700':'400'}">${fDT(l.lastClientTs||l.lastInteraction)}</div>
     </div>`;
   }).join('') : '<div class="ke" style="padding:16px">Sin leads para este filtro.</div>';
-  
+
   $('lTbl').innerHTML=hd+rows;
   $('lTbl').querySelectorAll('.tr2[data-id]').forEach(el=>el.addEventListener('click',()=>openModal(+el.dataset.id)));
 }
+
 function renderKanban(){const stages=['Nuevo','esperando_respuesta_chileautos','esperando_respuesta_general','Contactado','En Proceso','Reservado','Cerrado','Perdido'];const grp={};stages.forEach(s=>grp[s]=[]);S.leads.forEach(l=>{if(!grp[l.status])grp[l.status]=[];grp[l.status].push(l);});$('kbn').innerHTML=stages.map(st=>{const items=grp[st]||[];const isQ=st==='Calificado'; const stMap={'Nuevo':'Nuevos','esperando_respuesta_chileautos':'En sala de CA','esperando_respuesta_general':'En sala Gral','Contactado':'Contactados','En Proceso':'En proceso','Perdido':'Perdidos'}; const dispSt=stMap[st]||st;const isR=st==='Reservado';return`<div class="kbc ${isQ?'ql':''}${isR?' rs-col':''}"><div class="kbh" style="${isR?'color:var(--wn)':''}">${isQ?'⭐ Calificado':isR?'🔒 Reservado':esc(dispSt)}<span class="cnt">${items.length}</span>${isR&&items.some(l=>l.alertLevel==='critical')?'<span style="color:var(--bd2);font-size:11px;margin-left:6px">⚠️ vencidos</span>':''}</div><div class="kbs">${items.length?items.map(l=>`<div class="kc ${l.alertLevel||''}" data-id="${l.id}">${l.isMulticotizante?'<span style="background:#fee2e2;color:#991b1b;font-size:10px;font-weight:700;padding:1px 6px;border-radius:10px;float:right">🔥 Multicotizante</span>':''}${l.unread?'<div class="ud"></div>':''}<div style="flex:1;min-width:0"><div class="kn">${esc(l.name)}</div><div class="kt">${l.status==='Reservado'?'🔒 '+fMin(l.reservadoAt||l.lastInteraction):fMin(mAgo(l.lastClientTs||l.lastInteraction))}</div>${l.nextAction&&l.nextAction.date?'<div style="font-size:11px;color:#f59e0b;font-weight:bold;margin-top:4px">⏰ '+new Date(l.nextAction.date).toLocaleString('es-CL',{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'})+'</div>':''}</div></div>`).join(''):'<div class="ke">Vacío</div>'}</div></div>`;}).join('');$('kbn').querySelectorAll('.kc[data-id]').forEach(el=>el.addEventListener('click',()=>openModal(+el.dataset.id)));}
 function renderCalendar(){
   var today=new Date();today.setHours(0,0,0,0);
