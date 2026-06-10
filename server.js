@@ -829,7 +829,7 @@ app.post('/api/leads/manual', auth('admin','vendedor'), async (req, res) => {
     if (token && phoneId && phone !== 'Pendiente') {
       try {
         const phoneClean = phone.replace(/\D/g,'');
-        const templateName = process.env.CA_WA_TEMPLATE || 'contacto_chileautos_v1';
+        const templateName = process.env.CA_WA_TEMPLATE || 'contacto_chileautos_v2';
         const waRes = await fetch('https://graph.facebook.com/v19.0/' + phoneId + '/messages', {
           method: 'POST',
           headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' },
@@ -950,7 +950,7 @@ app.post('/api/chileautos/webhook', async (req, res) => {
     const token = process.env.WA_TOKEN, phoneId = process.env.WA_PHONE_ID;
     if (token && phoneId && phone !== 'Pendiente') {
       try {
-        const templateName = process.env.CA_WA_TEMPLATE || 'contacto_chileautos_v1';
+        const templateName = process.env.CA_WA_TEMPLATE || 'contacto_chileautos_v2';
         const waRes = await fetch(`https://graph.facebook.com/v19.0/${phoneId}/messages`, {
           method: 'POST',
           headers: { Authorization: 'Bearer '+token, 'Content-Type': 'application/json' },
