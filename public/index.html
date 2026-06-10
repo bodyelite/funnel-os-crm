@@ -376,7 +376,7 @@ document.addEventListener('visibilitychange', () => {
 <div>
   <h4>Notas internas</h4>
   <div class="nl" id="mNts"></div>
-  <textarea id="mNt" placeholder="Nueva nota interna..." style="margin-top:7px"></textarea>
+  <textarea id="mNt" placeholder="Nueva nota interna..." style="margin-top:7px"></textarea><div style="text-align:right; margin-top:8px;"><button type="button" onclick="document.getElementById('agendaDate').focus(); document.getElementById('agendaDate').scrollIntoView({behavior:'smooth', block:'center'}); toast('⬇️ Selecciona fecha y hora para la tarea', false);" style="background:var(--ac);color:white;border:none;padding:7px 14px;border-radius:6px;font-size:12px;cursor:pointer;font-weight:600;box-shadow:0 2px 4px rgba(0,0,0,0.15);transition:transform 0.1s">📝 Continuar: Agendar Tarea 👇</button></div>
   <div style="margin-top:10px;padding:10px;background:var(--p2);border-radius:8px;border:1px solid var(--bd)">
     <h4 style="margin-bottom:7px">⏰ Agendar Tarea</h4>
     <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
@@ -655,8 +655,8 @@ function renderDash(){renderSlaCards();renderFunnel();renderPerfTable();}
 function renderXRows(items,timeFn){if(!items.length)return'<div class="xe2">Sin leads.</div>';const gc='grid-template-columns:10px 1fr 1fr 1fr 1fr auto';const hd=`<div class="xlr" style="${gc};cursor:default;background:var(--p2)"><div></div><div style="font-size:10px;font-weight:700;color:var(--tm);text-transform:uppercase">Nombre</div><div style="font-size:10px;font-weight:700;color:var(--tm);text-transform:uppercase">Canal</div><div style="font-size:10px;font-weight:700;color:var(--tm);text-transform:uppercase">Vendedor</div><div style="font-size:10px;font-weight:700;color:var(--tm);text-transform:uppercase">Estado</div><div style="font-size:10px;font-weight:700;color:var(--tm);text-transform:uppercase">Última</div></div>`;return hd+items.map(l=>`<div class="xlr" data-id="${l.id}" style="${gc}">${adot(l.alertLevel)}<div><div class="lrn">${esc(l.name)}</div><div class="lrs">${l.unread?'● Sin resp · ':''}${esc(l.phone||'')}</div></div><div>${cSrc(l.source)}</div><div>${cUsr(l.assignedTo)}</div><div>${stpl(l.status)}</div><div class="lrt" style="color:var(--tm)">${timeFn(l)}</div></div>`).join('');}
 function bindXRows(c){c.querySelectorAll('.xlr[data-id]').forEach(el=>el.addEventListener('click',()=>openModal(+el.dataset.id)));}
 function renderLeads(){
-  const gc='grid-template-columns:22px 14px 10px 11px 1.4fr .9fr 1.1fr .85fr .85fr 1.2fr .75fr';
-  const hd=`<div class="tr2 hd" style="${gc}"><div></div><div></div><div></div><div></div><div>Nombre</div><div>Tel.</div><div>Interés</div><div>Canal</div><div>Asignado</div><div>Estado</div><div>Última</div></div>`;
+  const gc='grid-template-columns:22px 14px 1.4fr .9fr 1.1fr .85fr .85fr 1.2fr .75fr';
+  const hd=`<div class="tr2 hd" style="${gc}"><div></div><div></div><div>Nombre</div><div>Tel.</div><div>Interés</div><div>Canal</div><div>Asignado</div><div>Estado</div><div>Última</div></div>`;
   const filtCanal = document.getElementById('filtCanal')?.value || '';
   const filtEstado = document.getElementById('filtEstado')?.value || '';
   const filtSearch = document.getElementById('filtSearch')?.value.toLowerCase().trim() || '';
@@ -684,8 +684,8 @@ function renderLeads(){
     const unreadTag = l.unread ? '<span style="background:#fef2f2;color:#ef4444;border:1px solid #fca5a5;font-size:9px;padding:2px 6px;border-radius:10px;margin-left:6px;font-weight:800;letter-spacing:0.05em">NUEVO</span>' : '';
     const rowBg = l.unread ? 'background:rgba(239,68,68,0.04)' : '';
     
-    return `<div class="tr2" style="${gc};${rowBg}" data-id="${l.id}">
-      ${chk}${unreadDot}${adot(l.alertLevel)}${sdot(l.intentSignal||'NONE')}
+    return `<div class="tr2" style="${gc};${rowBg};cursor:pointer" onclick="if(typeof openModal==='function')openModal(${l.id})">
+      ${chk}${unreadDot}
       <div style="display:flex;align-items:center;overflow:hidden"><strong style="${nameStyle};white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(l.name)}</strong>${unreadTag}</div>
       <div style="font-size:11.5px;color:var(--tm)">${esc(l.phone||'—')}</div>
       <div style="font-size:11.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(l.interest||'—')}</div>
@@ -1114,7 +1114,7 @@ function renderModalHistory(l){
 
 function closeModal(){S.mid=null;$('mbg').classList.remove('show');$('mNt').value='';$('aMsg').value='';}
 function refreshModalSilent(){const l=findLead(S.mid);if(!l)return;renderModalChat(l);renderModalNotes(l);renderModalCtx(l);}
-function renderModal(){const l=findLead(S.mid);if(!l){closeModal();return;}$('mTit').innerHTML='<span style="cursor:pointer;border-bottom:1px dashed var(--tm)" onclick="const nn=prompt(\'Editar nombre del cliente:\', \''+esc(l.name)+'\'); if(nn&&nn.trim()&&nn!==l.name){api(\'PATCH\',\'/api/leads/\'+l.id,{name:nn.trim()}).then(()=>{l.name=nn.trim();this.innerHTML=esc(nn.trim())+\' ✏️\';refresh();});}" title="Editar Nombre">'+esc(l.name)+' ✏️</span>' + (l.phone?' <span style="color:var(--tm);font-size:0.9em">· '+esc(l.phone)+'</span>':'');const sla=l.alertLevel==='critical'?'<span style="color:var(--bd2);font-weight:700">🔴 > 60 min (Alerta)</span>':l.alertLevel==='risk'?'<span style="color:var(--wn);font-weight:700">🟡 20-30 min (Riesgo)</span>':l.alertLevel==='fresh'?'<span style="color:var(--ok)">🟢 < 20 min (Verde)</span>':'';$('mMet').innerHTML=`${cSrc(l.source)} ${cUsr(l.assignedTo)} <span style="color:var(--tm)">📅 ${fDT(l.lastClientTs||l.lastInteraction)}</span> ${sbdg(l.intentSignal||'NONE')} ${sla} ${l.unread?'<span style="color:var(--bd2);font-size:11px;font-weight:600">● Sin respuesta</span>':''}`;$('mSt').innerHTML=(l.status==='esperando_respuesta_chileautos'?['esperando_respuesta_chileautos','esperando_respuesta_general',...ALL_ST.filter(x=>x!=='esperando_respuesta_chileautos'&&x!=='esperando_respuesta_general')]:ALL_ST).map(s=>`<option value="${esc(s)}" ${s===l.status?'selected':''}>${s==='esperando_respuesta_chileautos'?'🏷 En Espera Chileautos':s==='esperando_respuesta_general'?'⏳ En Espera General':esc(s)}</option>`).join('');const bOn=l.botActive!==false;$('bChk').checked=bOn;$('bTxt').textContent=bOn?'ON':'OFF';$('bTxt').className='bst '+(bOn?'on':'of');$('aMsg').value=''; const isW=(l.status==='esperando_respuesta_chileautos'||l.status==='esperando_respuesta_general'); const cR=isW&&l.chatHistory?.some(m=>m.role==='user'); const blk=isW&&!cR; $('aMsg').disabled=blk; $('aSnd').disabled=blk; $('aMsg').placeholder=blk?'⏳ Bloqueado: Esperando respuesta...':'Escribe un mensaje...';
+function renderModal(){const l=findLead(S.mid);if(!l){closeModal();return;}$('mTit').innerHTML='<span onclick="window.editLeadName('+l.id+')" style="cursor:pointer;border-bottom:1px dashed var(--tm)" title="Editar Nombre">'+esc(l.name)+' ✏️</span>' + (l.phone?' <span style="color:var(--tm);font-size:0.9em">· '+esc(l.phone)+'</span>':'');refresh();});}" title="Editar Nombre">'+esc(l.name)+' ✏️</span>' + (l.phone?' <span style="color:var(--tm);font-size:0.9em">· '+esc(l.phone)+'</span>':'');const sla=l.alertLevel==='critical'?'<span style="color:var(--bd2);font-weight:700">🔴 > 60 min (Alerta)</span>':l.alertLevel==='risk'?'<span style="color:var(--wn);font-weight:700">🟡 20-30 min (Riesgo)</span>':l.alertLevel==='fresh'?'<span style="color:var(--ok)">🟢 < 20 min (Verde)</span>':'';$('mMet').innerHTML=`${cSrc(l.source)} ${cUsr(l.assignedTo)} <span style="color:var(--tm)">📅 ${fDT(l.lastClientTs||l.lastInteraction)}</span> ${sbdg(l.intentSignal||'NONE')} ${sla} ${l.unread?'<span style="color:var(--bd2);font-size:11px;font-weight:600">● Sin respuesta</span>':''}`;$('mSt').innerHTML=(l.status==='esperando_respuesta_chileautos'?['esperando_respuesta_chileautos','esperando_respuesta_general',...ALL_ST.filter(x=>x!=='esperando_respuesta_chileautos'&&x!=='esperando_respuesta_general')]:ALL_ST).map(s=>`<option value="${esc(s)}" ${s===l.status?'selected':''}>${s==='esperando_respuesta_chileautos'?'🏷 En Espera Chileautos':s==='esperando_respuesta_general'?'⏳ En Espera General':esc(s)}</option>`).join('');const bOn=l.botActive!==false;$('bChk').checked=bOn;$('bTxt').textContent=bOn?'ON':'OFF';$('bTxt').className='bst '+(bOn?'on':'of');$('aMsg').value=''; const isW=(l.status==='esperando_respuesta_chileautos'||l.status==='esperando_respuesta_general'); const cR=isW&&l.chatHistory?.some(m=>m.role==='user'); const blk=isW&&!cR; $('aMsg').disabled=blk; $('aSnd').disabled=blk; $('aMsg').placeholder=blk?'⏳ Bloqueado: Esperando respuesta...':'Escribe un mensaje...';
   renderAgendaDetails(l);
   renderModalCtx(l);renderModalChat(l);renderModalNotes(l);
   renderModalHistory(l);var _ab=$("mAssignBlock"),_ms=$("mAssign");if(_ab&&S.user&&S.user.role==="admin"){_ab.style.display="block";_ms.innerHTML=(S.users||[]).filter(function(u){return u.role==="vendedor";}).map(function(u){return'<option value="'+esc(u.username)+'"'+(u.username===l.assignedTo?' selected':'')+'>'+esc(u.name)+'</option>';}).join("");}else if(_ab){_ab.style.display="none";}
@@ -1711,8 +1711,41 @@ window.completeCurrentTask = async function(id) {
   }
 };
 
-</script>
-</body>
+
+    window.prevUnreadIds = new Set();
+    setInterval(() => {
+        if(!window.S || !window.S.leads) return;
+        let hasNew = false;
+        let newNames = [];
+        const currentUnreads = new Set();
+        
+        window.S.leads.forEach(l => {
+            if(l.unread) {
+                currentUnreads.add(l.id);
+                // Si este lead NO estaba como no-leído en el chequeo anterior, es un mensaje nuevo real
+                if(!window.prevUnreadIds.has(l.id)) {
+                    hasNew = true;
+                    newNames.push(l.name);
+                }
+            }
+        });
+        window.prevUnreadIds = currentUnreads;
+        
+        if(hasNew) {
+            try {
+                let a = document.getElementById('notifSoundObj');
+                if(!a) {
+                    a = new Audio('https://actions.google.com/sounds/v1/alarms/beep_short.ogg');
+                    a.id = 'notifSoundObj';
+                    document.body.appendChild(a);
+                }
+                a.play().catch(()=>{});
+                toast('💬 Mensaje nuevo de: ' + newNames.join(', '));
+            } catch(e){}
+        }
+    }, 2500);
+    </script>
+    </body>
 </html>
 
 
