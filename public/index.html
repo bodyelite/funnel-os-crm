@@ -684,7 +684,7 @@ function renderLeads(){
     const unreadTag = l.unread ? '<span style="background:#fef2f2;color:#ef4444;border:1px solid #fca5a5;font-size:9px;padding:2px 6px;border-radius:10px;margin-left:6px;font-weight:800;letter-spacing:0.05em">NUEVO</span>' : '';
     const rowBg = l.unread ? 'background:rgba(239,68,68,0.04)' : '';
     
-    return `<div class="tr2" style="${gc};${rowBg};cursor:pointer" onclick="if(typeof openModal==='function')openModal(${l.id})">
+    return `<div class="tr2" style="${gc};${rowBg};cursor:pointer" data-id="${l.id}">
       ${chk}${unreadDot}
       <div style="display:flex;align-items:center;overflow:hidden"><strong style="${nameStyle};white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(l.name)}</strong>${unreadTag}</div>
       <div style="font-size:11.5px;color:var(--tm)">${esc(l.phone||'—')}</div>
