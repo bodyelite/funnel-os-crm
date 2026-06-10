@@ -297,7 +297,7 @@ async function marcela(tenant, history, msg, notes, assignedName) {
       temperature: 0.5,
       response_format: { type: 'json_object' },
       messages: [
-        { role: 'system', content: sysPromptProcessed },
+        { role: 'system', content: sysPromptProcessed + adContext },
         ...history.slice(-14).map(h => ({ role: h.role === 'user' ? 'user' : 'assistant', content: h.content })),
         { role: 'user', content: msg }
       ].flat()
