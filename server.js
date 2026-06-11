@@ -705,6 +705,8 @@ app.post('/api/chat',async(req,res)=>{
   const idx=leads.findIndex(l=>l.id===leadId);
   leads[idx].chatHistory=leads[idx].chatHistory||[];leads[idx].chatHistory.push({role:'user',content:message,ts:Date.now()});
   leads[idx].unread=true;
+    // Marcar secuencia WA como respondida
+    if (leads[idx].waSequence) leads[idx].waSequence.replied = true;
   if(leads[idx].botActive!==false){
     if(message.trim().toLowerCase()==='/reset'){leads.splice(idx,1);await tWrite(F.leads,tenant,leads);return res.json({reply:'🔄 Lead eliminado. Listo para nuevo ingreso desde Chileautos.',status:'eliminado',alertLevel:'none'});}
     const assignedUserChat=allUsers.find(u=>u.username===leads[idx].assignedTo)||RMG_VENDORS.find(v=>v.username===leads[idx].assignedTo);
@@ -822,7 +824,8 @@ app.post('/api/leads/manual', auth('admin','vendedor'), async (req, res) => {
       alertLevel: 'none', intentSignal: 'NONE', unread: true,
       assignedTo: asignado || req.user?.username || 'vendedor1',
       lastInteraction: n, lastClientTs: status === 'Nuevo' ? n : new Date(0).toISOString(), createdAt: n,
-      notes: initNotes, chatHistory: [], media: [], pastActions: [], nextAction: { text: '📞 Llamar al cliente (Plantilla WA enviada)', date: new Date(Date.now() + 30 * 60000).toISOString(), createdAt: n, delegateToIA: false, iaCompleted: false } };
+      notes: initNotes, chatHistory: [], media: [], pastActions: [], nextAction: { text: '📞 Llamar al cliente (Plantilla WA enviada)', date: new Date(Date.now() + 30 * 60000).toISOString(), createdAt: n, delegateToIA: false, iaCompleted: false },
+      waSequence: { step: 1, lastSentAt: n, replied: false } };
     leads.unshift(lead);
     await tWrite(F.leads, tenant, leads);
     const token = process.env.WA_TOKEN, phoneId = process.env.WA_PHONE_ID;
@@ -1598,6 +1601,114 @@ setTimeout(async () => {
     }
   } catch(e) { console.log('Error en parche', e); }
 }, 3000);
+
+
+// ── WA SEQUENCE: Endpoint manual contacto_4 ──────────────────────────────────
+app.post('/api/leads/:id/send-template', auth('admin','vendedor'), async (req, res) => {
+  try {
+    const tenant = req.tenant;
+    const { templateName, params } = req.body;
+    if (!templateName) return res.status(400).json({ error: 'templateName requerido' });
+    const leads = await tRead(F.leads, tenant);
+    const lead = leads.find(l => l.id == req.params.id);
+    if (!lead) return res.status(404).json({ error: 'Lead no encontrado' });
+    const token = process.env.WA_TOKEN, phoneId = process.env.WA_PHONE_ID;
+    if (!token || !phoneId) return res.status(500).json({ error: 'WA no configurado' });
+    const phone = lead.phone?.replace(/\D/g,'');
+    if (!phone) return res.status(400).json({ error: 'Lead sin teléfono' });
+    const components = params?.length
+      ? [{ type: 'body', parameters: params.map(t => ({ type: 'text', text: t })) }]
+      : [];
+    const waRes = await fetch(`https://graph.facebook.com/v19.0/${phoneId}/messages`, {
+      method: 'POST',
+      headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        messaging_product: 'whatsapp', to: phone, type: 'template',
+        template: { name: templateName, language: { code: 'es' }, components }
+      })
+    });
+    const waJson = await waRes.json();
+    if (!waRes.ok) return res.status(502).json({ error: 'WA error', detail: waJson });
+    // Registrar en chatHistory
+    const idx = leads.findIndex(l => l.id == req.params.id);
+    leads[idx].chatHistory = leads[idx].chatHistory || [];
+    leads[idx].chatHistory.push({ role: 'bot', content: `[PLANTILLA WA ENVIADA: ${templateName}]`, ts: Date.now() });
+    if (leads[idx].waSequence) {
+      leads[idx].waSequence.step = 4;
+      leads[idx].waSequence.lastSentAt = new Date().toISOString();
+    }
+    await tWrite(F.leads, tenant, leads);
+    res.json({ ok: true });
+  } catch(e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+
+// ── WA SEQUENCE: Auto contacto_2 (30min) y contacto_3 (3h) ──────────────────
+async function sendWATemplate(phone, templateName, params) {
+  const token = process.env.WA_TOKEN, phoneId = process.env.WA_PHONE_ID;
+  if (!token || !phoneId) return false;
+  const components = params?.length
+    ? [{ type: 'body', parameters: params.map(t => ({ type: 'text', text: t })) }]
+    : [];
+  const res = await fetch(`https://graph.facebook.com/v19.0/${phoneId}/messages`, {
+    method: 'POST',
+    headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      messaging_product: 'whatsapp', to: phone, type: 'template',
+      template: { name: templateName, language: { code: 'es' }, components }
+    })
+  });
+  return res.ok;
+}
+
+setInterval(async () => {
+  try {
+    for (const tenant of TENANTS) {
+      const leads = await tRead(F.leads, tenant);
+      let changed = false;
+      for (const lead of leads) {
+        // Solo leads nuevos, con teléfono, con waSequence activa y sin respuesta
+        if (!lead.waSequence || lead.waSequence.replied) continue;
+        if (!lead.phone || lead.phone === 'Pendiente') continue;
+        if (!['Nuevo', 'Contactado'].includes(lead.status)) continue;
+        const phone = lead.phone.replace(/\D/g,'');
+        const minsSinceLastSent = (Date.now() - new Date(lead.waSequence.lastSentAt).getTime()) / 60000;
+        const step = lead.waSequence.step;
+        // contacto_2 → 30 min después de contacto_1
+        if (step === 1 && minsSinceLastSent >= 30) {
+          const ok = await sendWATemplate(phone, 'contacto_2', [
+            lead.name, 'RMG Autos', lead.interest || 'el vehículo consultado'
+          ]);
+          if (ok) {
+            lead.waSequence.step = 2;
+            lead.waSequence.lastSentAt = new Date().toISOString();
+            lead.chatHistory = lead.chatHistory || [];
+            lead.chatHistory.push({ role: 'bot', content: '[PLANTILLA WA ENVIADA: contacto_2]', ts: Date.now() });
+            changed = true;
+            console.log(`[WA-SEQ] contacto_2 enviado a ${lead.name}`);
+          }
+        }
+        // contacto_3 → 3 horas después de contacto_2
+        else if (step === 2 && minsSinceLastSent >= 180) {
+          const ok = await sendWATemplate(phone, 'contacto_3', [
+            lead.name, 'RMG Autos', lead.interest || 'el vehículo consultado'
+          ]);
+          if (ok) {
+            lead.waSequence.step = 3;
+            lead.waSequence.lastSentAt = new Date().toISOString();
+            lead.chatHistory = lead.chatHistory || [];
+            lead.chatHistory.push({ role: 'bot', content: '[PLANTILLA WA ENVIADA: contacto_3]', ts: Date.now() });
+            changed = true;
+            console.log(`[WA-SEQ] contacto_3 enviado a ${lead.name}`);
+          }
+        }
+      }
+      if (changed) await tWrite(F.leads, tenant, leads);
+    }
+  } catch(e) { console.error('[WA-SEQ]', e.message); }
+}, 60000); // cada 1 minuto
 
 // Parche de migracion zombi anulado por gerencia.
 // FORZAR DEPLOY 1781022985011

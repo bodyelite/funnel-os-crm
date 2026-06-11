@@ -1810,6 +1810,74 @@ window.renderAgendaDetails = function(l) {
 };
 </script>
 
+
+<!-- WA SEQUENCE: Botón manual contacto_4 -->
+<button id="btnContacto4" onclick="sendContacto4()" style="
+  display:none;
+  margin-top:8px;
+  background:#25D366;
+  color:#fff;
+  border:none;
+  border-radius:8px;
+  padding:8px 16px;
+  font-size:13px;
+  cursor:pointer;
+  width:100%;
+">📤 Enviar contacto_4 (Cierre)</button>
+
+<script>
+// WA SEQUENCE: Mostrar botón contacto_4 en ficha del lead
+function checkShowContacto4(lead) {
+  const btn = document.getElementById('btnContacto4');
+  if (!btn) return;
+  // Mostrar si la secuencia llegó al paso 3 (contacto_3 ya enviado) y no ha respondido
+  if (lead && lead.waSequence && lead.waSequence.step >= 3 && !lead.waSequence.replied) {
+    btn.style.display = 'block';
+    btn.dataset.leadId = lead.id;
+    btn.dataset.leadName = lead.name;
+    btn.dataset.leadInterest = lead.interest || '';
+  } else if (btn) {
+    btn.style.display = 'none';
+  }
+}
+
+async function sendContacto4() {
+  const btn = document.getElementById('btnContacto4');
+  const leadId = btn?.dataset.leadId;
+  const leadName = btn?.dataset.leadName || '';
+  const leadInterest = btn?.dataset.leadInterest || 'el vehículo consultado';
+  if (!leadId) return;
+  if (!confirm('¿Enviar plantilla de cierre (contacto_4) a este lead?')) return;
+  btn.disabled = true;
+  btn.textContent = 'Enviando...';
+  try {
+    const token = localStorage.getItem('authToken') || sessionStorage.getItem('authToken');
+    const res = await fetch('/api/leads/' + leadId + '/send-template', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-Auth-Token': token },
+      body: JSON.stringify({
+        templateName: 'contacto_4',
+        params: [leadName, 'RMG Autos']
+      })
+    });
+    if (res.ok) {
+      btn.textContent = '✅ Enviado';
+      btn.style.background = '#888';
+      setTimeout(() => { btn.style.display = 'none'; }, 3000);
+    } else {
+      const err = await res.json();
+      alert('Error: ' + (err.error || 'desconocido'));
+      btn.disabled = false;
+      btn.textContent = '📤 Enviar contacto_4 (Cierre)';
+    }
+  } catch(e) {
+    alert('Error de red: ' + e.message);
+    btn.disabled = false;
+    btn.textContent = '📤 Enviar contacto_4 (Cierre)';
+  }
+}
+</script>
+
 </body>
 </html>
 
