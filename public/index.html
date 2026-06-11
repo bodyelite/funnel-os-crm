@@ -655,8 +655,8 @@ function renderDash(){renderSlaCards();renderFunnel();renderPerfTable();}
 function renderXRows(items,timeFn){if(!items.length)return'<div class="xe2">Sin leads.</div>';const gc='grid-template-columns:10px 1fr 1fr 1fr 1fr auto';const hd=`<div class="xlr" style="${gc};cursor:default;background:var(--p2)"><div></div><div style="font-size:10px;font-weight:700;color:var(--tm);text-transform:uppercase">Nombre</div><div style="font-size:10px;font-weight:700;color:var(--tm);text-transform:uppercase">Canal</div><div style="font-size:10px;font-weight:700;color:var(--tm);text-transform:uppercase">Vendedor</div><div style="font-size:10px;font-weight:700;color:var(--tm);text-transform:uppercase">Estado</div><div style="font-size:10px;font-weight:700;color:var(--tm);text-transform:uppercase">Última</div></div>`;return hd+items.map(l=>`<div class="xlr" data-id="${l.id}" style="${gc}">${adot(l.alertLevel)}<div><div class="lrn">${esc(l.name)}</div><div class="lrs">${l.unread?'● Sin resp · ':''}${esc(l.phone||'')}</div></div><div>${cSrc(l.source)}</div><div>${cUsr(l.assignedTo)}</div><div>${stpl(l.status)}</div><div class="lrt" style="color:var(--tm)">${timeFn(l)}</div></div>`).join('');}
 function bindXRows(c){c.querySelectorAll('.xlr[data-id]').forEach(el=>el.addEventListener('click',()=>openModal(+el.dataset.id)));}
 function renderLeads(){
-  const gc='grid-template-columns:22px 14px 1.4fr .9fr 1.1fr .85fr .85fr 1.2fr .75fr';
-  const hd=`<div class="tr2 hd" style="${gc}"><div></div><div></div><div>Nombre</div><div>Tel.</div><div>Interés</div><div>Canal</div><div>Asignado</div><div>Estado</div><div>Última</div></div>`;
+  const gc='grid-template-columns:22px 14px 1.4fr .9fr 1.9fr .85fr 1.2fr .75fr';
+  const hd=`<div class="tr2 hd" style="${gc}"><div></div><div></div><div>Nombre</div><div>Tel.</div><div>Origen · Interés Específico</div><div>Asignado</div><div>Estado</div><div>Última</div></div>`;
   const filtCanal = document.getElementById('filtCanal')?.value || '';
   const filtEstado = document.getElementById('filtEstado')?.value || '';
   const filtSearch = document.getElementById('filtSearch')?.value.toLowerCase().trim() || '';
@@ -687,8 +687,9 @@ function renderLeads(){
       ${chk}${unreadDot}
       <div style="display:flex;align-items:center;overflow:hidden"><strong style="${nameStyle};white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(l.name)}</strong>${unreadTag}</div>
       <div style="font-size:11.5px;color:var(--tm)">${esc(l.phone||'—')}</div>
-      <div style="font-size:11.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(l.interest||'—')}</div>
-      <div>${cSrc(l.source)}</div>
+      <div style="display:flex;flex-direction:column;justify-content:center;overflow:hidden">
+        <div style="display:flex;align-items:center;gap:6px">${cSrc(l.source)} <span style="font-size:11px;color:var(--ts);white-space:nowrap;text-overflow:ellipsis;overflow:hidden" title="${esc(l.interest||'')}">${esc(l.interest||'Consulta Genérica')}</span></div>
+      </div>
       <div>${cUsr(l.assignedTo)}</div>
       <div>${stpl(l.status)}</div>
       <div style="font-size:11px;color:var(--tm);font-weight:${l.unread?'700':'400'}">${fDT(l.lastClientTs||l.lastInteraction)}</div>
