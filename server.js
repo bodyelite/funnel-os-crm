@@ -1144,15 +1144,40 @@ app.post('/webhook',async(req,res)=>{
       const yapoMatch = body.match(/(?:Me interesa el anuncio\s*"([^"]+)"|hola[^.]*(?:yapo|anuncio)[^.]*?([A-Z][A-Z0-9 ]{5,40}))/i);
       const mlMatch   = body.match(/(?:publicaci[oó]n en Mercado Libre[^:\-]*[:\-]?\s*(.{0,60})|MLC-\d+|mercado libre[^.]*?([A-Z][A-Z0-9 ]{5,40}))/i);
       const caMatch   = body.match(/(?:auto en Chileautos[^:\-]*[:\-]?\s*(.{0,60})|chileautos[^.]*?([A-Z][A-Z0-9 ]{5,40}))/i);
-      const metaMatch = body.match(/anuncio en Meta|vi su anuncio en Meta|anuncio de RMG en Meta|anuncio RMG Meta/i);
+      const metaMatchText = body.match(/anuncio en Meta|vi su anuncio|Mundialera/i);
+      const hasReferral = (adTracing && adTracing.source_type === 'ad');
+      
+      if (hasReferral || metaMatchText) {
+        detectedSource = 'Meta Ads';
+        const titularAd = hasReferral ? (adTracing.headline || '') : '';
+        const adId = hasReferral ? (adTracing.source_id || '') : '';
+        
+        // Evaluamos LA LÁMINA exacta independientemente de lo que escribió el cliente
+        let isMundialera = false;
+        let autoClicado = '';
+        
+        if (titularAd.includes('3008') || titularAd.includes('Peugeot')) {
+            autoClicado = 'Peugeot 3008 Hybrid (con TV de regalo 📺)'; isMundialera = true;
+        } else if (titularAd.includes('Silverado') || titularAd.includes('Trailboss')) {
+            autoClicado = 'Silverado Trailboss (Transferencia Gratis 📄)'; isMundialera = true;
+        } else if (titularAd.includes('Landtrek')) {
+            autoClicado = 'Landtrek Diésel (Precio Congelado ❄️)'; isMundialera = true;
+        } else if (titularAd.includes('Mundialera') || titularAd.includes('TV') || titularAd.includes('Transf') || body.match(/Mundialera/i)) {
+            isMundialera = true;
+        }
 
-      const isMetaAd = metaMatch || body.match(/Mundialera|TV de Regalo/i) || (adTracing && adTracing.source_type === 'ad');
-      if (isMetaAd) {
-        detectedSource   = 'Meta Ads';
-        const titularAd = (adTracing && adTracing.headline) ? adTracing.headline : '';
-        detectedInterest = titularAd || 'Anuncio Meta Ads';
-        portalNote = `Lead Meta Ads. Anuncio clicado: [${detectedInterest}]. INSTRUCCIÓN IA: Identifica el auto del titular, valida stock y ofrécele los beneficios de la promoción inmediatamente. Mensaje inicial: "${body.slice(0, 100)}"`;
-      } else if (yapoMatch) {
+        if (isMundialera) {
+             detectedInterest = titularAd || 'Promoción Mundialera';
+             if (autoClicado) {
+                 portalNote = `Lead desde Meta Ads. Hizo clic EXACTAMENTE en la lámina del: ${autoClicado}. INSTRUCCIÓN CRÍTICA IA: NO preguntes qué auto busca. Dile que viste su interés en el ${autoClicado} por la Promo Mundialera, confirma stock y ofrece el beneficio directo. Mensaje del cliente: "${body.slice(0, 100)}"`;
+             } else {
+                 portalNote = `Lead desde Meta Ads. Promo Mundialera. INSTRUCCIÓN IA: Ofrece los 3 modelos de la promo (3008, Silverado, Landtrek). Mensaje del cliente: "${body.slice(0, 100)}"`;
+             }
+        } else {
+             detectedInterest = titularAd || 'Anuncio Meta Ads';
+             portalNote = `Lead Meta Ads (ID: ${adId}) — Lámina clicada: [${detectedInterest}]. Mensaje inicial: "${body.slice(0, 100)}"`;
+        }
+      } } else if (yapoMatch) {
         detectedSource   = 'Yapo';
         detectedInterest = yapoMatch[1].trim();
         portalNote = `Lead ingresó desde Yapo. Vehículo consultado: ${detectedInterest}`;
