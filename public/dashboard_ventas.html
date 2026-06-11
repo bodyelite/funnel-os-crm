@@ -1,0 +1,928 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dashboard Ventas — Autos Usados</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+  :root {
+    --bg: #0f1117;
+    --surface: #181c25;
+    --surface2: #1e2330;
+    --border: rgba(255,255,255,0.07);
+    --text: #e8eaf0;
+    --muted: #7a7f94;
+    --accent: #6c63ff;
+    --accent2: #e05c8a;
+    --accent3: #00c49a;
+    --accent4: #f59e0b;
+    --radius: 12px;
+    --radius-sm: 8px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    font-size: 14px;
+    line-height: 1.5;
+    min-height: 100vh;
+  }
+
+  /* HEADER */
+  header {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 18px 28px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  header h1 {
+    font-size: 17px;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+    color: var(--text);
+  }
+  header h1 span {
+    color: var(--accent);
+  }
+  .header-sub {
+    font-size: 12px;
+    color: var(--muted);
+    margin-top: 2px;
+  }
+  .header-badge {
+    background: rgba(108,99,255,0.15);
+    color: var(--accent);
+    border: 1px solid rgba(108,99,255,0.3);
+    border-radius: 20px;
+    padding: 4px 12px;
+    font-size: 12px;
+    font-weight: 500;
+  }
+
+  /* MAIN LAYOUT */
+  main {
+    padding: 24px 28px;
+    max-width: 1400px;
+    margin: 0 auto;
+  }
+
+  /* FILTROS */
+  .filter-bar {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 14px 20px;
+    display: flex;
+    gap: 20px;
+    align-items: center;
+    flex-wrap: wrap;
+    margin-bottom: 20px;
+  }
+  .filter-group {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .filter-group label {
+    font-size: 11px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    font-weight: 500;
+  }
+  .filter-group select {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    color: var(--text);
+    font-size: 13px;
+    padding: 6px 10px;
+    outline: none;
+    cursor: pointer;
+    min-width: 140px;
+    transition: border-color 0.15s;
+  }
+  .filter-group select:hover { border-color: rgba(108,99,255,0.4); }
+  .filter-group select:focus { border-color: var(--accent); }
+  .filter-reset {
+    margin-left: auto;
+    background: transparent;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    color: var(--muted);
+    font-size: 12px;
+    padding: 6px 14px;
+    cursor: pointer;
+    transition: all 0.15s;
+    align-self: flex-end;
+  }
+  .filter-reset:hover { border-color: var(--accent); color: var(--accent); }
+
+  /* METRICS */
+  .metrics {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0,1fr));
+    gap: 14px;
+    margin-bottom: 20px;
+  }
+  .metric {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 18px 20px;
+    position: relative;
+    overflow: hidden;
+  }
+  .metric::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+  }
+  .metric:nth-child(1)::before { background: var(--accent); }
+  .metric:nth-child(2)::before { background: var(--accent3); }
+  .metric:nth-child(3)::before { background: var(--accent2); }
+  .metric:nth-child(4)::before { background: var(--accent4); }
+  .metric-label {
+    font-size: 11px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    font-weight: 500;
+    margin-bottom: 8px;
+  }
+  .metric-value {
+    font-size: 26px;
+    font-weight: 700;
+    letter-spacing: -0.03em;
+    color: var(--text);
+    line-height: 1;
+  }
+  .metric-sub {
+    font-size: 11px;
+    color: var(--muted);
+    margin-top: 6px;
+  }
+
+  /* SECTION TITLE */
+  .section-title {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--muted);
+    font-weight: 600;
+    margin: 22px 0 12px;
+  }
+
+  /* GRID ROWS */
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 14px; }
+  .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; margin-bottom: 14px; }
+
+  /* CARDS */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 18px 20px;
+  }
+  .card-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text);
+    margin-bottom: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .card-title .pill {
+    font-size: 11px;
+    font-weight: 500;
+    background: rgba(108,99,255,0.12);
+    color: var(--accent);
+    border-radius: 20px;
+    padding: 2px 8px;
+  }
+
+  /* LEGEND */
+  .legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-bottom: 10px;
+  }
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 12px;
+    color: var(--muted);
+  }
+  .legend-dot {
+    width: 8px; height: 8px;
+    border-radius: 2px;
+    flex-shrink: 0;
+  }
+
+  /* CHART WRAPPERS */
+  .chart-wrap { position: relative; }
+
+  /* GENDER SPLIT BAR */
+  .gender-bars { display: flex; flex-direction: column; gap: 10px; margin-top: 4px; }
+  .gender-row { display: flex; align-items: center; gap: 10px; }
+  .gender-label { width: 75px; font-size: 12px; color: var(--muted); text-transform: capitalize; flex-shrink: 0; }
+  .gender-bar-outer { flex: 1; background: var(--surface2); border-radius: 4px; height: 22px; overflow: hidden; }
+  .gender-bar-inner { height: 100%; border-radius: 4px; display: flex; align-items: center; justify-content: flex-end; padding-right: 8px; font-size: 11px; font-weight: 600; color: #fff; transition: width 0.4s ease; }
+  .gender-count { width: 28px; text-align: right; font-size: 12px; font-weight: 600; color: var(--text); }
+
+  /* TOP LIST */
+  .top-list { display: flex; flex-direction: column; gap: 7px; }
+  .top-item { display: flex; align-items: center; gap: 8px; }
+  .top-rank { width: 20px; font-size: 11px; color: var(--muted); font-weight: 600; flex-shrink: 0; text-align: right; }
+  .top-name { flex: 1; font-size: 13px; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .top-bar-outer { width: 80px; background: var(--surface2); border-radius: 3px; height: 6px; flex-shrink: 0; }
+  .top-bar-inner { height: 100%; border-radius: 3px; }
+  .top-count { width: 24px; text-align: right; font-size: 12px; font-weight: 600; color: var(--text); flex-shrink: 0; }
+
+  /* VENDEDOR TABLE */
+  .vend-table { width: 100%; border-collapse: collapse; }
+  .vend-table th {
+    font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em;
+    color: var(--muted); font-weight: 600; text-align: left;
+    padding: 0 0 10px; border-bottom: 1px solid var(--border);
+  }
+  .vend-table th:not(:first-child) { text-align: right; }
+  .vend-table td {
+    padding: 9px 0; border-bottom: 1px solid var(--border);
+    font-size: 13px; color: var(--text);
+  }
+  .vend-table td:not(:first-child) { text-align: right; color: var(--muted); }
+  .vend-table tr:last-child td { border-bottom: none; }
+  .vend-badge {
+    display: inline-block;
+    width: 8px; height: 8px; border-radius: 50%;
+    margin-right: 6px; vertical-align: middle;
+  }
+
+  /* COLOR PILLS */
+  .color-grid { display: flex; flex-wrap: wrap; gap: 8px; }
+  .color-chip {
+    display: flex; align-items: center; gap: 6px;
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 20px; padding: 4px 12px 4px 8px;
+    font-size: 12px; color: var(--text);
+  }
+  .color-swatch { width: 12px; height: 12px; border-radius: 50%; border: 1px solid rgba(255,255,255,0.1); flex-shrink: 0; }
+
+  /* PAGO DONUT */
+  .pago-wrap { display: flex; align-items: center; gap: 20px; }
+  .pago-legend { display: flex; flex-direction: column; gap: 10px; flex: 1; }
+  .pago-legend-item { display: flex; align-items: center; justify-content: space-between; }
+  .pago-legend-label { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--muted); }
+  .pago-legend-val { font-size: 13px; font-weight: 600; color: var(--text); }
+
+  @media (max-width: 900px) {
+    .metrics { grid-template-columns: 1fr 1fr; }
+    .grid-2, .grid-3 { grid-template-columns: 1fr; }
+    main { padding: 16px; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>Body Elite — <span>Dashboard Ventas</span></h1>
+    <div class="header-sub">Autos usados · Jun 2024 – May 2026</div>
+  </div>
+  <div class="header-badge" id="headerCount">193 ventas</div>
+</header>
+
+<main>
+
+  <!-- FILTROS -->
+  <div class="filter-bar">
+    <div class="filter-group">
+      <label>Sucursal</label>
+      <select id="filtSucursal"></select>
+    </div>
+    <div class="filter-group">
+      <label>Forma de pago</label>
+      <select id="filtPago"></select>
+    </div>
+    <div class="filter-group">
+      <label>Vendedor</label>
+      <select id="filtVendedor"></select>
+    </div>
+    <div class="filter-group">
+      <label>Período</label>
+      <select id="filtPeriodo">
+        <option value="all">Todo el período</option>
+        <option value="2024">2024</option>
+        <option value="2025">2025</option>
+        <option value="2026">2026</option>
+      </select>
+    </div>
+    <button class="filter-reset" onclick="resetFiltros()">Limpiar filtros</button>
+  </div>
+
+  <!-- MÉTRICAS -->
+  <div class="metrics" id="metrics"></div>
+
+  <!-- GÉNERO + PAGO -->
+  <div class="section-title">Análisis de clientes</div>
+  <div class="grid-3">
+    <div class="card">
+      <div class="card-title">Distribución por género</div>
+      <div class="gender-bars" id="genderBars"></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Precio promedio por género</div>
+      <div class="chart-wrap" style="height:180px;"><canvas id="chartPrecioGenero" role="img" aria-label="Precio promedio por género"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Forma de pago</div>
+      <div class="pago-wrap">
+        <div class="chart-wrap" style="width:110px;height:110px;flex-shrink:0;"><canvas id="chartPago" role="img" aria-label="Forma de pago"></canvas></div>
+        <div class="pago-legend" id="pagoLegend"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MARCAS Y MODELOS -->
+  <div class="section-title">Marcas y modelos</div>
+  <div class="grid-2">
+    <div class="card">
+      <div class="card-title">Top 10 marcas <span class="pill">por unidades</span></div>
+      <div class="top-list" id="topMarcas"></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Top 10 modelos <span class="pill">por unidades</span></div>
+      <div class="top-list" id="topModelos"></div>
+    </div>
+  </div>
+
+  <!-- TEMPORALIDAD -->
+  <div class="section-title">Evolución mensual</div>
+  <div class="grid-2">
+    <div class="card">
+      <div class="card-title">Volumen de ventas por mes</div>
+      <div class="chart-wrap" style="height:200px;"><canvas id="chartMensual" role="img" aria-label="Ventas mensuales"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Precio promedio de venta por mes</div>
+      <div class="chart-wrap" style="height:200px;"><canvas id="chartPrecioMes" role="img" aria-label="Precio promedio mensual"></canvas></div>
+    </div>
+  </div>
+
+  <!-- SUCURSAL + VENDEDORES -->
+  <div class="section-title">Desempeño operacional</div>
+  <div class="grid-2">
+    <div class="card">
+      <div class="card-title">Ventas por sucursal</div>
+      <div class="chart-wrap" style="height:190px;"><canvas id="chartSucursal" role="img" aria-label="Ventas por sucursal"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Ranking de vendedores</div>
+      <table class="vend-table" id="vend-table">
+        <thead><tr><th>Vendedor</th><th>Ventas</th><th>Prom. venta</th><th>Total</th></tr></thead>
+        <tbody id="vendBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- COLORES -->
+  <div class="section-title">Colores más vendidos</div>
+  <div class="card" style="margin-bottom:28px;">
+    <div class="card-title">Distribución por color</div>
+    <div class="chart-wrap" style="height:180px;margin-bottom:16px;"><canvas id="chartColor" role="img" aria-label="Colores más vendidos"></canvas></div>
+    <div class="color-grid" id="colorGrid"></div>
+  </div>
+
+
+  <!-- COMUNAS -->
+  <div class="section-title">Comunas de clientes</div>
+  <div class="grid-2" style="margin-bottom:28px;">
+    <div class="card">
+      <div class="card-title">Top 20 comunas por ventas</div>
+      <div class="top-list" id="topComunas"></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Precio prom. de venta por comuna <span class="pill">top 15</span></div>
+      <div style="position:relative;" id="wrapPrecioComuna"><canvas id="chartPrecioComuna" role="img" aria-label="Precio promedio por comuna"></canvas></div>
+    </div>
+  </div>
+
+</main>
+
+<script>
+const COMUNAS_MAP = {
+  343:"Santiago",342:"Pudahuel",341:"Pudahuel",340:"Pudahuel",338:"Rancagua",337:"Las Condes",
+  336:"Huechuraba",335:"La Cisterna",333:"San Bernardo",332:"Pudahuel",328:"Sin datos",
+  327:"Valparaíso",326:"Pudahuel",322:"Ñuñoa",320:"La Cisterna",319:"Peñalolén",317:"Las Condes",
+  316:"Macul",314:"Peñalolén",312:"Santiago",309:"Maipú",308:"Santiago",305:"Ñuñoa",
+  303:"Cerro Navia",301:"Sin datos",300:"Maipú",299:"Sin datos",297:"Sin datos",296:"Pudahuel",
+  294:"Sin datos",293:"Sin datos",291:"Alhué",290:"Sin datos",289:"Renca",288:"Maipú",
+  287:"Lo Prado",286:"Pudahuel",285:"Santiago",284:"Quilicura",283:"La Florida",281:"Las Condes",
+  279:"Lampa",278:"La Granja",277:"Valdivia",276:"La Reina",275:"Ñuñoa",274:"Colina",
+  273:"Peñalolén",272:"Maipú",270:"Maipú",269:"Sin datos",268:"Santiago",267:"Panguipulli",
+  265:"Longaví",263:"Ñuñoa",262:"Sin datos",257:"Sin datos",255:"Quilicura",253:"Peñalolén",
+  252:"Providencia",250:"Paine",249:"San Antonio",248:"La Pintana",247:"Cabildo",246:"Machalí",
+  243:"Olmué",242:"Peñalolén",236:"Lampa",235:"Macul",226:"Maipú",224:"Concón",223:"Valparaíso",
+  222:"Maipú",221:"Providencia",218:"Macul",217:"Macul",216:"Pudahuel",215:"Sin datos",
+  212:"Chillán",210:"Sin datos",208:"Valparaíso",207:"Macul",206:"Buin",205:"Huasco",
+  204:"Viña del Mar",203:"Sin datos",202:"Santiago",201:"Valdivia",200:"Talcahuano",
+  199:"Lampa",198:"Santiago",197:"Sin datos",196:"Macul",194:"Peñalolén",190:"Providencia",
+  189:"Macul",187:"Maipú",186:"Pudahuel",185:"La Florida",184:"Maipú",181:"Santiago",
+  179:"La Florida",178:"San Bernardo",177:"Sin datos",176:"Maipú",174:"Talcahuano",173:"Recoleta",
+  171:"La Florida",170:"Talca",169:"Macul",167:"Maipú",165:"Macul",164:"Macul",163:"Independencia",
+  162:"Providencia",161:"Pudahuel",158:"Lampa",157:"Maipú",155:"Providencia",154:"Valparaíso",
+  152:"Pudahuel",151:"Santiago",150:"Huechuraba",149:"Talca",145:"Quinta Normal",144:"Pudahuel",
+  143:"Maipú",142:"Renca",141:"Peñalolén",140:"Las Condes",139:"Huechuraba",138:"San Miguel",
+  137:"Maipú",136:"Lampa",135:"Sin datos",134:"Macul",133:"San Joaquín",132:"San Joaquín",
+  131:"Recoleta",128:"San Bernardo",127:"Maipú",126:"Pudahuel",124:"Pudahuel",122:"Sin datos",
+  120:"Maipú",118:"Talca",117:"Providencia",116:"Sin datos",115:"Providencia",113:"Puente Alto",
+  112:"Sin datos",111:"Lonquimay",110:"Sin datos",109:"Santiago",108:"Sin datos",107:"Paine",
+  106:"Ñuñoa",105:"Curicó",104:"Viña del Mar",103:"Huechuraba",101:"Las Condes",99:"Providencia",
+  98:"Talcahuano",95:"Santiago",94:"San Bernardo",93:"La Florida",90:"Peñalolén",88:"Lo Barnechea",
+  87:"Sin datos",86:"San Bernardo",85:"Colina",84:"Santiago",83:"Santiago",82:"Las Condes",
+  81:"Las Condes",80:"Maipú",79:"Maipú",78:"Las Condes",76:"Recoleta",75:"Chillán",
+  74:"Puente Alto",73:"Maipú",72:"Las Condes",71:"Puente Alto",69:"Pudahuel",68:"Valparaíso",
+  67:"Santiago",65:"Vitacura",61:"Ñuñoa",60:"Ñuñoa",57:"San Bernardo",56:"Ñuñoa",
+  53:"Providencia",52:"Buin",51:"Santiago",50:"Santiago",49:"Sin datos",48:"Sin datos",
+  47:"Las Condes",44:"Las Condes",43:"Ñuñoa",41:"Santiago",40:"Macul",36:"Santiago",
+  35:"Sin datos",34:"Lampa",33:"Sin datos",32:"Lampa",30:"Independencia",24:"Sin datos",
+  23:"Sin datos",22:"Concón",21:"Sin datos",20:"Sin datos",19:"Sin datos",12:"Sin datos",7:"Sin datos",
+};
+
+const RAW = [
+{id:7,fecha:"2024-06-17",vendedor:"Raul Miño",cliente:"RICARDO ANDRES CHAMORRO TORRES",marca:"PEUGEOT",modelo:"PARTNER",color:"BLANCO",sucursal:"BATUCO",pago:"CONTADO",costo:8020619,venta:11200000},
+{id:12,fecha:"2024-06-19",vendedor:"Marianela",cliente:"NITZA ANDREA LUEIZA URBINA",marca:"PEUGEOT",modelo:"PARTNER",color:"BLANCO",sucursal:"BATUCO",pago:"CRÉDITO",costo:7000000,venta:10590000},
+{id:19,fecha:"2024-06-26",vendedor:"Raul Miño",cliente:"PATRICIA TEGUALDA HIDALGO ESPINACE",marca:"GEELY",modelo:"AZKARRA",color:"PLATEADO",sucursal:"BATUCO",pago:"CONTADO",costo:11223756,venta:11990000},
+{id:20,fecha:"2024-07-01",vendedor:"Raul Miño",cliente:"CARLOS RODRIGO CAYUPAN AGURTO",marca:"PEUGEOT",modelo:"308",color:"GRIS",sucursal:"BATUCO",pago:"CONTADO",costo:17850000,venta:18250000},
+{id:21,fecha:"2024-07-02",vendedor:"Marianela",cliente:"JUAN CARLOS SEGOVIA GALLARDO",marca:"PEUGEOT",modelo:"PARTNER",color:"BLANCO",sucursal:"BATUCO",pago:"CONTADO",costo:7894108,venta:10000000},
+{id:22,fecha:"2024-08-12",vendedor:"Marianela",cliente:"francisca maureen kemp quiroga",marca:"PEUGEOT",modelo:"PARTNER",color:"BLANCO",sucursal:"BATUCO",pago:"CONTADO",costo:10600303,venta:11000000},
+{id:23,fecha:"2024-08-07",vendedor:"Raul Miño",cliente:"AGRO SERVIC SPA",marca:"PEUGEOT",modelo:"PARTNER",color:"BLANCO",sucursal:"BATUCO",pago:"CONTADO",costo:10179556,venta:11450000},
+{id:24,fecha:"2024-08-08",vendedor:"Raul Miño",cliente:"DIAZ ALVAREZ HERMANOS SPA",marca:"PEUGEOT",modelo:"PARTNER",color:"BLANCO",sucursal:"BATUCO",pago:"CONTADO",costo:7970163,venta:9290000},
+{id:30,fecha:"2024-08-26",vendedor:"Hugo Millan",cliente:"DAVE VICENTE CIFUENTES CASTILLO",marca:"CHEVROLET",modelo:"SAIL NB",color:"PLATEADO",sucursal:"BATUCO",pago:"CONTADO",costo:4513080,venta:5500000},
+{id:32,fecha:"2024-09-09",vendedor:"Raul Miño",cliente:"TRANSPORTE E INVERSION SAN ENRIQUE LTDA",marca:"PEUGEOT",modelo:"PARTNER",color:"BLANCO",sucursal:"BATUCO",pago:"CRÉDITO",costo:8032000,venta:9500000},
+{id:33,fecha:"2024-08-01",vendedor:"Raul Miño",cliente:"calixte moneus",marca:"CHEVROLET",modelo:"SILVERADO",color:"BLANCO",sucursal:"BATUCO",pago:"CRÉDITO",costo:26030000,venta:27000000},
+{id:34,fecha:"2024-08-28",vendedor:"Raul Miño",cliente:"LUIS ANTONIO AMBIADO PINO",marca:"PEUGEOT",modelo:"PARTNER",color:"BLANCO",sucursal:"BATUCO",pago:"CONTADO",costo:8216670,venta:10000000},
+{id:35,fecha:"2024-09-04",vendedor:"Hugo Millan",cliente:"VICTORIA ANDREA PARRA AGUILERA",marca:"MG",modelo:"ZS",color:"AZUL",sucursal:"BATUCO",pago:"CONTADO",costo:7003080,venta:8090000},
+{id:36,fecha:"2024-09-02",vendedor:"Hugo Millan",cliente:"FMTEC SPA",marca:"PEUGEOT",modelo:"PARTNER",color:"BLANCO",sucursal:"BATUCO",pago:"CONTADO",costo:8058232,venta:9950000},
+{id:40,fecha:"2024-10-04",vendedor:"Catherine Gutierrez",cliente:"Camila Ignacia San Martin Benitez",marca:"SUZUKI",modelo:"BALENO",color:"BLANCO",sucursal:"LAS CONDES",pago:"CONTADO",costo:9550000,venta:10690000},
+{id:41,fecha:"2024-10-01",vendedor:"Catherine Gutierrez",cliente:"Luis Francisco Hidalgo Aquino",marca:"CHERY",modelo:"ARRIZO 3",color:"GRIS",sucursal:"LAS CONDES",pago:"CONTADO",costo:5513080,venta:6400000},
+{id:43,fecha:"2024-10-09",vendedor:"Catherine Gutierrez",cliente:"Camila Andrea Carvajal Becerra",marca:"MAZDA",modelo:"CX3",color:"ROJO",sucursal:"LAS CONDES",pago:"CONTADO",costo:9508426,venta:10890000},
+{id:44,fecha:"2024-11-04",vendedor:"Catherine Gutierrez",cliente:"Jennifer Isabel Diaz Poblete",marca:"SUZUKI",modelo:"IGNIS",color:"NARANJO",sucursal:"LAS CONDES",pago:"CONTADO",costo:5002831,venta:7000000},
+{id:47,fecha:"2024-11-20",vendedor:"Hugo Valdebenito",cliente:"Karina Vanessa Ramirez Huaquin",marca:"SUZUKI",modelo:"BALENO",color:"BLANCO",sucursal:"LAS CONDES",pago:"CONTADO",costo:8200000,venta:9990000},
+{id:48,fecha:"2024-11-22",vendedor:"Hugo Valdebenito",cliente:"Regner Antonio Illesca Pinto",marca:"RENAULT",modelo:"DUSTER",color:"BLANCO",sucursal:"LAS CONDES",pago:"CONTADO",costo:3941855,venta:4745640},
+{id:49,fecha:"2024-11-22",vendedor:"Catherine Gutierrez",cliente:"Jonathan Edgardo Lopez Cabrera",marca:"MINI",modelo:"COOPER",color:"AZUL",sucursal:"LAS CONDES",pago:"CONTADO",costo:5501089,venta:6300000},
+{id:50,fecha:"2024-11-27",vendedor:"Catherine Gutierrez",cliente:"DARLING ALEJANDRA VERA FUENTES",marca:"CHANGAN",modelo:"CS35",color:"AZUL",sucursal:"LAS CONDES",pago:"CONTADO",costo:6730630,venta:7790000},
+{id:51,fecha:"2024-11-28",vendedor:"Nicolas Rojas",cliente:"DELOUIS SAINPHIL",marca:"SUZUKI",modelo:"SPRESSO",color:"GRIS",sucursal:"LAS CONDES",pago:"CONTADO",costo:4783503,venta:5500000},
+{id:52,fecha:"2024-11-28",vendedor:"Nicolas Rojas",cliente:"NICOLAS JUNIOR ESPINOZA TRILLERO",marca:"BMW",modelo:"240i",color:"BLANCO",sucursal:"LAS CONDES",pago:"CONTADO",costo:30200000,venta:32000000},
+{id:53,fecha:"2024-12-06",vendedor:"Nicolas Rojas",cliente:"ALEJANDRA ANDREA NIETO PAVEZ",marca:"OPEL",modelo:"ASTRA",color:"GRIS",sucursal:"LAS CONDES",pago:"CONTADO",costo:5266750,venta:6600000},
+{id:56,fecha:"2024-12-11",vendedor:"Nicolas Rojas",cliente:"Jeanette Viviana Campos Muñoz",marca:"MITSUBISHI",modelo:"ECLIPSE",color:"AZUL",sucursal:"LAS CONDES",pago:"CONTADO",costo:16665079,venta:16600000},
+{id:57,fecha:"2025-01-09",vendedor:"Catherine Gutierrez",cliente:"Katherine Francisca Chavarria Navea",marca:"MAZDA",modelo:"NEW 3",color:"GRIS",sucursal:"LAS CONDES",pago:"CONTADO",costo:16646385,venta:19990000},
+{id:60,fecha:"2024-12-30",vendedor:"Hugo Valdebenito",cliente:"Camila Andrea Carvajal Becerra",marca:"FORD",modelo:"TERRITORY",color:"BLANCO",sucursal:"LAS CONDES",pago:"CONTADO",costo:11503179,venta:12900000},
+{id:61,fecha:"2025-01-09",vendedor:"Catherine Gutierrez",cliente:"Julio Lilamon Bravo Araya",marca:"TOYOTA",modelo:"HILUX",color:"ROJO",sucursal:"LAS CONDES",pago:"CONTADO",costo:11980015,venta:13400000},
+{id:65,fecha:"2025-01-09",vendedor:"Catherine Gutierrez",cliente:"Carlos Manuel Vasquez Contreras",marca:"NISSAN",modelo:"X TRAIL",color:"BLANCO",sucursal:"LAS CONDES",pago:"CONTADO",costo:9290340,venta:11990000},
+{id:67,fecha:"2025-02-03",vendedor:"Catherine Gutierrez",cliente:"Daniel Andres Silva Rojas",marca:"CITROEN",modelo:"C 4",color:"BLANCO",sucursal:"LAS CONDES",pago:"CONTADO",costo:10663080,venta:10000000},
+{id:68,fecha:"2025-02-13",vendedor:"Catherine Gutierrez",cliente:"Cristobal Ignacio Leon Veliz",marca:"BMW",modelo:"420I",color:"GRIS",sucursal:"LAS CONDES",pago:"CONTADO",costo:12763456,venta:16990000},
+{id:69,fecha:"2025-02-03",vendedor:"Catherine Gutierrez",cliente:"Beatriz Aida Navarro Aguilera",marca:"FORD",modelo:"TERRITORY",color:"AZUL",sucursal:"LAS CONDES",pago:"CONTADO",costo:9295200,venta:11227930},
+{id:71,fecha:"2025-02-13",vendedor:"Catherine Gutierrez",cliente:"Patricio Javier Franco Hurtado",marca:"HYUNDAI",modelo:"TUCSON",color:"GRIS",sucursal:"LAS CONDES",pago:"CONTADO",costo:11051800,venta:12990000},
+{id:72,fecha:"2025-02-13",vendedor:"Catherine Gutierrez",cliente:"Gabriel Ignacio Gutierrez Flores",marca:"MG",modelo:"RX5",color:"NEGRO",sucursal:"LAS CONDES",pago:"CRÉDITO",costo:7366200,venta:8890000},
+{id:73,fecha:"2025-02-07",vendedor:"Raul Miño",cliente:"CRISTIAN MANUEL FERNANDEZ FARIAS",marca:"CHEVROLET",modelo:"SAIL NB",color:"ROJO",sucursal:"BATUCO",pago:"CONTADO",costo:7319340,venta:8200000},
+{id:74,fecha:"2025-02-10",vendedor:"Hugo Valdebenito",cliente:"BERNARDITA ESTER GUERRERO MUÑOZ",marca:"FORD",modelo:"F-150",color:"GRIS",sucursal:"LAS CONDES",pago:"CONTADO",costo:15733812,venta:17990000},
+{id:75,fecha:"2025-02-19",vendedor:"Hugo Valdebenito",cliente:"CLAUDIO ANDRES DELGADO LOPEZ",marca:"MERCEDES BENZ",modelo:"A250",color:"PLATEADO",sucursal:"LAS CONDES",pago:"CONTADO",costo:9410609,venta:11900000},
+{id:76,fecha:"2025-02-19",vendedor:"Raul Miño",cliente:"FERNANDA SIMONA ZAMORA FERNANDEZ",marca:"CITROEN",modelo:"C 3",color:"BLANCO",sucursal:"LAS CONDES",pago:"CRÉDITO",costo:7350000,venta:8290000},
+{id:78,fecha:"2025-02-20",vendedor:"Catherine Gutierrez",cliente:"Andrea Nataly Stutman Zapata",marca:"CHERY",modelo:"ARRIZO 5",color:"GRIS",sucursal:"LAS CONDES",pago:"CONTADO",costo:6050000,venta:8190000},
+{id:79,fecha:"2025-03-05",vendedor:"Catherine Gutierrez",cliente:"Edwin Fabian Mejia Mendez",marca:"CHERY",modelo:"ARRIZO 3",color:"ROJO",sucursal:"LAS CONDES",pago:"CONTADO",costo:4220000,venta:5400000},
+{id:80,fecha:"2025-03-03",vendedor:"Catherine Gutierrez",cliente:"Natalia Valeska Lara Ibarra",marca:"KIA",modelo:"RIO",color:"AZUL",sucursal:"LAS CONDES",pago:"CONTADO",costo:3953038,venta:5100000},
+{id:81,fecha:"2025-03-04",vendedor:"Catherine Gutierrez",cliente:"Margarita Ines Lagos Hartard",marca:"SUZUKI",modelo:"GRAND NOMADE",color:"PLATEADO",sucursal:"LAS CONDES",pago:"CRÉDITO",costo:7500000,venta:8590000},
+{id:82,fecha:"2025-03-05",vendedor:"Catherine Gutierrez",cliente:"Pia Constanza Rivera Barrera",marca:"PEUGEOT",modelo:"208",color:"GRIS",sucursal:"LAS CONDES",pago:"CONTADO",costo:8354700,venta:9350000},
+{id:83,fecha:"2025-03-04",vendedor:"Catherine Gutierrez",cliente:"Teudy Jose Peñaloza Rojas",marca:"CHERY",modelo:"TIGGO 8",color:"GRIS",sucursal:"LAS CONDES",pago:"CONTADO",costo:9750000,venta:11700000},
+{id:84,fecha:"2025-03-11",vendedor:"Catherine Gutierrez",cliente:"CLAUDIA VANESSA BARRIOS MARIN",marca:"CHERY",modelo:"TIGGO 7",color:"GRIS",sucursal:"LAS CONDES",pago:"CONTADO",costo:10970000,venta:13490000},
+{id:85,fecha:"2025-03-14",vendedor:"Catherine Gutierrez",cliente:"Nicole Gonzalez Campos",marca:"JETOUR",modelo:"DASHING",color:"BLANCO",sucursal:"LAS CONDES",pago:"CONTADO",costo:13050014,venta:14385000},
+{id:86,fecha:"2025-03-15",vendedor:"Catherine Gutierrez",cliente:"Rodrigo Eduardo Alfan Bravo",marca:"CHEVROLET",modelo:"SPARK",color:"PLATEADO",sucursal:"LAS CONDES",pago:"CONTADO",costo:2400000,venta:2700000},
+{id:87,fecha:"2025-03-30",vendedor:"Hugo Valdebenito",cliente:"Isabel Andrea Poveda Cifuentes",marca:"CHERY",modelo:"TIGGO 2",color:"ROJO",sucursal:"LAS CONDES",pago:"CRÉDITO",costo:5644955,venta:6690000},
+{id:88,fecha:"2025-03-30",vendedor:"Catherine Gutierrez",cliente:"Nicole Araceli Jara Vera",marca:"CHERY",modelo:"TIGGO 7",color:"AZUL",sucursal:"LAS CONDES",pago:"CONTADO",costo:9847938,venta:12290000},
+{id:90,fecha:"2025-04-04",vendedor:"Catherine Gutierrez",cliente:"Cristian Guillermo Bautista Astudillo",marca:"VOLKSWAGEN",modelo:"TIGUAN",color:"GRIS",sucursal:"LAS CONDES",pago:"CONTADO",costo:13626953,venta:14590000},
+{id:93,fecha:"2025-04-21",vendedor:"Catherine Gutierrez",cliente:"Gian Carlos Perez Fabian",marca:"CHANGAN",modelo:"CS35",color:"BLANCO",sucursal:"LAS CONDES",pago:"CONTADO",costo:7875000,venta:9500000},
+{id:94,fecha:"2025-04-21",vendedor:"Raul Miño",cliente:"PABLO RAUL CASTILLO FARIAS",marca:"CHEVROLET",modelo:"NEW TRACKER",color:"PLATEADO",sucursal:"LAS CONDES",pago:"CONTADO",costo:10797584,venta:11990000},
+{id:95,fecha:"2025-04-21",vendedor:"Catherine Gutierrez",cliente:"DAVID RUEDA RESTREPO",marca:"MG",modelo:"3",color:"NEGRO",sucursal:"LAS CONDES",pago:"CONTADO",costo:6004462,venta:6825000},
+{id:98,fecha:"2025-04-21",vendedor:"Catherine Gutierrez",cliente:"Cristian Andres Nuñez Diaz",marca:"CHEVROLET",modelo:"GROOVE",color:"ROJO",sucursal:"LAS CONDES",pago:"CRÉDITO",costo:7575000,venta:9790000},
+{id:99,fecha:"2025-04-15",vendedor:"Catherine Gutierrez",cliente:"Angelo Antonio Castro Burgos",marca:"PEUGEOT",modelo:"PARTNER",color:"BLANCO",sucursal:"LAS CONDES",pago:"CONTADO",costo:8788458,venta:9990000},
+{id:101,fecha:"2025-04-22",vendedor:"Catherine Gutierrez",cliente:"Comercializadora Express SPA",marca:"SSANGYONG",modelo:"GRAND MUSSO",color:"BLANCO",sucursal:"LAS CONDES",pago:"CONTADO",costo:12491000,venta:14990000},
+{id:103,fecha:"2025-04-21",vendedor:"Catherine Gutierrez",cliente:"Fernanda Andrea Arce Rojas",marca:"CITROEN",modelo:"C-ELYSEE",color:"GRIS",sucursal:"LAS CONDES",pago:"CONTADO",costo:4634038,venta:5800000},
+{id:104,fecha:"2025-04-21",vendedor:"Catherine Gutierrez",cliente:"COMERCIAL FRUTOS DEL PAÍS SPA",marca:"MAXUS",modelo:"V90 DELIVERY",color:"BLANCO",sucursal:"LAS CONDES",pago:"CONTADO",costo:14599376,venta:16200000},
+{id:105,fecha:"2025-04-26",vendedor:"Catherine Gutierrez",cliente:"Yuli Rosa Ramirez Cano",marca:"CHEVROLET",modelo:"PRISMA",color:"PLATEADO",sucursal:"LAS CONDES",pago:"CRÉDITO",costo:5075000,venta:6990000},
+{id:106,fecha:"2025-05-06",vendedor:"Hugo Valdebenito",cliente:"KATHERINE JOHANNA PALMA MECIAS",marca:"JEEP",modelo:"RENEGADE",color:"PLATEADO",sucursal:"LAS CONDES",pago:"CONTADO",costo:8675000,venta:10490000},
+{id:107,fecha:"2025-05-07",vendedor:"Catherine Gutierrez",cliente:"HUGO DEMETRIO TACUSSIS KING",marca:"HYUNDAI",modelo:"ACCENT",color:"BLANCO",sucursal:"LAS CONDES",pago:"CONTADO",costo:7125033,venta:8200000},
+{id:108,fecha:"2025-05-29",vendedor:"Raul Miño",cliente:"ASESVAL CONSULTORES SPA",marca:"PEUGEOT",modelo:"5008",color:"AZUL",sucursal:"LAS CONDES",pago:"CRÉDITO",costo:14150000,venta:16390000},
+{id:109,fecha:"2025-05-12",vendedor:"Catherine Gutierrez",cliente:"Esteban Andy Morales Zuñiga",marca:"NISSAN",modelo:"NAVARA",color:"BLANCO",sucursal:"LAS CONDES",pago:"CONTADO",costo:20565000,venta:24490000},
+{id:110,fecha:"2025-06-05",vendedor:"Catherine Gutierrez",cliente:"Ignacio Martin Huarte",marca:"MG",modelo:"ZS",color:"ROJO",sucursal:"LAS CONDES",pago:"CONTADO",costo:7593380,venta:8100000},
+{id:111,fecha:"2025-05-17",vendedor:"Catherine Gutierrez",cliente:"Emanuel Masri Alvarez",marca:"CHEVROLET",modelo:"CRUZE",color:"PLATEADO",sucursal:"LAS CONDES",pago:"CONTADO",costo:5260000,venta:6400000},
+{id:112,fecha:"2025-05-20",vendedor:"Catherine Gutierrez",cliente:"Carlos Alejandro Tapia Reyes",marca:"SUBARU",modelo:"IMPREZA",color:"BLANCO",sucursal:"LAS CONDES",pago:"CONTADO",costo:10095078,venta:11990000},
+{id:113,fecha:"2025-05-24",vendedor:"Catherine Gutierrez",cliente:"Valeria Leticia Troncoso Madriaza",marca:"CITROEN",modelo:"C 3",color:"GRIS",sucursal:"LAS CONDES",pago:"CRÉDITO",costo:8500269,venta:9790000},
+{id:115,fecha:"2025-05-27",vendedor:"Catherine Gutierrez",cliente:"Andres Armando Moreno Mujica",marca:"DODGE",modelo:"JOURNEY",color:"GRIS",sucursal:"LAS CONDES",pago:"CONTADO",costo:8695781,venta:11000000},
+{id:116,fecha:"2025-05-30",vendedor:"Raul Miño",cliente:"ROSA NATALIA PINTO VALDES",marca:"DODGE",modelo:"JOURNEY",color:"BLANCO",sucursal:"LAS CONDES",pago:"CONTADO",costo:7219939,venta:9000000},
+{id:117,fecha:"2025-06-16",vendedor:"Hugo Valdebenito",cliente:"GILLIAM GISSEL ALVAREZ AVILA",marca:"PEUGEOT",modelo:"2008",color:"ROJO",sucursal:"LAS CONDES",pago:"CONTADO",costo:10500000,venta:11550000},
+{id:118,fecha:"2025-06-16",vendedor:"Hugo Valdebenito",cliente:"CRISTIAN GONZALEZ HORMAZABAL",marca:"PEUGEOT",modelo:"3008",color:"GRIS",sucursal:"LAS CONDES",pago:"CONTADO",costo:6642917,venta:8790000},
+{id:120,fecha:"2025-06-16",vendedor:"Catherine Gutierrez",cliente:"Priscilla Katherinne Sandoval Fraga",marca:"CHEVROLET",modelo:"GROOVE",color:"GRIS",sucursal:"LAS CONDES",pago:"CONTADO",costo:8800000,venta:10590000},
+{id:122,fecha:"2025-06-16",vendedor:"Catherine Gutierrez",cliente:"Paola Cristina Diaz Olivares",marca:"MG",modelo:"RX5",color:"GRIS",sucursal:"LAS CONDES",pago:"CONTADO",costo:9975000,venta:11790000},
+{id:124,fecha:"2025-06-21",vendedor:"Raul Miño",cliente:"CRISTIAN SILVA BAHAMONDES",marca:"FOTON",modelo:"MIDI",color:"BLANCO",sucursal:"LAS CONDES",pago:"CONTADO",costo:4710000,venta:6000000},
+{id:126,fecha:"2025-06-30",vendedor:"Catherine Gutierrez",cliente:"Joaquín Vicente Evans Navarro",marca:"MG",modelo:"ZS",color:"BLANCO",sucursal:"LAS CONDES",pago:"CONTADO",costo:6953873,venta:7990000},
+{id:127,fecha:"2025-07-03",vendedor:"Catherine Gutierrez",cliente:"Daniel Abelardo Lopez Leiva",marca:"MITSUBISHI",modelo:"MONTERO",color:"GRIS",sucursal:"LAS CONDES",pago:"CONTADO",costo:10461000,venta:12200000},
+{id:128,fecha:"2025-07-13",vendedor:"Catherine Gutierrez",cliente:"Jacqueline Andrea Silva Gonzalez",marca:"TOYOTA",modelo:"RAV 4",color:"BLANCO",sucursal:"LAS CONDES",pago:"CONTADO",costo:13305000,venta:16490000},
+{id:131,fecha:"2025-07-31",vendedor:"Leslie Montoya",cliente:"MIRYAN JACQUELINE PLUA LOPEZ",marca:"RENAULT",modelo:"SYMBOL",color:"GRIS",sucursal:"LAS CONDES",pago:"CRÉDITO",costo:3965000,venta:5390000},
+{id:132,fecha:"2025-07-12",vendedor:"Leslie Montoya",cliente:"FRANCISCO FRANCO AGUILERA ARAMBURU",marca:"HYUNDAI",modelo:"TUCSON",color:"PLATEADO",sucursal:"LAS CONDES",pago:"CRÉDITO",costo:11315460,venta:12790000},
+{id:133,fecha:"2025-07-17",vendedor:"Leslie Montoya",cliente:"LORETO DEL ROSARIO CALFUCURA",marca:"JETOUR",modelo:"X70",color:"BLANCO",sucursal:"LAS CONDES",pago:"CRÉDITO",costo:9885050,venta:11290000},
+{id:134,fecha:"2025-07-17",vendedor:"Leslie Montoya",cliente:"DIEGO ANTONIO MORALES CHACON",marca:"JEEP",modelo:"RENEGADE",color:"BLANCO",sucursal:"LAS CONDES",pago:"CONTADO",costo:12399287,venta:13790000},
+{id:135,fecha:"2025-07-21",vendedor:"Leslie Montoya",cliente:"ROXANA PAOLA DIAZ",marca:"FORD",modelo:"NEW TERRITORY",color:"AZUL",sucursal:"LAS CONDES",pago:"CONTADO",costo:13391176,venta:14630000},
+{id:136,fecha:"2025-08-06",vendedor:"Leslie Montoya",cliente:"NICOLAS ELIAS GUARJARDO CONTRERAS",marca:"MAZDA",modelo:"CX3",color:"BLANCO",sucursal:"LAS CONDES",pago:"CONTADO",costo:9800000,venta:12590000},
+{id:137,fecha:"2025-08-30",vendedor:"Leslie Montoya",cliente:"GUILLERMO DANIEL GONZALEZ SANCHEZ",marca:"NISSAN",modelo:"MARCH",color:"PLATEADO",sucursal:"LAS CONDES",pago:"CONTADO",costo:5200385,venta:6297222},
+{id:138,fecha:"2025-08-30",vendedor:"Leslie Montoya",cliente:"VICTOR MANUEL GARRIDO AGUILAR",marca:"CHEVROLET",modelo:"GROOVE",color:"GRIS",sucursal:"LAS CONDES",pago:"CONTADO",costo:8656850,venta:10690000},
+{id:139,fecha:"2025-08-20",vendedor:"Leslie Montoya",cliente:"MODO CONSCIENTE SPA",marca:"PEUGEOT",modelo:"LANDTREK",color:"BLANCO",sucursal:"LAS CONDES",pago:"CRÉDITO",costo:20801153,venta:23980000},
+{id:140,fecha:"2025-08-30",vendedor:"Leslie Montoya",cliente:"DIEGO ANDRES INOSTROZA SALINAS",marca:"KIA",modelo:"RIO",color:"PLATEADO",sucursal:"LAS CONDES",pago:"CONTADO",costo:8250000,venta:9990000},
+{id:141,fecha:"2025-08-30",vendedor:"Leslie Montoya",cliente:"ARACELI CASILDA HENRIQUEZ CANCINO",marca:"SUZUKI",modelo:"CELERIO",color:"BLANCO",sucursal:"LAS CONDES",pago:"CONTADO",costo:6520000,venta:7990000},
+{id:142,fecha:"2025-08-30",vendedor:"Leslie Montoya",cliente:"GONZALO CALFUCURA ANDRADES",marca:"SUZUKI",modelo:"CIAZ",color:"GRIS",sucursal:"MACUL",pago:"CONTADO",costo:5021296,venta:6500000},
+{id:143,fecha:"2025-08-31",vendedor:"Leslie Montoya",cliente:"BERTA DEL CARMEN BERNAL",marca:"DONGFENG",modelo:"SX5",color:"GRIS",sucursal:"MACUL",pago:"CONTADO",costo:7033555,venta:7990000},
+{id:144,fecha:"2025-09-02",vendedor:"Leslie Montoya",cliente:"EVELYN PAOLA GONZALEZ GIN",marca:"BRILLANCE",modelo:"KONECT",color:"BLANCO",sucursal:"MACUL",pago:"CONTADO",costo:5956270,venta:7990000},
+{id:145,fecha:"2025-09-03",vendedor:"Leslie Montoya",cliente:"PEDRO RUPERTINO POBLETE SALVO",marca:"KIA",modelo:"MORNING",color:"NEGRO",sucursal:"MACUL",pago:"CRÉDITO",costo:6708688,venta:7990000},
+{id:149,fecha:"2025-09-29",vendedor:"Leslie Montoya",cliente:"LUIS ALFREDO AVILA SUAREZ",marca:"MAZDA",modelo:"CX3",color:"ROJO",sucursal:"MACUL",pago:"CRÉDITO",costo:10640279,venta:10990000},
+{id:150,fecha:"2025-09-11",vendedor:"Leslie Montoya",cliente:"JAMON Y MORRON SPA",marca:"JAC",modelo:"T8 PRO",color:"AZUL",sucursal:"MACUL",pago:"CRÉDITO",costo:9804077,venta:12790000},
+{id:151,fecha:"2025-09-22",vendedor:"Leslie Montoya",cliente:"AMELIA ROSA RODRIGUEZ CALDERON",marca:"CHANGAN",modelo:"CS15",color:"NARANJO",sucursal:"MACUL",pago:"CONTADO",costo:6934886,venta:7300000},
+{id:152,fecha:"2025-09-30",vendedor:"Leslie Montoya",cliente:"JOSE MARTIN CELIS ALVA",marca:"TOYOTA",modelo:"YARIS",color:"GRIS",sucursal:"MACUL",pago:"CRÉDITO",costo:4975000,venta:7112110},
+{id:154,fecha:"2025-09-26",vendedor:"Raul Miño",cliente:"CHRISTIAN ALEJANDRO CORREA MIRANDA",marca:"CHERY",modelo:"ARRIZO 3",color:"PLATEADO",sucursal:"MACUL",pago:"CONTADO",costo:3580000,venta:4700000},
+{id:155,fecha:"2025-09-30",vendedor:"Leslie Montoya",cliente:"MACARENA PAZ VALLEJOS VARAS",marca:"OPEL",modelo:"MOKKA",color:"GRIS",sucursal:"MACUL",pago:"CRÉDITO",costo:13101745,venta:14390000},
+{id:157,fecha:"2025-09-30",vendedor:"Leslie Montoya",cliente:"PATRICIA ANDREA GONZALEZ OLEA",marca:"PEUGEOT",modelo:"308",color:"BLANCO",sucursal:"MACUL",pago:"CRÉDITO",costo:13389765,venta:14392000},
+{id:158,fecha:"2025-10-01",vendedor:"Raul Miño",cliente:"CLAUDIA ANDREA GONZALEZ ASTORGA",marca:"PEUGEOT",modelo:"3008",color:"BLANCO",sucursal:"LAS CONDES",pago:"CONTADO",costo:12211794,venta:12400000},
+{id:161,fecha:"2025-10-04",vendedor:"Leslie Montoya",cliente:"NACOR LEVI GUTIERREZ ROJAS",marca:"JETOUR",modelo:"DASHING",color:"BLANCO",sucursal:"MACUL",pago:"CRÉDITO",costo:12507000,venta:15200000},
+{id:162,fecha:"2025-10-20",vendedor:"Raul Miño",cliente:"EUGENIA MARIA JAVIERA MAASS",marca:"OPEL",modelo:"MOKKA",color:"BLANCO",sucursal:"MACUL",pago:"CONTADO",costo:12851845,venta:14249270},
+{id:163,fecha:"2025-10-06",vendedor:"Raul Miño",cliente:"JAVIER ALEJANDRO CONTRERAS",marca:"CHEVROLET",modelo:"TRACKER",color:"BLANCO",sucursal:"MACUL",pago:"CONTADO",costo:5264368,venta:6290000},
+{id:164,fecha:"2025-10-07",vendedor:"Raul Miño",cliente:"ALFREDO SILVA NICOLA",marca:"HYUNDAI",modelo:"H1",color:"BLANCO",sucursal:"MACUL",pago:"CONTADO",costo:10238000,venta:11500000},
+{id:165,fecha:"2025-10-15",vendedor:"Leslie Montoya",cliente:"MARCELA DEL CARMEN CORNEJO VILLAGRA",marca:"SUZUKI",modelo:"BALENO",color:"PLATEADO",sucursal:"MACUL",pago:"CONTADO",costo:8153000,venta:8990000},
+{id:167,fecha:"2025-10-11",vendedor:"Leslie Montoya",cliente:"JOHANNA DEL CARMEN RODRIGUEZ AFANADOR",marca:"FIAT",modelo:"FIORINO",color:"BLANCO",sucursal:"MACUL",pago:"CRÉDITO",costo:4925936,venta:5790000},
+{id:169,fecha:"2025-10-08",vendedor:"Leslie Montoya",cliente:"ILMA ODETT JARA MONTECINO",marca:"HYUNDAI",modelo:"ACCENT",color:"PLATEADO",sucursal:"MACUL",pago:"CONTADO",costo:8600000,venta:10490000},
+{id:170,fecha:"2025-10-11",vendedor:"Leslie Montoya",cliente:"TU CARGA.CL SPA",marca:"PEUGEOT",modelo:"PARTNER",color:"BLANCO",sucursal:"MACUL",pago:"CONTADO",costo:10497000,venta:12490000},
+{id:171,fecha:"2025-10-10",vendedor:"Leslie Montoya",cliente:"PEDRO ANTONIO CARDENAS DURAN",marca:"HYUNDAI",modelo:"H1",color:"BLANCO",sucursal:"MACUL",pago:"CRÉDITO",costo:13056101,venta:16173000},
+{id:173,fecha:"2025-10-13",vendedor:"Leslie Montoya",cliente:"ABEL SALINAS BERROSPI",marca:"CHEVROLET",modelo:"N400",color:"BLANCO",sucursal:"MACUL",pago:"CONTADO",costo:5649269,venta:7590000},
+{id:174,fecha:"2025-10-18",vendedor:"Leslie Montoya",cliente:"RODRIGO NELSON LLANOS VILLALOBOS",marca:"PEUGEOT",modelo:"FURGÓN PARTNER",color:"BLANCO",sucursal:"MACUL",pago:"CRÉDITO",costo:10473000,venta:12490000},
+{id:176,fecha:"2025-10-20",vendedor:"Leslie Montoya",cliente:"ROBINSON ABDON FERNANDEZ PALMA",marca:"GAC",modelo:"GS4",color:"GRIS",sucursal:"MACUL",pago:"CONTADO",costo:8811710,venta:10290000},
+{id:177,fecha:"2025-10-20",vendedor:"Leslie Montoya",cliente:"SARA LUISA NOEMI ROJAS FUENTES",marca:"VOLVO",modelo:"XC60",color:"BLANCO",sucursal:"MACUL",pago:"CONTADO",costo:9300000,venta:10200000},
+{id:178,fecha:"2025-10-22",vendedor:"Leslie Montoya",cliente:"PAULINA ANDREA FUENTES ALMENDRA",marca:"JAC",modelo:"J4",color:"GRIS",sucursal:"MACUL",pago:"CONTADO",costo:3641949,venta:4590000},
+{id:179,fecha:"2025-10-24",vendedor:"Leslie Montoya",cliente:"JENNIFER DENISSE REYGADA SOTO",marca:"FORD",modelo:"ESCAPE",color:"GRIS",sucursal:"MACUL",pago:"CONTADO",costo:7515000,venta:8990000},
+{id:181,fecha:"2025-10-27",vendedor:"Leslie Montoya",cliente:"SERGIO ENRIQUE QUIÑONES SOTO",marca:"CHEVROLET",modelo:"ONIX",color:"GRIS",sucursal:"MACUL",pago:"CONTADO",costo:5680000,venta:6990000},
+{id:184,fecha:"2025-11-06",vendedor:"Leslie Montoya",cliente:"JESSICA ALESSANDRA RODRIGUEZ MORILLO",marca:"FOTON",modelo:"TM5",color:"BLANCO",sucursal:"MACUL",pago:"CRÉDITO",costo:8008000,venta:10290000},
+{id:185,fecha:"2025-11-03",vendedor:"Leslie Montoya",cliente:"JUAN CARLOS PADILLA MIANGOLARRA",marca:"FIAT",modelo:"UNO",color:"GRIS",sucursal:"MACUL",pago:"CRÉDITO",costo:4300000,venta:6290000},
+{id:186,fecha:"2025-11-04",vendedor:"Leslie Montoya",cliente:"CATALINA ANDREA HERRERA BERNUY",marca:"FOTON",modelo:"MIDI",color:"BLANCO",sucursal:"MACUL",pago:"CONTADO",costo:5460385,venta:7290000},
+{id:187,fecha:"2025-11-07",vendedor:"Leslie Montoya",cliente:"RODRIGO EUGENIO DIAZ MERY",marca:"SUZUKI",modelo:"BALENO",color:"GRIS",sucursal:"MACUL",pago:"CONTADO",costo:9208000,venta:11490000},
+{id:189,fecha:"2025-11-06",vendedor:"VICTOR MICHEA",cliente:"CAROLINA ANGELICA CACERES PEREZ",marca:"HYUNDAI",modelo:"CRETA",color:"GRIS",sucursal:"MACUL",pago:"CONTADO",costo:12850000,venta:14990000},
+{id:190,fecha:"2025-11-17",vendedor:"Leslie Montoya",cliente:"LUIS ANIBAL SALAS CARMONA",marca:"PEUGEOT",modelo:"PARTNER",color:"BLANCO",sucursal:"MACUL",pago:"CONTADO",costo:10298000,venta:12490000},
+{id:194,fecha:"2025-11-14",vendedor:"Leslie Montoya",cliente:"SEBASTIÁN IGNACIO GARCÍA LOYOLA",marca:"PEUGEOT",modelo:"308",color:"GRIS",sucursal:"MACUL",pago:"CONTADO",costo:18847569,venta:16144650},
+{id:196,fecha:"2025-11-18",vendedor:"Leslie Montoya",cliente:"HECTOR LUIS ROA MALDONADO",marca:"MG",modelo:"ZS",color:"BLANCO",sucursal:"MACUL",pago:"CRÉDITO",costo:5539000,venta:7200000},
+{id:197,fecha:"2025-11-19",vendedor:"Leslie Montoya",cliente:"ALVARO ESTEBAN ESPINOZA VILLANUEVA",marca:"CHEVROLET",modelo:"SILVERADO",color:"NEGRO",sucursal:"MACUL",pago:"CONTADO",costo:14790748,venta:16750000},
+{id:198,fecha:"2025-11-21",vendedor:"Leslie Montoya",cliente:"GABRIEL ALBERTO ALEMAN CURVELO",marca:"PEUGEOT",modelo:"3008",color:"BLANCO",sucursal:"MACUL",pago:"CONTADO",costo:12990000,venta:13490000},
+{id:199,fecha:"2025-11-21",vendedor:"Raul Miño",cliente:"CLAUDIA ANDREA GONZALEZ ASTORGA",marca:"BMW",modelo:"X1",color:"BLANCO",sucursal:"MACUL",pago:"CONTADO",costo:12773990,venta:12990000},
+{id:200,fecha:"2025-11-24",vendedor:"Leslie Montoya",cliente:"RODRIGO NELSON LLANOS VILLALOBOS",marca:"CITROEN",modelo:"BERLINGO",color:"BLANCO",sucursal:"MACUL",pago:"CRÉDITO",costo:7955000,venta:8990000},
+{id:201,fecha:"2025-11-25",vendedor:"Leslie Montoya",cliente:"RODRIGO EDUARDO PALMA GUERRERO",marca:"RENAULT",modelo:"SYMBOL",color:"BEIGE",sucursal:"MACUL",pago:"CONTADO",costo:1483000,venta:2700000},
+{id:202,fecha:"2025-11-28",vendedor:"Leslie Montoya",cliente:"FRANCISCA ALEJANDRA IBARRA HERRERA",marca:"SUZUKI",modelo:"BALENO",color:"BLANCO",sucursal:"MACUL",pago:"CONTADO",costo:5898000,venta:6990000},
+{id:203,fecha:"2025-12-03",vendedor:"Leslie Montoya",cliente:"LUIS ALBERTO ABARCA ESPINOZA",marca:"CHERY",modelo:"TIGGO 3",color:"GRIS",sucursal:"MACUL",pago:"CONTADO",costo:5501000,venta:6790000},
+{id:204,fecha:"2025-11-29",vendedor:"Leslie Montoya",cliente:"Rosa María Elorrieta Grimalt",marca:"OPEL",modelo:"MOKKA",color:"BLANCO",sucursal:"MACUL",pago:"CONTADO",costo:13199144,venta:16000000},
+{id:205,fecha:"2025-12-06",vendedor:"Leslie Montoya",cliente:"MATIAS SEBASTIAN CUBAS GALEAS",marca:"MG",modelo:"ZX",color:"BLANCO",sucursal:"MACUL",pago:"CRÉDITO",costo:10575000,venta:11590000},
+{id:206,fecha:"2025-12-01",vendedor:"Leslie Montoya",cliente:"CHRISTOPHER FRANCISCO URREA JIMENEZ",marca:"CHEVROLET",modelo:"EQUINOX",color:"ROJO",sucursal:"MACUL",pago:"CONTADO",costo:9453660,venta:10937150},
+{id:207,fecha:"2025-12-03",vendedor:"Leslie Montoya",cliente:"GUSTAVO RENE PADILLA CASTRO",marca:"CHEVROLET",modelo:"ONIX",color:"ROJO",sucursal:"MACUL",pago:"CONTADO",costo:8300000,venta:9990000},
+{id:208,fecha:"2025-12-06",vendedor:"Leslie Montoya",cliente:"FABIAN NICOLAS BASUALTO MAUREIRA",marca:"CHEVROLET",modelo:"SAIL NB",color:"GRIS",sucursal:"MACUL",pago:"CONTADO",costo:4895000,venta:6997150},
+{id:210,fecha:"2025-12-06",vendedor:"Leslie Montoya",cliente:"CAROL GISSELLE RIQUELME DROGUETT",marca:"SUZUKI",modelo:"BALENO",color:"GRIS",sucursal:"MACUL",pago:"CONTADO",costo:12850000,venta:13500000},
+{id:212,fecha:"2025-12-10",vendedor:"Leslie Montoya",cliente:"TRANSPORTES RINGO ORMAZABAL EIRL",marca:"MERCEDES BENZ",modelo:"516",color:"BLANCO",sucursal:"MACUL",pago:"CONTADO",costo:46236800,venta:50000000},
+{id:215,fecha:"2025-12-13",vendedor:"Leslie Montoya",cliente:"F Y Q SPA",marca:"PEUGEOT",modelo:"PARTNER",color:"BLANCO",sucursal:"MACUL",pago:"CONTADO",costo:7955262,venta:10000000},
+{id:216,fecha:"2025-12-16",vendedor:"Leslie Montoya",cliente:"VICENTE JAVIER TORRES BUSTAMANTE",marca:"PEUGEOT",modelo:"2008",color:"GRIS",sucursal:"MACUL",pago:"CONTADO",costo:4670418,venta:5600000},
+{id:217,fecha:"2025-12-20",vendedor:"Leslie Montoya",cliente:"MARIA ELENA MADRID VILCHES",marca:"CHEVROLET",modelo:"GROOVE",color:"ROJO",sucursal:"MACUL",pago:"CONTADO",costo:8500000,venta:10290000},
+{id:218,fecha:"2025-12-26",vendedor:"Leslie Montoya",cliente:"JAVIERA PAZ CORNEJO TRONCOSO",marca:"JAC",modelo:"S3",color:"PLATEADO",sucursal:"MACUL",pago:"CONTADO",costo:2625000,venta:4500000},
+{id:221,fecha:"2025-12-26",vendedor:"Raul Miño",cliente:"RAUL HERNAN PAREDES SAAVEDRA",marca:"PEUGEOT",modelo:"208",color:"BLANCO",sucursal:"MACUL",pago:"CONTADO",costo:7300000,venta:8900000},
+{id:222,fecha:"2025-12-30",vendedor:"Leslie Montoya",cliente:"OSMARYS DEL VALLE IDROGO MARQUEZ",marca:"JETOUR",modelo:"X70",color:"NEGRO",sucursal:"MACUL",pago:"CRÉDITO",costo:9000000,venta:10990000},
+{id:223,fecha:"2025-12-30",vendedor:"Leslie Montoya",cliente:"VALENTINA PAZ CORVALAN SANTA CRUZ",marca:"CHEVROLET",modelo:"TRACKER",color:"NEGRO",sucursal:"MACUL",pago:"CONTADO",costo:7510000,venta:8890000},
+{id:224,fecha:"2026-01-02",vendedor:"Leslie Montoya",cliente:"ALEXANDRA FRANCISCA ORREGO ESTAY",marca:"OPEL",modelo:"MOKKA",color:"BLANCO",sucursal:"MACUL",pago:"CONTADO",costo:12476000,venta:13990000},
+{id:226,fecha:"2026-01-13",vendedor:"Leslie Montoya",cliente:"ABRAHAM LINCOLN SAN MARTIN LAZO",marca:"CHEVROLET",modelo:"N400",color:"BLANCO",sucursal:"MACUL",pago:"CRÉDITO",costo:7800000,venta:8490000},
+{id:235,fecha:"2026-01-24",vendedor:"Leslie Montoya",cliente:"SOLENGE MACARENA VEGA MACAYA",marca:"OPEL",modelo:"MOKKA",color:"GRIS",sucursal:"MACUL",pago:"CONTADO",costo:12530275,venta:14240000},
+{id:236,fecha:"2026-01-13",vendedor:"Raul Miño",cliente:"CLAUDIA ANDREA GONZALEZ ASTORGA",marca:"PEUGEOT",modelo:"PARTNER",color:"BLANCO",sucursal:"MACUL",pago:"CONTADO",costo:7798792,venta:7800000},
+{id:242,fecha:"2026-01-19",vendedor:"Leslie Montoya",cliente:"ESTER GLADYS JIMENEZ SEBRA",marca:"DFSK",modelo:"CARGO VAN",color:"BLANCO",sucursal:"MACUL",pago:"CRÉDITO",costo:3417533,venta:4190000},
+{id:243,fecha:"2026-01-20",vendedor:"Leslie Montoya",cliente:"CAROLA DEL CARMEN TARUD LAMA",marca:"FORD",modelo:"EXPLORER",color:"BLANCO",sucursal:"MACUL",pago:"CRÉDITO",costo:15990250,venta:16450000},
+{id:246,fecha:"2026-01-21",vendedor:"CARLOS FRACACHAN",cliente:"FELIPE ANDRES ANCALIPE ROSSI",marca:"VOLKSWAGEN",modelo:"GOL",color:"BLANCO",sucursal:"MACUL",pago:"CONTADO",costo:6415271,venta:6990000},
+{id:247,fecha:"2026-01-21",vendedor:"Leslie Montoya",cliente:"MARCELA ALEJANDRA PACHECO CUETO",marca:"JEEP",modelo:"RENEGADE",color:"ROJO",sucursal:"MACUL",pago:"CONTADO",costo:10262000,venta:12690000},
+{id:248,fecha:"2026-01-23",vendedor:"Leslie Montoya",cliente:"NORA ALEJANDRA ESPINOZA VILCHES",marca:"SUZUKI",modelo:"BALENO",color:"AZUL",sucursal:"MACUL",pago:"CONTADO",costo:12140000,venta:13290000},
+{id:249,fecha:"2026-01-22",vendedor:"Leslie Montoya",cliente:"IGNACIO VACHIER FARFAL GALLARDO",marca:"NISSAN",modelo:"QASHQAI",color:"BLANCO",sucursal:"MACUL",pago:"CONTADO",costo:4656490,venta:5990000},
+{id:250,fecha:"2026-02-25",vendedor:"CARLOS FRACACHAN",cliente:"CAROLINA ANDREA SALAZAR RIOS",marca:"FORD",modelo:"TERRITORY",color:"BLANCO",sucursal:"MACUL",pago:"CONTADO",costo:17700000,venta:19390000},
+{id:252,fecha:"2026-01-29",vendedor:"CARLOS FRACACHAN",cliente:"LEONEL ESTEBAN SANCHEZ CARO",marca:"CHEVROLET",modelo:"ONIX",color:"GRIS",sucursal:"MACUL",pago:"CRÉDITO",costo:7635371,venta:8250000},
+{id:253,fecha:"2026-01-29",vendedor:"Leslie Montoya",cliente:"PILAR MACARENA QUINTAS SANTOS",marca:"MAXUS",modelo:"T60",color:"GRIS",sucursal:"MACUL",pago:"CONTADO",costo:11409000,venta:12300000},
+{id:255,fecha:"2026-01-28",vendedor:"CARLOS FRACACHAN",cliente:"MARCELA PAZ TOLEDO MISSENE",marca:"KIA",modelo:"MORNING",color:"ROJO",sucursal:"MACUL",pago:"CONTADO",costo:2800000,venta:4500000},
+{id:257,fecha:"2026-02-25",vendedor:"Leslie Montoya",cliente:"JENNIFFER EUGENIA MORAGA OVANDO",marca:"FORD",modelo:"EXPLORER",color:"BLANCO",sucursal:"MACUL",pago:"CONTADO",costo:12920561,venta:14990000},
+{id:262,fecha:"2026-02-25",vendedor:"CARLOS FRACACHAN",cliente:"HUGO MANUEL CONCHA RIVEROS",marca:"CHERY",modelo:"TIGGO 2",color:"GRIS",sucursal:"MACUL",pago:"CONTADO",costo:7331000,venta:8990000},
+{id:263,fecha:"2026-02-25",vendedor:"CARLOS FRACACHAN",cliente:"ALEJANDRO JOSE CENTENO MEZA",marca:"SUZUKI",modelo:"SWIFT",color:"AZUL",sucursal:"MACUL",pago:"CONTADO",costo:10740000,venta:12790000},
+{id:265,fecha:"2026-02-25",vendedor:"Leslie Montoya",cliente:"MARCELO IVAN BECAR DURAN",marca:"SUZUKI",modelo:"CELERIO",color:"GRIS",sucursal:"MACUL",pago:"CONTADO",costo:7221000,venta:8500000},
+{id:267,fecha:"2026-02-18",vendedor:"CARLOS FRACACHAN",cliente:"Luis Alejandro Brito Soto",marca:"PEUGEOT",modelo:"PARTNER",color:"BLANCO",sucursal:"MACUL",pago:"CONTADO",costo:10468000,venta:11990000},
+{id:268,fecha:"2026-02-14",vendedor:"Leslie Montoya",cliente:"LIDIA LUZMIRA GOMEZ YAÑEZ",marca:"HONDA",modelo:"CITY",color:"PLATEADO",sucursal:"MACUL",pago:"CRÉDITO",costo:8710000,venta:10990000},
+{id:269,fecha:"2026-02-14",vendedor:"Leslie Montoya",cliente:"Liliana Del Carmen Rojas Pozas",marca:"CHEVROLET",modelo:"SAIL",color:"CAFÉ",sucursal:"MACUL",pago:"CRÉDITO",costo:4260000,venta:5790000},
+{id:270,fecha:"2026-02-21",vendedor:"CARLOS FRACACHAN",cliente:"JAVIER MAXIMILIANO QUEZADA LOPEZ",marca:"FORD",modelo:"TERRITORY",color:"ROJO",sucursal:"MACUL",pago:"CRÉDITO",costo:9888000,venta:12590000},
+{id:272,fecha:"2026-02-23",vendedor:"CARLOS FRACACHAN",cliente:"Maria Elizabeth Muñoz Troncoso",marca:"FORD",modelo:"ECOSPORT",color:"NEGRO",sucursal:"MACUL",pago:"CRÉDITO",costo:6163770,venta:7990000},
+{id:273,fecha:"2026-02-24",vendedor:"Leslie Montoya",cliente:"ANGELA DAMELIS ARAUJO DE CAPIELLO",marca:"FORD",modelo:"TERRITORY",color:"BLANCO",sucursal:"MACUL",pago:"CRÉDITO",costo:8638000,venta:11290000},
+{id:274,fecha:"2026-02-28",vendedor:"Leslie Montoya",cliente:"RONALD DOMINGUE",marca:"CHANGAN",modelo:"MD201",color:"BLANCO",sucursal:"MACUL",pago:"CRÉDITO",costo:5110000,venta:6390000},
+{id:275,fecha:"2026-02-26",vendedor:"Leslie Montoya",cliente:"JUAN CARLOS CONTRERAS CASTRO",marca:"CITROEN",modelo:"C 3",color:"GRIS",sucursal:"MACUL",pago:"CONTADO",costo:8227999,venta:8700000},
+{id:276,fecha:"2026-02-28",vendedor:"CARLOS FRACACHAN",cliente:"Benjamín Andrés Ellis Hidalgo",marca:"OPEL",modelo:"MOKKA",color:"BLANCO",sucursal:"MACUL",pago:"CONTADO",costo:12410132,venta:13990000},
+{id:277,fecha:"2026-03-04",vendedor:"CARLOS FRACACHAN",cliente:"JHONATAN JEAN PAUL LOPEZ CABRERA",marca:"CHERY",modelo:"TIGGO 8",color:"BLANCO",sucursal:"MACUL",pago:"CONTADO",costo:9357958,venta:10790000},
+{id:278,fecha:"2026-02-28",vendedor:"CARLOS FRACACHAN",cliente:"PAMELA ANDREA CADIN GUEVARA",marca:"CHEVROLET",modelo:"CAPTIVA",color:"BLANCO",sucursal:"MACUL",pago:"CRÉDITO",costo:10230000,venta:13840000},
+{id:279,fecha:"2026-02-28",vendedor:"Raul Miño",cliente:"JOAQUIN MIÑO GONZALEZ",marca:"PEUGEOT",modelo:"208",color:"GRIS",sucursal:"MACUL",pago:"CONTADO",costo:7340000,venta:7340000},
+{id:281,fecha:"2026-03-09",vendedor:"CARLOS FRACACHAN",cliente:"IGNACIO ALEXANDER VALLADARES COCCIO",marca:"BMW",modelo:"120i",color:"AZUL",sucursal:"MACUL",pago:"CONTADO",costo:12970050,venta:15000000},
+{id:283,fecha:"2026-03-06",vendedor:"Leslie Montoya",cliente:"WALDO ALEJANDRO GONZALEZ ASTORGA",marca:"DONGFENG",modelo:"SX6",color:"ROJO",sucursal:"MACUL",pago:"CONTADO",costo:6221257,venta:7990000},
+{id:284,fecha:"2026-03-07",vendedor:"CARLOS FRACACHAN",cliente:"GLADYS ALEJANDRA PEÑA ESCALONA",marca:"PEUGEOT",modelo:"301",color:"BLANCO",sucursal:"MACUL",pago:"CONTADO",costo:10516494,venta:11790000},
+{id:285,fecha:"2026-03-09",vendedor:"Leslie Montoya",cliente:"ANILEXI ALFONSO GONZALEZ",marca:"CHEVROLET",modelo:"SPARK SEDAN",color:"BLANCO",sucursal:"MACUL",pago:"CRÉDITO",costo:4910000,venta:6613000},
+{id:286,fecha:"2026-03-11",vendedor:"Leslie Montoya",cliente:"GABRIEL ANDRES HERRERA BUSCUÑAN",marca:"SUZUKI",modelo:"BALENO",color:"ROJO",sucursal:"MACUL",pago:"CONTADO",costo:5583174,venta:8190000},
+{id:287,fecha:"2026-03-12",vendedor:"CARLOS FRACACHAN",cliente:"JORGE DEL TRÁNSITO PERGUI BUSTOS",marca:"MITSUBISHI",modelo:"MONTERO",color:"NEGRO",sucursal:"MACUL",pago:"CONTADO",costo:6734741,venta:8590000},
+{id:288,fecha:"2026-03-16",vendedor:"Leslie Montoya",cliente:"NICOLE ANDREA ABARCA NUÑEZ",marca:"TOYOTA",modelo:"COROLLA CROSS",color:"PLATEADO",sucursal:"MACUL",pago:"CONTADO",costo:17228974,venta:19790000},
+{id:289,fecha:"2026-03-19",vendedor:"Leslie Montoya",cliente:"CHAYANNE ERASMO MORALES HERNANDEZ",marca:"PEUGEOT",modelo:"PARTNER",color:"BLANCO",sucursal:"MACUL",pago:"CONTADO",costo:10151198,venta:11900000},
+{id:290,fecha:"2026-03-17",vendedor:"Leslie Montoya",cliente:"MARCOS ANTONIO ALIAGA DELFINO",marca:"MG",modelo:"3",color:"PLATEADO",sucursal:"MACUL",pago:"CONTADO",costo:3870022,venta:4050000},
+{id:291,fecha:"2026-03-19",vendedor:"Leslie Montoya",cliente:"Luis armando allendes allendes",marca:"DONGFENG",modelo:"DF 212",color:"BLANCO",sucursal:"MACUL",pago:"CONTADO",costo:10143675,venta:11590000},
+{id:293,fecha:"2026-03-19",vendedor:"Raul Miño",cliente:"PAULA CAROLINA PINTO VILCHES",marca:"CHANGAN",modelo:"CS55",color:"GRIS",sucursal:"MACUL",pago:"CONTADO",costo:10943300,venta:12500000},
+{id:294,fecha:"2026-03-23",vendedor:"Leslie Montoya",cliente:"SERGIO ANTONIO RODRIGUEZ OLEA",marca:"SUZUKI",modelo:"ALTO",color:"BLANCO",sucursal:"MACUL",pago:"CONTADO",costo:3800000,venta:5190000},
+{id:296,fecha:"2026-03-27",vendedor:"CARLOS FRACACHAN",cliente:"DANIELA TAMARA HIDALGO VALLADARES",marca:"GREAT WALL",modelo:"POER",color:"BLANCO",sucursal:"MACUL",pago:"CONTADO",costo:12957245,venta:13700000},
+{id:297,fecha:"2026-03-28",vendedor:"Leslie Montoya",cliente:"JOANNA ALEJANDRA REYES MARTINEZ",marca:"CHEVROLET",modelo:"CAPTIVA",color:"BLANCO",sucursal:"MACUL",pago:"CONTADO",costo:10614702,venta:12990000},
+{id:299,fecha:"2026-03-31",vendedor:"CARLOS FRACACHAN",cliente:"IVAN ARTEMIO ALTAMIRANO MANSILLA",marca:"OPEL",modelo:"MOKKA",color:"BLANCO",sucursal:"MACUL",pago:"CRÉDITO",costo:11450000,venta:12600000},
+{id:300,fecha:"2026-04-22",vendedor:"VICTOR MICHEA",cliente:"ENRIQUETA ALEJANDRA OJEDA CAVIEDES",marca:"MG",modelo:"ONE",color:"GRIS",sucursal:"MACUL",pago:"CONTADO",costo:11022900,venta:11500000},
+{id:301,fecha:"2026-04-22",vendedor:"CARLOS FRACACHAN",cliente:"KATHERINE DE LOURDES VARAS JARA",marca:"PEUGEOT",modelo:"2008",color:"NEGRO",sucursal:"MACUL",pago:"CONTADO",costo:13490000,venta:16990000},
+{id:303,fecha:"2026-04-22",vendedor:"CARLOS FRACACHAN",cliente:"YOLANDA NESTINA ROJAS OLIVARES",marca:"HAVAL",modelo:"H2",color:"PLATEADO",sucursal:"MACUL",pago:"CRÉDITO",costo:5200000,venta:7290000},
+{id:305,fecha:"2026-04-30",vendedor:"CARLOS FRACACHAN",cliente:"MARIA FRANCISCA HIDALGO MANAN",marca:"FORD",modelo:"TERRITORY",color:"ROJO",sucursal:"MACUL",pago:"CRÉDITO",costo:10324124,venta:12790000},
+{id:308,fecha:"2026-04-22",vendedor:"CARLOS FRACACHAN",cliente:"STEFFANY MURGUEITIO MOLINA",marca:"PEUGEOT",modelo:"208",color:"BLANCO",sucursal:"MACUL",pago:"CRÉDITO",costo:7301463,venta:8990000},
+{id:309,fecha:"2026-04-22",vendedor:"CARLOS FRACACHAN",cliente:"FRANCESCA BERLLENI KARIN VILLALOBOS",marca:"RAM",modelo:"VAN",color:"BLANCO",sucursal:"MACUL",pago:"CRÉDITO",costo:4473652,venta:5790000},
+{id:312,fecha:"2026-04-16",vendedor:"CARLOS FRACACHAN",cliente:"STEFFANY MURGUEITIO MOLINA",marca:"CHEVROLET",modelo:"CAPTIVA",color:"ROJO",sucursal:"MACUL",pago:"CRÉDITO",costo:9825000,venta:11200000},
+{id:314,fecha:"2026-04-22",vendedor:"DANIELA NARVAEZ",cliente:"MARTHA ISABEL NAPURI NEIRA",marca:"JAC",modelo:"T8 PRO",color:"NEGRO",sucursal:"MACUL",pago:"CRÉDITO",costo:10558424,venta:12390000},
+{id:316,fecha:"2026-04-22",vendedor:"DANIELA NARVAEZ",cliente:"YERSON ENRIQUE GAMEZ QUINTANA",marca:"OPEL",modelo:"COMBO",color:"BLANCO",sucursal:"MACUL",pago:"CRÉDITO",costo:9374441,venta:11990000},
+{id:317,fecha:"2026-04-21",vendedor:"CARLOS FRACACHAN",cliente:"LORENA DEL PILAR VEGA PAREDES",marca:"VOLKSWAGEN",modelo:"GOL",color:"BLANCO",sucursal:"MACUL",pago:"CRÉDITO",costo:6150000,venta:7990000},
+{id:319,fecha:"2026-04-25",vendedor:"CARLOS FRACACHAN",cliente:"LUKAS VICENTE VERA BECERRA",marca:"OPEL",modelo:"MOKKA",color:"GRIS",sucursal:"MACUL",pago:"CONTADO",costo:13040000,venta:14790000},
+{id:320,fecha:"2026-04-27",vendedor:"CARLOS FRACACHAN",cliente:"ALICIA MARIA JARAMILLO MONTENEGRO",marca:"PEUGEOT",modelo:"PARTNER",color:"BLANCO",sucursal:"MACUL",pago:"CONTADO",costo:10824538,venta:11990000},
+{id:322,fecha:"2026-04-30",vendedor:"DANIELA NARVAEZ",cliente:"CARLOS ANDRES QUINTERO OSORNO",marca:"CHEVROLET",modelo:"TRACKER",color:"NEGRO",sucursal:"MACUL",pago:"CONTADO",costo:10530000,venta:12990000},
+{id:326,fecha:"2026-04-30",vendedor:"DANIELA NARVAEZ",cliente:"IGNACIA CAROLINA PEREZ SALAS",marca:"PEUGEOT",modelo:"208",color:"GRIS",sucursal:"MACUL",pago:"CONTADO",costo:8500000,venta:9190000},
+{id:327,fecha:"2026-05-05",vendedor:"CARLOS FRACACHAN",cliente:"MARISOL DE LAS MERCEDES FIERRO SANCHEZ",marca:"PEUGEOT",modelo:"3008",color:"BLANCO",sucursal:"MACUL",pago:"CONTADO",costo:22481346,venta:26990000},
+{id:328,fecha:"2026-05-15",vendedor:"CARLOS FRACACHAN",cliente:"CATHERINE ALEJANDRA GUTIERREZ REYES",marca:"MG",modelo:"ZX",color:"BLANCO",sucursal:"MACUL",pago:"CONTADO",costo:7500000,venta:8600000},
+{id:332,fecha:"2026-05-08",vendedor:"DANIELA NARVAEZ",cliente:"Roberto Alfredo Altamirano Silva",marca:"PEUGEOT",modelo:"PARTNER",color:"BLANCO",sucursal:"MACUL",pago:"CRÉDITO",costo:9833469,venta:11990000},
+{id:333,fecha:"2026-05-07",vendedor:"DANIELA NARVAEZ",cliente:"JOSE MAXIMILIANO BAEZA BAEZA",marca:"KARRY",modelo:"Q51",color:"BLANCO",sucursal:"MACUL",pago:"CONTADO",costo:5891980,venta:7190000},
+{id:335,fecha:"2026-05-08",vendedor:"DANIELA NARVAEZ",cliente:"LUISHEET DEL CARMEN BETANCOURT FERNANDEZ",marca:"KIA",modelo:"MORNING",color:"GRIS",sucursal:"MACUL",pago:"CRÉDITO",costo:6583850,venta:7990000},
+{id:336,fecha:"2026-05-14",vendedor:"CARLOS FRACACHAN",cliente:"ERNESTINA DE LAS MERCEDES BUSTAMANTE CISTERNA",marca:"PEUGEOT",modelo:"3008",color:"BLANCO",sucursal:"MACUL",pago:"CONTADO",costo:20235346,venta:24990000},
+{id:337,fecha:"2026-05-09",vendedor:"CARLOS FRACACHAN",cliente:"JUAN PABLO SANDOVAL POBLETE",marca:"ALFA ROMEO",modelo:"159",color:"GRIS",sucursal:"MACUL",pago:"CONTADO",costo:6100000,venta:6500000},
+{id:338,fecha:"2026-05-15",vendedor:"DANIELA NARVAEZ",cliente:"ATENAS CARBAJAL",marca:"OPEL",modelo:"MOKKA",color:"BLANCO",sucursal:"MACUL",pago:"CONTADO",costo:11460571,venta:13490000},
+{id:340,fecha:"2026-05-12",vendedor:"DANIELA NARVAEZ",cliente:"TRANSPORTE DE CARGA MAURICIO GOMEZ SPA",marca:"PEUGEOT",modelo:"PARTNER",color:"BLANCO",sucursal:"MACUL",pago:"CONTADO",costo:9931932,venta:12300000},
+{id:341,fecha:"2026-05-14",vendedor:"DANIELA NARVAEZ",cliente:"CARLOS ENRIQUE LOBOS RODRIGUEZ",marca:"OPEL",modelo:"COMBO",color:"BLANCO",sucursal:"MACUL",pago:"CONTADO",costo:9415118,venta:11990000},
+{id:342,fecha:"2026-05-16",vendedor:"CARLOS FRACACHAN",cliente:"LUIS ANTONIO VERGARA CASTILLO",marca:"CHANGAN",modelo:"UNI-T",color:"GRIS",sucursal:"MACUL",pago:"CONTADO",costo:11740000,venta:13500000},
+{id:343,fecha:"2026-05-18",vendedor:"CARLOS FRACACHAN",cliente:"ANGELA JAVIERA SEPULVEDA VASQUEZ",marca:"KIA",modelo:"MORNING",color:"PLATEADO",sucursal:"MACUL",pago:"CRÉDITO",costo:5500000,venta:6990000}
+];
+
+const VEND_COLORS = ['#6c63ff','#00c49a','#e05c8a','#f59e0b','#3b8aff','#ff6b6b','#a78bfa','#34d399','#fb923c'];
+
+function inferGender(name) {
+  const n = name.toUpperCase().trim();
+  if (/SPA|LIMITADA|EIRL|LTDA|TRANSPORTE|COMERCIAL|AGRO|MODO|FRUTOS|TU CARGA|JAMON|ASESVAL|F Y Q|KARRY|RACING|CARGO/.test(n)) return 'empresa';
+  const first = n.split(/\s+/)[0];
+  const fem = ['NITZA','PATRICIA','FRANCISCA','VICTORIA','CAMILA','JENNIFER','KARINA','DARLING','ALEJANDRA','BEATRIZ','ANDREA','KATHERINE','NATALIA','MARGARITA','PIA','CLAUDIA','NICOLE','ISABEL','CAROL','ROSA','FERNANDA','SARA','PAULINA','JESSICA','CATALINA','CAROLINA','MACARENA','JOHANNA','ILMA','MARCELA','LORETO','ROXANA','MIRYAN','ARACELI','BERTA','EVELYN','AMELIA','LIDIA','LILIANA','ANGELA','PILAR','GLADYS','PAMELA','JOANNA','DANIELA','YOLANDA','MARIA','LORENA','ALICIA','MARISOL','LUISHEET','ERNESTINA','ATENAS','MARTHA','IGNACIA','FRANCESCA','STEFFANY','NORA','ESTER','CAROLA','JENNIFFER','SOLENGE','OSMARYS','VALENTINA','JAVIERA','ALEXANDRA','ENRIQUETA','ANILEXI','PAULA','LILIANA','PILAR','CAROLA'];
+  if (fem.includes(first)) return 'femenino';
+  return 'masculino';
+}
+
+function normalizeColor(c) {
+  if (!c) return 'otro';
+  const u = c.toUpperCase();
+  if (/BLANCO/.test(u)) return 'BLANCO';
+  if (/GRIS/.test(u)) return 'GRIS';
+  if (/PLAT[EA]|PLATA/.test(u)) return 'PLATEADO';
+  if (/ROJO|BURDEO/.test(u)) return 'ROJO';
+  if (/NEGRO/.test(u)) return 'NEGRO';
+  if (/AZUL/.test(u)) return 'AZUL';
+  if (/BEIGE|CAF/.test(u)) return 'BEIGE/CAFÉ';
+  if (/NARANJO/.test(u)) return 'NARANJO';
+  return 'OTRO';
+}
+
+const COLOR_HEX = {BLANCO:'#e8eaf0',GRIS:'#888780',PLATEADO:'#b4b2a9',ROJO:'#e24b4a',NEGRO:'#444441',AZUL:'#378add','BEIGE/CAFÉ':'#c4a76e',NARANJO:'#f59e0b',OTRO:'#7f77dd'};
+
+let data = RAW.map(r => ({...r, genero: inferGender(r.cliente), colorNorm: normalizeColor(r.color), comuna: COMUNAS_MAP[r.id] || 'Sin datos'}));
+let charts = {};
+
+function groupBy(arr, key) { return arr.reduce((a,r)=>{a[r[key]]=(a[r[key]]||0)+1;return a;},{}); }
+function groupSum(arr, key, val) { return arr.reduce((a,r)=>{a[r[key]]=(a[r[key]]||0)+r[val];return a;},{}); }
+
+function fmtM(n) { return '$'+Math.round(n/1e6).toLocaleString('es-CL')+'M'; }
+function fmtClp(n) { return '$'+Math.round(n).toLocaleString('es-CL'); }
+
+function getFiltered() {
+  const suc = document.getElementById('filtSucursal').value;
+  const pag = document.getElementById('filtPago').value;
+  const vend = document.getElementById('filtVendedor').value;
+  const per = document.getElementById('filtPeriodo').value;
+  return data.filter(r =>
+    (suc === 'Todas' || r.sucursal === suc) &&
+    (pag === 'Todos' || r.pago === pag) &&
+    (vend === 'Todos' || r.vendedor === vend) &&
+    (per === 'all' || r.fecha.startsWith(per))
+  );
+}
+
+function populate(id, opts, def) {
+  const s = document.getElementById(id);
+  s.innerHTML = `<option value="${def[0]}">${def[1]}</option>`;
+  opts.forEach(o => { const el=document.createElement('option'); el.value=o; el.textContent=o; s.appendChild(el); });
+}
+
+function init() {
+  populate('filtSucursal', [...new Set(data.map(r=>r.sucursal))].sort(), ['Todas','Todas las sucursales']);
+  populate('filtPago', [...new Set(data.map(r=>r.pago))].sort(), ['Todos','Todas las formas']);
+  populate('filtVendedor', [...new Set(data.map(r=>r.vendedor))].sort(), ['Todos','Todos los vendedores']);
+}
+
+function mkChart(id, type, d, opts) {
+  if (charts[id]) charts[id].destroy();
+  charts[id] = new Chart(document.getElementById(id), {type, data:d, options:{...opts, responsive:true, maintainAspectRatio:false}});
+}
+
+function render() {
+  const fd = getFiltered();
+  const total = fd.length;
+  const totalV = fd.reduce((s,r)=>s+r.venta,0);
+  const avgV = total ? totalV/total : 0;
+  const margen = fd.reduce((s,r)=>s+(r.venta-r.costo),0);
+
+  document.getElementById('headerCount').textContent = total + ' ventas';
+
+  document.getElementById('metrics').innerHTML = `
+    <div class="metric"><div class="metric-label">Total ventas</div><div class="metric-value">${total}</div><div class="metric-sub">unidades facturadas</div></div>
+    <div class="metric"><div class="metric-label">Ingresos totales</div><div class="metric-value">${fmtM(totalV)}</div><div class="metric-sub">CLP</div></div>
+    <div class="metric"><div class="metric-label">Precio prom. venta</div><div class="metric-value">${fmtM(avgV)}</div><div class="metric-sub">por unidad</div></div>
+    <div class="metric"><div class="metric-label">Margen bruto</div><div class="metric-value">${fmtM(margen)}</div><div class="metric-sub">venta − costo</div></div>
+  `;
+
+  // GÉNERO BARS
+  const genCnt = groupBy(fd,'genero');
+  const genAvg = {};
+  ['masculino','femenino','empresa'].forEach(g => {
+    const sub = fd.filter(r=>r.genero===g);
+    genAvg[g] = sub.length ? sub.reduce((s,r)=>s+r.venta,0)/sub.length : 0;
+  });
+  const maxG = Math.max(...Object.values(genCnt));
+  const gColors = {masculino:'#6c63ff',femenino:'#e05c8a',empresa:'#00c49a'};
+  const gLabels = {masculino:'Masculino',femenino:'Femenino',empresa:'Empresa'};
+  document.getElementById('genderBars').innerHTML = ['masculino','femenino','empresa'].map(g=>{
+    const cnt = genCnt[g]||0;
+    const pct = maxG ? Math.round(cnt/maxG*100) : 0;
+    const pctTotal = total ? Math.round(cnt/total*100) : 0;
+    return `<div class="gender-row">
+      <div class="gender-label">${gLabels[g]}</div>
+      <div class="gender-bar-outer"><div class="gender-bar-inner" style="width:${pct}%;background:${gColors[g]};">${pctTotal}%</div></div>
+      <div class="gender-count">${cnt}</div>
+    </div>`;
+  }).join('');
+
+  // PRECIO POR GÉNERO
+  mkChart('chartPrecioGenero','bar',{
+    labels:['Masculino','Femenino','Empresa'],
+    datasets:[{data:['masculino','femenino','empresa'].map(g=>Math.round(genAvg[g]||0)),backgroundColor:['#6c63ff','#e05c8a','#00c49a'],borderRadius:6,barThickness:32}]
+  },{plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>fmtClp(ctx.raw)}}},scales:{y:{ticks:{callback:v=>'$'+Math.round(v/1e6)+'M',color:'#7a7f94'},grid:{color:'rgba(255,255,255,0.05)'}},x:{ticks:{color:'#7a7f94'},grid:{display:false}}}});
+
+  // PAGO DONUT
+  const pagCnt = groupBy(fd,'pago');
+  const pagKeys = Object.keys(pagCnt);
+  const pagColors = ['#6c63ff','#00c49a'];
+  mkChart('chartPago','doughnut',{
+    labels:pagKeys,
+    datasets:[{data:pagKeys.map(k=>pagCnt[k]),backgroundColor:pagColors,borderWidth:0,cutout:'70%'}]
+  },{plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>`${ctx.label}: ${ctx.raw} (${Math.round(ctx.raw/total*100)}%)`}}}});
+  document.getElementById('pagoLegend').innerHTML = pagKeys.map((k,i)=>`
+    <div class="pago-legend-item">
+      <div class="pago-legend-label"><span style="width:8px;height:8px;border-radius:2px;background:${pagColors[i]};display:inline-block;"></span>${k}</div>
+      <div class="pago-legend-val">${pagCnt[k]} <span style="color:var(--muted);font-weight:400;">(${Math.round(pagCnt[k]/total*100)}%)</span></div>
+    </div>`).join('');
+
+  // TOP MARCAS
+  const marcaCnt = groupBy(fd,'marca');
+  const top10m = Object.entries(marcaCnt).sort((a,b)=>b[1]-a[1]).slice(0,10);
+  const maxM = top10m[0]?.[1]||1;
+  document.getElementById('topMarcas').innerHTML = top10m.map(([n,c],i)=>`
+    <div class="top-item">
+      <div class="top-rank">${i+1}</div>
+      <div class="top-name">${n}</div>
+      <div class="top-bar-outer"><div class="top-bar-inner" style="width:${Math.round(c/maxM*100)}%;background:${VEND_COLORS[i%VEND_COLORS.length]};"></div></div>
+      <div class="top-count">${c}</div>
+    </div>`).join('');
+
+  // TOP MODELOS
+  const modCnt = groupBy(fd,'modelo');
+  const top10mo = Object.entries(modCnt).sort((a,b)=>b[1]-a[1]).slice(0,10);
+  const maxMo = top10mo[0]?.[1]||1;
+  document.getElementById('topModelos').innerHTML = top10mo.map(([n,c],i)=>`
+    <div class="top-item">
+      <div class="top-rank">${i+1}</div>
+      <div class="top-name">${n}</div>
+      <div class="top-bar-outer"><div class="top-bar-inner" style="width:${Math.round(c/maxMo*100)}%;background:${VEND_COLORS[i%VEND_COLORS.length]};"></div></div>
+      <div class="top-count">${c}</div>
+    </div>`).join('');
+
+  // MENSUAL
+  const byMes={}, byMesV={};
+  fd.forEach(r=>{const m=r.fecha.slice(0,7); byMes[m]=(byMes[m]||0)+1; byMesV[m]=(byMesV[m]||0)+r.venta;});
+  const meses = Object.keys(byMes).sort();
+  const mesLabels = meses.map(m=>{const[y,mo]=m.split('-'); const mn=['','Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'][+mo]; return `${mn} ${y.slice(2)}`;});
+  const gridLine = 'rgba(255,255,255,0.05)';
+  const tickClr = '#7a7f94';
+  mkChart('chartMensual','line',{
+    labels:mesLabels,
+    datasets:[{data:meses.map(m=>byMes[m]),borderColor:'#6c63ff',backgroundColor:'rgba(108,99,255,0.12)',fill:true,tension:0.35,pointRadius:3,pointBackgroundColor:'#6c63ff'}]
+  },{plugins:{legend:{display:false}},scales:{y:{ticks:{stepSize:1,color:tickClr},grid:{color:gridLine}},x:{ticks:{color:tickClr,maxRotation:45},grid:{display:false}}}});
+
+  mkChart('chartPrecioMes','line',{
+    labels:mesLabels,
+    datasets:[{data:meses.map(m=>Math.round(byMesV[m]/byMes[m])),borderColor:'#e05c8a',backgroundColor:'rgba(224,92,138,0.12)',fill:true,tension:0.35,pointRadius:3,pointBackgroundColor:'#e05c8a'}]
+  },{plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>fmtClp(ctx.raw)}}},scales:{y:{ticks:{callback:v=>'$'+Math.round(v/1e6)+'M',color:tickClr},grid:{color:gridLine}},x:{ticks:{color:tickClr,maxRotation:45},grid:{display:false}}}});
+
+  // SUCURSAL
+  const sucCnt = groupBy(fd,'sucursal');
+  const sucKeys = Object.keys(sucCnt);
+  mkChart('chartSucursal','bar',{
+    labels:sucKeys,
+    datasets:[{data:sucKeys.map(k=>sucCnt[k]),backgroundColor:['#6c63ff','#00c49a','#f59e0b'],borderRadius:6,barThickness:40}]
+  },{plugins:{legend:{display:false}},scales:{y:{ticks:{stepSize:1,color:tickClr},grid:{color:gridLine}},x:{ticks:{color:tickClr},grid:{display:false}}}});
+
+  // VENDEDORES TABLE
+  const vendMap = {};
+  fd.forEach(r=>{
+    if (!vendMap[r.vendedor]) vendMap[r.vendedor]={cnt:0,sum:0};
+    vendMap[r.vendedor].cnt++;
+    vendMap[r.vendedor].sum+=r.venta;
+  });
+  const vendArr = Object.entries(vendMap).sort((a,b)=>b[1].cnt-a[1].cnt);
+  document.getElementById('vendBody').innerHTML = vendArr.map(([v,d],i)=>`
+    <tr>
+      <td><span class="vend-badge" style="background:${VEND_COLORS[i%VEND_COLORS.length]}"></span>${v}</td>
+      <td>${d.cnt}</td>
+      <td>${fmtM(d.sum/d.cnt)}</td>
+      <td>${fmtM(d.sum)}</td>
+    </tr>`).join('');
+
+  // COLORES
+  const colCnt = groupBy(fd,'colorNorm');
+  const topCol = Object.entries(colCnt).sort((a,b)=>b[1]-a[1]);
+  const colLabels = topCol.map(e=>e[0]);
+  mkChart('chartColor','bar',{
+    labels:colLabels,
+    datasets:[{data:topCol.map(e=>e[1]),backgroundColor:colLabels.map(c=>COLOR_HEX[c]||'#7f77dd'),borderRadius:5,borderWidth:1,borderColor:'rgba(255,255,255,0.08)'}]
+  },{plugins:{legend:{display:false}},scales:{y:{ticks:{stepSize:1,color:tickClr},grid:{color:gridLine}},x:{ticks:{color:tickClr},grid:{display:false}}}});
+
+
+  // TOP COMUNAS
+  const comunaCnt = {};
+  const comunaSum = {};
+  fd.forEach(r => {
+    const c = r.comuna || 'Sin datos';
+    comunaCnt[c] = (comunaCnt[c]||0) + 1;
+    comunaSum[c] = (comunaSum[c]||0) + r.venta;
+  });
+  const topComunas = Object.entries(comunaCnt).filter(([k])=>k!=='Sin datos').sort((a,b)=>b[1]-a[1]).slice(0,20);
+  const maxC = topComunas[0]?.[1]||1;
+  document.getElementById('topComunas').innerHTML = topComunas.map(([c,n],i) => `
+    <div class="top-item">
+      <div class="top-rank">${i+1}</div>
+      <div class="top-name">${c}</div>
+      <div class="top-bar-outer"><div class="top-bar-inner" style="width:${Math.round(n/maxC*100)}%;background:${VEND_COLORS[i%VEND_COLORS.length]};"></div></div>
+      <div class="top-count">${n}</div>
+    </div>`).join('');
+
+  // PRECIO PROMEDIO POR COMUNA (top 15 con datos)
+  const topCPrecio = Object.entries(comunaSum).filter(([k])=>k!=='Sin datos' && comunaCnt[k]>=2).sort((a,b)=>b[1]/comunaCnt[b[0]] - a[1]/comunaCnt[a[0]]).slice(0,15);
+  const wCP = document.getElementById('wrapPrecioComuna');
+  wCP.style.height = (topCPrecio.length*32+60)+'px';
+  wCP.style.position='relative';
+  mkChart('chartPrecioComuna','bar',{
+    labels: topCPrecio.map(([c])=>c),
+    datasets:[{data:topCPrecio.map(([c,s])=>Math.round(s/comunaCnt[c])),backgroundColor:VEND_COLORS.map((_,i)=>VEND_COLORS[i%VEND_COLORS.length]),borderRadius:3}]
+  },{indexAxis:'y',plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>fmtClp(ctx.raw)}}},scales:{x:{ticks:{callback:v=>'$'+Math.round(v/1e6)+'M',color:tickClr},grid:{color:gridLine}},y:{ticks:{color:tickClr},grid:{display:false}}}});
+
+  document.getElementById('colorGrid').innerHTML = topCol.map(([c,n])=>`
+    <div class="color-chip">
+      <div class="color-swatch" style="background:${COLOR_HEX[c]||'#888'}"></div>
+      ${c} <span style="color:var(--muted);margin-left:4px;">${n}</span>
+    </div>`).join('');
+}
+
+function resetFiltros() {
+  ['filtSucursal','filtPago','filtVendedor','filtPeriodo'].forEach(id=>{document.getElementById(id).selectedIndex=0;});
+  render();
+}
+
+['filtSucursal','filtPago','filtVendedor','filtPeriodo'].forEach(id=>{document.getElementById(id).addEventListener('change',render);});
+
+init();
+render();
+</script>
+</body>
+</html>
