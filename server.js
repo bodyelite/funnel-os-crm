@@ -297,7 +297,7 @@ async function marcela(tenant, history, msg, notes, assignedName) {
       temperature: 0.5,
       response_format: { type: 'json_object' },
       messages: [
-        { role: 'system', content: sysPromptProcessed + adContext },
+        { role: 'system', content: sysPromptProcessed },
         ...history.slice(-14).map(h => ({ role: h.role === 'user' ? 'user' : 'assistant', content: h.content })),
         { role: 'user', content: msg }
       ].flat()
@@ -1146,17 +1146,12 @@ app.post('/webhook',async(req,res)=>{
       const caMatch   = body.match(/(?:auto en Chileautos[^:\-]*[:\-]?\s*(.{0,60})|chileautos[^.]*?([A-Z][A-Z0-9 ]{5,40}))/i);
       const metaMatch = body.match(/anuncio en Meta|vi su anuncio en Meta|anuncio de RMG en Meta|anuncio RMG Meta/i);
 
-      if (metaMatch) {
+      const isMetaAd = metaMatch || body.match(/Mundialera|TV de Regalo/i) || (adTracing && adTracing.source_type === 'ad');
+      if (isMetaAd) {
         detectedSource   = 'Meta Ads';
-        // Extraer el vehículo específico del anuncio desde el texto del mensaje
-        // Formatos esperados: "vi el Opel Mokka GS Line 2024 en su anuncio de Meta"
-        let vehMeta = '';
-        const vm = body.match(/(?:vi el|vi la|interesa el|interesa la|por el|por la|el|la)\s+([A-Za-zÁÉÍÓÚáéíóúÑñ0-9][^,.\n]*?)(?:\s+en su anuncio|\s+en el anuncio|\s+de Meta|\s+por Meta|\s+y me interesa|$)/i);
-        if (vm && vm[1]) vehMeta = vm[1].trim();
-        // Limpiar colas genéricas
-        vehMeta = vehMeta.replace(/\b(en su anuncio|de meta|por meta|y me interesa un auto|y me interesa)\b/gi, '').trim();
-        detectedInterest = vehMeta && vehMeta.length > 2 ? vehMeta : 'Consulta desde Meta Ads';
-        portalNote = `Lead Meta Ads — Anuncio: ${detectedInterest}. Mensaje inicial: ${body.slice(0, 120)}`;
+        const titularAd = (adTracing && adTracing.headline) ? adTracing.headline : '';
+        detectedInterest = titularAd || 'Anuncio Meta Ads';
+        portalNote = `Lead Meta Ads. Anuncio clicado: [${detectedInterest}]. INSTRUCCIÓN IA: Identifica el auto del titular, valida stock y ofrécele los beneficios de la promoción inmediatamente. Mensaje inicial: "${body.slice(0, 100)}"`;
       } else if (yapoMatch) {
         detectedSource   = 'Yapo';
         detectedInterest = yapoMatch[1].trim();
