@@ -1152,7 +1152,6 @@ app.post('/webhook',async(req,res)=>{
         const titularAd = hasReferral ? (adTracing.headline || '') : '';
         const adId = hasReferral ? (adTracing.source_id || '') : '';
         
-        // Evaluamos LA LÁMINA exacta independientemente de lo que escribió el cliente
         let isMundialera = false;
         let autoClicado = '';
         
@@ -1169,7 +1168,7 @@ app.post('/webhook',async(req,res)=>{
         if (isMundialera) {
              detectedInterest = titularAd || 'Promoción Mundialera';
              if (autoClicado) {
-                 portalNote = `Lead desde Meta Ads. Hizo clic EXACTAMENTE en la lámina del: ${autoClicado}. INSTRUCCIÓN CRÍTICA IA: NO preguntes qué auto busca. Dile que viste su interés en el ${autoClicado} por la Promo Mundialera, confirma stock y ofrece el beneficio directo. Mensaje del cliente: "${body.slice(0, 100)}"`;
+                 portalNote = `Lead desde Meta Ads. Hizo clic en la lámina del: ${autoClicado}. INSTRUCCIÓN CRÍTICA IA: NO preguntes qué auto busca. Dile que viste su interés en el ${autoClicado} por la Promo Mundialera, confirma stock y ofrece beneficio. Mensaje del cliente: "${body.slice(0, 100)}"`;
              } else {
                  portalNote = `Lead desde Meta Ads. Promo Mundialera. INSTRUCCIÓN IA: Ofrece los 3 modelos de la promo (3008, Silverado, Landtrek). Mensaje del cliente: "${body.slice(0, 100)}"`;
              }
@@ -1177,7 +1176,7 @@ app.post('/webhook',async(req,res)=>{
              detectedInterest = titularAd || 'Anuncio Meta Ads';
              portalNote = `Lead Meta Ads (ID: ${adId}) — Lámina clicada: [${detectedInterest}]. Mensaje inicial: "${body.slice(0, 100)}"`;
         }
-      } } else if (yapoMatch) {
+      } else if (yapoMatch) {
         detectedSource   = 'Yapo';
         detectedInterest = yapoMatch[1].trim();
         portalNote = `Lead ingresó desde Yapo. Vehículo consultado: ${detectedInterest}`;
