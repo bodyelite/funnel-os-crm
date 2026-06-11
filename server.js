@@ -1369,36 +1369,9 @@ setInterval(async () => {
           }
         }
 
-        // ─── TAREA 2: Retargeting Post-Link a los 2 min sin respuesta ──────
-        if (lead.botActive === true && !lead.followUpSent && Array.isArray(lead.chatHistory) && lead.chatHistory.length) {
-          // Buscar el ULTIMO mensaje del bot que contiene rmgautos.cl
-          let lastLinkTs = null;
-          for (let i = lead.chatHistory.length - 1; i >= 0; i--) {
-            const m = lead.chatHistory[i];
-            if ((m.role === 'bot' || m.role === 'ia_proactiva') && m.content && m.content.indexOf('rmgautos.cl') !== -1) {
-              lastLinkTs = m.ts || null;
-              break;
-            }
-            if (m.role === 'user') break; // si el ultimo es del user, no hay link sin respuesta
-          }
-          if (lastLinkTs) {
-            const last = lead.chatHistory[lead.chatHistory.length - 1];
-            const isLastFromBot = last.role === 'bot' || last.role === 'ia_proactiva';
-            const minsDesdeLink = (Date.now() - lastLinkTs) / 60000;
-            if (isLastFromBot && minsDesdeLink >= 3) {
-              const phone = (lead.phone || '').replace(/\D/g, '');
-              if (phone) {
-                const followUp = '¿Pudiste ver la ficha en el enlace? 👀 Fíjate en el equipamiento, ¡es lo que más preguntan! ¿Qué te pareció?';
-                sendWA(phone, followUp).catch(() => {});
-                lead.chatHistory.push({ role: 'ia_proactiva', content: followUp, ts: Date.now(), agentName: 'Retargeting Bot' });
-                lead.lastInteraction = new Date().toISOString();
-                lead.followUpSent = true;
-                changed = true;
-                console.log('[Retargeting] Follow-up enviado a', lead.name);
-              }
-            }
-          }
-        }
+        /* ─── TAREA 2: ANULADA ─── 
+ Choque de trenes resuelto. IA Proactiva maneja el retargeting ahora. 
+*/
       }
 
       if (changed) await tWrite(F.leads, t, leads);
