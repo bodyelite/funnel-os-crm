@@ -1225,7 +1225,52 @@ app.post('/webhook',async(req,res)=>{
       const _av=_au.find(u=>u.username===ld[tenant][idx].assignedTo)||RMG_VENDORS.find(v=>v.username===ld[tenant][idx].assignedTo);
       if(_av?.phone)sendWA(_av.phone,'\u{1F514} '+prevSrc+': '+ld[tenant][idx].name+' respondio! Ya esta en tu embudo.').catch(()=>{});
     }
-    if(adTracing&&!ld[tenant][idx].adTracing)ld[tenant][idx].adTracing=adTracing;
+    
+    const mt_yapo = (body || '').match(/(?:Me interesa el anuncio\s*"([^"]+)"|hola[^.]*(?:yapo|anuncio)[^.]*?([A-Z][A-Z0-9 ]{5,40}))/i);
+    const mt_ml   = (body || '').match(/(?:publicaci[oó]n en Mercado Libre[^:\-]*[:\-]?\s*(.{0,60})|MLC-\d+|mercado libre[^.]*?([A-Z][A-Z0-9 ]{5,40}))/i);
+    const mt_meta = (adTracing && adTracing.source_type === 'ad') || (body || '').match(/anuncio en Meta|vi su anuncio|Mundialera|Promo/i);
+    
+    let newSource = null;
+    let newInterest = null;
+
+    if (mt_meta) {
+        newSource = 'Meta Ads';
+        newInterest = (adTracing && adTracing.headline) ? adTracing.headline : 'Anuncio Meta Ads';
+        if (newInterest.includes('3008') || newInterest.includes('Peugeot')) newInterest = 'Peugeot 3008 Hybrid (con TV de regalo 📺)';
+        else if (newInterest.includes('Silverado') || newInterest.includes('Trailboss')) newInterest = 'Silverado Trailboss (Transferencia Gratis 📄)';
+        else if (newInterest.includes('Landtrek')) newInterest = 'Landtrek Diésel (Precio Congelado ❄️)';
+    } else if (mt_yapo) {
+        newSource = 'Yapo';
+        newInterest = (mt_yapo[1] || mt_yapo[2] || 'Anuncio en Yapo').trim();
+    } else if (mt_ml) {
+        newSource = 'MercadoLibre';
+        newInterest = (mt_ml[1] || mt_ml[2] || 'Anuncio en MercadoLibre').trim();
+    }
+
+    if (newSource && ld[tenant][idx].source !== newSource) {
+        const oldSource = ld[tenant][idx].source || 'Desconocido';
+        ld[tenant][idx].source = newSource;
+        ld[tenant][idx].interest = newInterest;
+        ld[tenant][idx].status = 'Nuevo';
+        ld[tenant][idx].history = ld[tenant][idx].history || [];
+        ld[tenant][idx].history.push({
+            ts: Date.now(),
+            content: `♻️ [Reingreso Multicanal] El cliente volvió a contactar. Origen anterior: ${oldSource}. Nuevo origen: ${newSource}. Interés: ${newInterest}`
+        });
+        ld[tenant][idx].notes = ld[tenant][idx].notes || [];
+        ld[tenant][idx].notes.push({
+            content: `♻️ Reingreso detectado desde ${newSource}. Interés actualizado a: ${newInterest}`,
+            author: 'Sistema',
+            ts: Date.now()
+        });
+        const _au = await tRead(F.users, tenant);
+        const _av = _au.find(u => u.username === ld[tenant][idx].assignedTo) || RMG_VENDORS.find(v => v.username === ld[tenant][idx].assignedTo);
+        if (_av && _av.phone) {
+            sendWA(_av.phone, `🔔 REINGRESO MULTICANAL: ${ld[tenant][idx].name} volvió a cotizar. Nuevo origen: ${newSource} (${newInterest}). Revisa el CRM.`).catch(()=>{});
+        }
+    }
+    if(adTracing) ld[tenant][idx].adTracing = adTracing;
+    
     ld[tenant][idx].chatHistory=ld[tenant][idx].chatHistory||[];ld[tenant][idx].chatHistory.push({role:'user',content:body,ts:Date.now()});
     ld[tenant][idx].unread=true;ld[tenant][idx].lastClientTs=new Date().toISOString();
     if(ld[tenant][idx].botActive!==false){
