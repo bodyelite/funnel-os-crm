@@ -1,3 +1,4 @@
+const webpush = require('web-push');
 'use strict';
 const{OpenAI}=require('openai');
 const STAFF_TASACION = [
@@ -16,6 +17,39 @@ const app=express();
 const PORT=process.env.PORT||3000;
 const DATA=process.env.RENDER?'/var/data':path.join(__dirname,'data');
 if(!fsSync.existsSync(DATA))fsSync.mkdirSync(DATA,{recursive:true});
+
+// ── WEB PUSH ─────────────────────────────────────────────────────
+(function setupVapid(){
+  const pub=process.env.VAPID_PUBLIC_KEY, priv=process.env.VAPID_PRIVATE_KEY;
+  if(pub&&priv){webpush.setVapidDetails('mailto:admin@rmgautos.cl',pub,priv);console.log('[PUSH] VAPID OK');}
+  else{console.warn('[PUSH] Sin VAPID keys — push desactivado');}
+})();
+const _PUSH_FILE=require('path').join(__dirname,'data','push_subs.json');
+let _pushSubs={};
+try{_pushSubs=JSON.parse(require('fs').readFileSync(_PUSH_FILE,'utf8'));}catch(_){}
+async function _saveSubs(){try{require('fs').writeFileSync(_PUSH_FILE,JSON.stringify(_pushSubs));}catch(_){}}
+async function sendWebPush(tenant,username,payload){
+  const key=tenant+':'+username, subs=_pushSubs[key]||[], dead=[];
+  for(const sub of subs){
+    try{await webpush.sendNotification(sub,JSON.stringify(payload));}
+    catch(err){if(err.statusCode===410||err.statusCode===404)dead.push(sub.endpoint);}
+  }
+  if(dead.length){_pushSubs[key]=subs.filter(s=>!dead.includes(s.endpoint));await _saveSubs();}
+}
+async function notifyTenantPush(tenant,leads){
+  try{
+    const unreads=(leads||[]).filter(l=>l.unread);
+    if(!unreads.length)return;
+    const last=unreads[unreads.length-1];
+    const msg=(last.chatHistory||[]).filter(m=>m.role==='user').slice(-1)[0];
+    const payload={title:'RMG CRM — '+last.name,body:msg?msg.content.slice(0,80):'Nuevo mensaje',count:unreads.length,leadId:last.id};
+    for(const k of Object.keys(_pushSubs).filter(k=>k.startsWith(tenant+':'))){
+      await sendWebPush(tenant,k.split(':')[1],payload);
+    }
+  }catch(e){console.warn('[PUSH] error:',e.message);}
+}
+// ── fin WEB PUSH ──────────────────────────────────────────────────
+
 app.use(express.json({limit:'2mb'}));
 app.use((req,res,next)=>{res.header('Access-Control-Allow-Origin','*');res.header('Access-Control-Allow-Headers','Content-Type,X-Auth-Token,Authorization');res.header('Access-Control-Allow-Methods','GET,POST,PUT,PATCH,DELETE,OPTIONS');if(req.method==='OPTIONS')return res.sendStatus(200);next();});
 
@@ -27,7 +61,7 @@ const SLA_GREEN=20;
 const SLA_YELLOW=50;
 const SLA_REASSIGN=30;
 const FINAL_ST=new Set(['Cerrado','Abandonado','Perdido']);
-const VALID_ST=new Set(['Nuevo','En Proceso','Contactado','Calificado','Agendado','Reservado','Seguimiento','Negociación','Atendido','Cerrado','Abandonado','Perdido']);
+const VALID_ST=new Set(['Nuevo','En Proceso','Contactado','Calificado','Agendado','Reservado','Seguimiento','Negociación','Atendido','Cerrado','Abandonado','Perdido','esperando_respuesta_chileautos','esperando_respuesta_general']);
 const read=async f=>{try{return JSON.parse(await fs.readFile(f,'utf8'));}catch{return{};}};
 const write=(f,d)=>fs.writeFile(f,JSON.stringify(d,null,2));
 const tRead=async(f,t,fb=[])=>{const s=await read(f);return s[t]!==undefined?s[t]:fb;};
@@ -36,8 +70,8 @@ const validT=t=>TENANTS.includes(t)?t:TENANTS[0];
 
 // ── Vendedores RMG — pool fijo para ruleta ─────────────────
 const RMG_VENDORS = [
-  {username:'daniela',name:'Daniela Narváez',role:'vendedor',phone:'56900000001',status:'Activo'},
-  {username:'carlos', name:'Carlos Fracachan',role:'vendedor',phone:'56900000002',status:'Activo'},
+  {username:'Dnarvaez',name:'Daniela Narvaez',role:'vendedor',phone:'56922117391',status:'Activo'},
+  {username:'Cfracachan',name:'Carlos Fracachan',role:'vendedor',phone:'56984926769',status:'Activo'},
 ];
 
 // ── Web Scraper Heurístico — rmgautos.cl/usados/ ───────────
@@ -250,13 +284,13 @@ async function marcela(tenant, history, msg, notes, assignedName) {
       }
     }
 
-    const baseSysPrompt = (botCfg && botCfg.systemPrompt) || 'Eres Marcela, asesora de ventas de Automotora Andes. Responde de forma calida y profesional en espanol chileno.';
+    const baseSysPrompt = (botCfg && botCfg.systemPrompt) || 'Eres Cata, asesora de ventas de Automotora Andes. REGLAS ESTRICTAS E INQUEBRANTABLES:\n1. IDENTIDAD: Tu nombre es Cata, NUNCA uses otro nombre.\n2. FORMATO: Responde 100% humana y conversacional. NUNCA envíes listas estilo ferretería con todos los modelos de golpe.\n3. LÓGICA SUV/CAMIONETA: Si el aviso original era pickup, entiende camioneta como pickup. En cualquier otro caso, asume que camioneta significa SUV.\n4. FLUJO DE VENTA: Si te piden SUV/Camioneta, menciona SOLO nombres de modelos, año y precio. Luego PREGUNTA: "¿Cuál te interesaría?". SOLO cuando el cliente elija un modelo, le envías el link.\n5. EMPRESA: Dirección: Av. Macul 3758, Macul, RM. Horarios: Lunes a Viernes 10:00-18:30 y Sábados 10:00-14:00. Si piden teléfono, indica que se comunican a este mismo número con Cata.';
     let sysPromptProcessed = baseSysPrompt.replace(/\{nombreIA\}/g, assignedName || 'Cata');
-    sysPromptProcessed += '\n\nINVENTARIO DISPONIBLE:\n' + (invS || '(sin inventario disponible temporalmente)');
+    sysPromptProcessed += '\n\nREGLA DE MATCHING OBLIGATORIA: Los nombres de los autos que llegan de portales (MercadoLibre, Yapo, Chileautos) suelen venir mal escritos, duplicados o incompletos (ej. "Mg Mg3 1.5 Std Mt"). En nuestro inventario pueden estar más detallados (ej. "MG 3 HATCH BACK 1.5 STD MT AC"). TU DEBER ES UNIRLOS. Ignora palabras extra como "Hatchback", "Sedan", "SUV", letras extra o repeticiones de marca. Si la marca y el número/modelo principal coinciden, ES EL MISMO AUTO. ¡NUNCA digas que no lo tienes en el primer mensaje! Responde con entusiasmo: "¡Sí, claro! Te cuento sobre el [Nombre exacto del inventario]" y dale los detalles y el link.\n\nINVENTARIO DISPONIBLE:\n' + (invS || '(sin inventario disponible temporalmente)');
     if (notes && notes.length) {
       sysPromptProcessed += '\nNOTAS INTERNAS:\n' + notes.slice(-5).map(n => '- ' + n.author + ': ' + n.content).join('\n');
     }
-    sysPromptProcessed += '\n\nRESPONDE SOLO EN FORMATO JSON (sin markdown, sin texto adicional):\n{"reply":"<texto con emojis>","intent_signal":"NONE"|"BLUE"|"YELLOW","intent_reason":"<nota corta>","schedule_detected":true|false,"schedule_text":"<hora si aplica>"}';
+    sysPromptProcessed += '\n\nHORA ACTUAL: ' + new Date().toLocaleString('es-CL', {timeZone: 'America/Santiago'}) + '. Saluda con "Buenos dias", "Buenas tardes" o "Buenas noches" segun corresponda. REGLA DE CIERRE: Si el cliente se despide (ej. "gracias", "ok", "listo") y la gestion ya termino o se agendo, DEBES marcar "end_conversation": true y dejar "reply" vacio ("") para NO repetir respuestas y cerrar el ciclo.\n\nRESPONDE SOLO EN FORMATO JSON (sin markdown, sin texto adicional):\n{"reply":"<texto o vacio>","intent_signal":"NONE"|"BLUE"|"YELLOW","intent_reason":"<nota>","schedule_detected":true|false,"schedule_text":"<hora/resumen>","end_conversation":false}';
 
     const completion = await openai.chat.completions.create({
       model: 'gpt-4o-mini',
@@ -269,14 +303,14 @@ async function marcela(tenant, history, msg, notes, assignedName) {
       ].flat()
     });
     let p = parseJ(completion.choices?.[0]?.message?.content || '');
-    if (!p) p = { reply: '\u00a1Perdona! Algo fall\u00f3 \ud83d\ude05 \u00bfMe repites?', intent_signal: 'NONE', intent_reason: 'fallback', schedule_detected: false, schedule_text: '' };
+    if (!p) p = { reply: '\u00a1Perdona! Algo fall\u00f3 \ud83d\ude05 \u00bfMe repites?', intent_signal: 'NONE', intent_reason: 'fallback', schedule_detected: false, schedule_text: '', end_conversation: false };
     if (p.schedule_detected && fueraH(p.schedule_text)) { p.reply += '\n\n(Nuestro horario es 09:30-18:30 \u23f0 \u00bfTe acomoda que te contactemos ma\u00f1ana a las 09:30?)'; p.intent_signal = 'YELLOW'; }
     return p;
   } catch(e) {
     console.error('[Marcela ERROR]', e.message);
     if (e.stack) console.error(e.stack.split('\n').slice(0,5).join('\n'));
     if (e.response) console.error('[OpenAI status]', e.response.status, e.response.data);
-    return { reply: 'Tuve un problemita t\u00e9cnico \ud83d\ude05 \u00bfPuedes repetir?', intent_signal: 'NONE', intent_reason: 'error', schedule_detected: false, schedule_text: '' };
+    return { reply: 'Tuve un problemita t\u00e9cnico \ud83d\ude05 \u00bfPuedes repetir?', intent_signal: 'NONE', intent_reason: 'error', schedule_detected: false, schedule_text: '', end_conversation: false };
   }
 }
 
@@ -299,7 +333,7 @@ function applySignal(lead,p){
 async function sendWA(to,text){
   const token=process.env.WA_TOKEN,phoneId=process.env.WA_PHONE_ID;
   if(!token||!phoneId){console.log('⚠️ WA no config — para:',to,'msg:',text.slice(0,60));return;}
-  try{const phone=String(to).replace(/\D/g,'');if(!phone)return;const res=await fetch(`https://graph.facebook.com/v17.0/${phoneId}/messages`,{method:'POST',headers:{'Authorization':'Bearer '+token,'Content-Type':'application/json'},body:JSON.stringify({messaging_product:'whatsapp',to:phone,type:'text',text:{body:text}})});if(!res.ok)console.error('WA error:',res.status);}catch(e){console.error('WA exc:',e.message);}
+  try{const phone=String(to).replace(/\D/g,'');if(!phone)return;const res=await fetch(`https://graph.facebook.com/v17.0/${phoneId}/messages`,{method:'POST',headers:{'Authorization':'Bearer '+token,'Content-Type':'application/json'},body:JSON.stringify({messaging_product:'whatsapp',to:phone,type:'text',text:{body:text}})});if(!res.ok){const err=await res.text();console.error('WA DETALLE ERROR:',err);}}catch(e){console.error('WA exc:',e.message);}
 }
 
 const SHIELD=['body elite','bodyelite','botox','lipo','lipoescultura','liposuccion','estetica','estética','masaje','masajes','doctora','tratamiento','acido hialuronico'];
@@ -308,14 +342,13 @@ function isShield(t){if(!t)return false;const n=t.toLowerCase().normalize('NFD')
 
 async function getSellers(tenant) {
   const allUsers = await tRead(F.users, tenant);
-  const rmgNames = ['daniela','carlos'];
-  const fromDB = allUsers.filter(u => rmgNames.includes(u.username) && u.role === 'vendedor' && (!u.status || u.status === 'Activo'));
-  return fromDB.length >= 2 ? fromDB : RMG_VENDORS;
+  return allUsers.filter(u => u.role === 'vendedor' && (!u.status || u.status === 'Activo'));
 }
 async function rrNext(tenant,exclude=null){const sl=await getSellers(tenant);if(!sl.length)return null;const pool=exclude?sl.filter(s=>s.username!==exclude):sl;const list=pool.length?pool:sl;const rr=await read(F.rr);const idx=(rr[tenant]||0)%list.length;rr[tenant]=(idx+1)%list.length;await write(F.rr,rr);return list[idx];}
 
 function calcAlert(lead){
   if(FINAL_ST.has(lead.status))return'none';
+  if(lead.status==='esperando_respuesta_chileautos'||lead.status==='esperando_respuesta_general')return'none';
   if(lead.status==='Reservado'){
     const ref=lead.reservadoAt||lead.lastInteraction;
     if(!ref)return'none';
@@ -384,14 +417,61 @@ function parseDateRange(start,end){let s=null,e=null;if(start){const d=new Date(
 function inRange(lead,s,e){if(s===null&&e===null)return true;const ts=new Date(lead.lastInteraction||0).getTime();return(s===null||ts>=s)&&(e===null||ts<=e);}
 
 async function seed(){
+
+  try {
+    const db = JSON.parse(fs.readFileSync(F.leads, 'utf8'));
+    let modified = false;
+    for (const t in db) {
+      for (const l of db[t]) {
+        ['lastInteraction','lastClientTs','createdAt','reservadoAt'].forEach(k => {
+          if (l[k] && typeof l[k] === 'string' && (l[k].includes('12-31') || l[k].includes('31-12'))) {
+            l[k] = new Date().toISOString(); modified = true;
+          }
+        });
+      }
+    }
+    if (modified) fs.writeFileSync(F.leads, JSON.stringify(db, null, 2));
+  } catch(e) {}
+
+
+  try {
+    const db = JSON.parse(fs.readFileSync(F.leads, 'utf8'));
+    let modified = false;
+    for (const t in db) {
+      for (const l of db[t]) {
+        ['lastInteraction','lastClientTs','createdAt','reservadoAt'].forEach(k => {
+          if (l[k] && typeof l[k] === 'string' && (l[k].includes('12-31') || l[k].includes('31-12'))) {
+            l[k] = new Date().toISOString(); modified = true;
+          }
+        });
+      }
+    }
+    if (modified) fs.writeFileSync(F.leads, JSON.stringify(db, null, 2));
+  } catch(e) {}
+
+  // GUARD: nunca sobreescribir leads si ya existen en disco
+  try {
+    const existing = JSON.parse(fs.readFileSync ? require('fs').readFileSync(F.leads,'utf8') : '{}');
+    const total = Object.values(existing).reduce((a,v)=>a+(Array.isArray(v)?v.length:0),0);
+    if(total > 0){
+      console.log('[SEED] Leads protegidos en disco:',total,'— seed omite leads');
+      // solo seed users/config, nunca leads
+    }
+  } catch(e){}
+
+  // PROTECCIÓN: si /var/data/leads.json tiene datos, no tocar
+  try {
+    const leadsData = JSON.parse(fs.readFileSync ? require('fs').readFileSync(F.leads,'utf8') : '{}');
+    const totalLeads = Object.values(leadsData).reduce((a,v)=>a+(Array.isArray(v)?v.length:0),0);
+    if(totalLeads > 0){ console.log('[SEED] Leads existentes:', totalLeads, '— no se sobreescriben'); }
+  } catch(e){}
+
   const users=await read(F.users);
   if(!users.demo_automotora){users.demo_automotora=[
     {username:'gerente',password:'demo',name:'Andrés Salas',role:'admin',phone:'56912000001',status:'Activo'},
-    {username:'daniela',password:'demo',name:'Daniela Narváez',role:'vendedor',phone:'56900000001',status:'Activo'},
-    {username:'carlos', password:'demo',name:'Carlos Fracachan',role:'vendedor',phone:'56900000002',status:'Activo'},
-    {username:'recepcion',password:'demo',name:'Daniela Ortiz',role:'secretaria',phone:'56912000004',status:'Activo'}
+            {username:'recepcion',password:'demo',name:'Daniela Ortiz',role:'secretaria',phone:'56912000004',status:'Activo'}
   ];}else{
-    for(const v of RMG_VENDORS){if(!users.demo_automotora.find(u=>u.username===v.username))users.demo_automotora.push(v);}
+    // BLOQUEADO: no recrear vendors demo automaticamente
   }
   if(!users.demo_clinica)users.demo_clinica=[{username:'gerente',password:'demo',name:'Dr. Hernán Vidal',role:'admin',phone:'56912000010',status:'Activo'},{username:'vendedor1',password:'demo',name:'Karina Bravo',role:'vendedor',phone:'56912000011',status:'Activo'},{username:'recepcion',password:'demo',name:'Marcela Tapia',role:'secretaria',phone:'56912000012',status:'Activo'}];
   await write(F.users,users);
@@ -463,11 +543,24 @@ app.patch('/api/leads/:id',auth(),async(req,res)=>{
   const leads=await tRead(F.leads,req.tenant);const idx=leads.findIndex(x=>x.id==req.params.id);
   if(idx===-1)return res.status(404).json({error:'No encontrado'});
   if(req.user.role==='vendedor'&&leads[idx].assignedTo!==req.user.username)return res.status(403).json({error:'Sin permisos'});
-  const ALLOWED=['status','interest','name','phone','botActive','nextAction'];if(req.user.role!=='vendedor')ALLOWED.push('assignedTo');
+  const ALLOWED=['status','interest','name','phone','botActive','nextAction','pastActions'];if(req.user.role!=='vendedor')ALLOWED.push('assignedTo');
+  // Borrado individual via patch status '_delete_'
+  if(req.body.status==='_delete_'){
+    const before=leads.length;
+    const remaining=leads.filter(x=>x.id!=req.params.id);
+    await tWrite(F.leads,req.tenant,remaining);
+    return res.json({ok:true,deleted:before-remaining.length});
+  }
   const patch={};for(const k of ALLOWED)if(req.body[k]!==undefined)patch[k]=req.body[k];
   if(patch.status!==undefined&&!VALID_ST.has(patch.status))return res.status(400).json({error:'Status inválido'});
   if(req.body.note&&String(req.body.note).trim()){leads[idx].notes=Array.isArray(leads[idx].notes)?leads[idx].notes:[];leads[idx].notes.push({content:String(req.body.note).trim(),author:req.user.name||req.user.username,ts:Date.now()});}
   if(patch.status==='Reservado'&&leads[idx].status!=='Reservado')patch.reservadoAt=new Date().toISOString();
+  if(patch.status==='Nuevo' && (leads[idx].status==='esperando_respuesta_chileautos'||leads[idx].status==='esperando_respuesta_general')){
+  const now=new Date().toISOString();
+  patch.lastClientTs=now;
+  patch.lastInteraction=now;
+  patch.alertLevel='none';
+}
   Object.assign(leads[idx],patch);
   leads[idx].lastInteraction=new Date().toISOString();leads[idx].unread=false;leads[idx].alertLevel=calcAlert(leads[idx]);
   await tWrite(F.leads,req.tenant,leads);res.json(leads[idx]);
@@ -542,6 +635,7 @@ app.post('/api/leads/:id/message',auth('admin','vendedor'),async(req,res)=>{
   if(req.user.role==='vendedor'&&leads[idx].assignedTo!==req.user.username)return res.status(403).json({error:'Sin permisos'});
   leads[idx].chatHistory=leads[idx].chatHistory||[];
   leads[idx].chatHistory.push({role:'agent',content,ts:Date.now(),agent:req.user.username,agentName:req.user.name||req.user.username});
+  leads[idx].botPersona=req.user.name||req.user.username;
   leads[idx].unread=false;leads[idx].lastInteraction=new Date().toISOString();leads[idx].alertLevel=calcAlert(leads[idx]);
   await tWrite(F.leads,req.tenant,leads);
   const phone=(leads[idx].phone||'').replace(/\D/g,'');if(phone)sendWA(phone,content).catch(()=>{});
@@ -611,13 +705,28 @@ app.post('/api/chat',async(req,res)=>{
   const idx=leads.findIndex(l=>l.id===leadId);
   leads[idx].chatHistory=leads[idx].chatHistory||[];leads[idx].chatHistory.push({role:'user',content:message,ts:Date.now()});
   leads[idx].unread=true;
+    // Marcar secuencia WA como respondida
+    if (leads[idx].waSequence) leads[idx].waSequence.replied = true;
   if(leads[idx].botActive!==false){
     if(message.trim().toLowerCase()==='/reset'){leads.splice(idx,1);await tWrite(F.leads,tenant,leads);return res.json({reply:'🔄 Lead eliminado. Listo para nuevo ingreso desde Chileautos.',status:'eliminado',alertLevel:'none'});}
     const assignedUserChat=allUsers.find(u=>u.username===leads[idx].assignedTo)||RMG_VENDORS.find(v=>v.username===leads[idx].assignedTo);
-    const assignedNameChat=assignedUserChat?.name||null;
+    const assignedNameChat=leads[idx].botPersona||assignedUserChat?.name||'Cata';
     const p=await marcela(tenant,leads[idx].chatHistory.slice(0,-1),message,leads[idx].notes,assignedNameChat);
-    leads[idx].chatHistory.push({role:'bot',content:p.reply,ts:Date.now()});
     applySignal(leads[idx],p);
+    
+    if(p.schedule_detected && p.schedule_text) {
+        leads[idx].notes = Array.isArray(leads[idx].notes) ? leads[idx].notes : [];
+        leads[idx].notes.push({content: '🚨 CITA AGENDADA POR IA: ' + p.schedule_text, author: 'Sistema', ts: Date.now()});
+        leads[idx].intentSignal = 'BLUE';
+        leads[idx].nextAction = {text: '📞 Llamar al cliente: ' + p.schedule_text, date: new Date(Date.now()+60000).toISOString(), createdAt: new Date().toISOString(), delegateToIA: false, iaCompleted: false};
+    }
+
+    if(!p.reply || p.reply.trim() === '') {
+        leads[idx].notes = Array.isArray(leads[idx].notes) ? leads[idx].notes : [];
+        leads[idx].notes.push({content: '🤫 IA detectó fin de conversación.', author: 'Sistema', ts: Date.now()});
+    } else {
+        leads[idx].chatHistory.push({role:'bot',content:p.reply,ts:Date.now()});
+    }
     if(esKeywordCalif(message)&&!leads[idx].keywordAlertSent){
       leads[idx].keywordAlertSent=true;
       leads[idx].intentSignal='BLUE';
@@ -634,7 +743,7 @@ app.post('/api/chat',async(req,res)=>{
         if(assignedUserChat?.phone)sendWA(assignedUserChat.phone,'✅ Lead Asignado: '+leads[idx].name+'. Lee el resumen en la bitácora del CRM.').catch(()=>{});
       }
     }
-    if(p.reply&&p.reply.indexOf('rmgautos.cl')!==-1){leads[idx].nextAction={text:'¿Pudiste ver la ficha en el enlace? Fíjate en los detalles del equipamiento 👀 ¿Qué te pareció?',date:new Date(Date.now()+2*60000).toISOString(),createdAt:new Date().toISOString(),delegateToIA:true,iaCompleted:false};}
+    if(p.reply&&p.reply.indexOf('rmgautos.cl')!==-1){leads[idx].nextAction={text:'¿Pudiste ver la ficha en el enlace? Fíjate en los detalles del equipamiento 👀 ¿Qué te pareció?',date:new Date(Date.now()+3*60000).toISOString(),createdAt:new Date().toISOString(),delegateToIA:true,iaCompleted:false};}
     leads[idx].alertLevel=calcAlert(leads[idx]);
     await tWrite(F.leads,tenant,leads);
     return res.json({reply:p.reply,sessionId,leadCaptured:captured,leadId,intentSignal:leads[idx].intentSignal,status:leads[idx].status});
@@ -714,16 +823,16 @@ app.post('/api/leads/manual', auth('admin','vendedor'), async (req, res) => {
       status, botActive: status === 'Nuevo',
       alertLevel: 'none', intentSignal: 'NONE', unread: true,
       assignedTo: asignado || req.user?.username || 'vendedor1',
-      lastInteraction: n, lastClientTs: new Date(0).toISOString(),
-      notes: initNotes, chatHistory: [], media: []
-    };
+      lastInteraction: n, lastClientTs: status === 'Nuevo' ? n : new Date(0).toISOString(), createdAt: n,
+      notes: initNotes, chatHistory: [], media: [], pastActions: [], nextAction: { text: '📞 Llamar al cliente (Plantilla WA enviada)', date: new Date(Date.now() + 30 * 60000).toISOString(), createdAt: n, delegateToIA: false, iaCompleted: false },
+      waSequence: { step: 1, lastSentAt: n, replied: false } };
     leads.unshift(lead);
     await tWrite(F.leads, tenant, leads);
     const token = process.env.WA_TOKEN, phoneId = process.env.WA_PHONE_ID;
     if (token && phoneId && phone !== 'Pendiente') {
       try {
         const phoneClean = phone.replace(/\D/g,'');
-        const templateName = process.env.CA_WA_TEMPLATE || 'contacto_chileautos_v1';
+        const templateName = process.env.CA_WA_TEMPLATE || 'contacto_chileautos_v2';
         const waRes = await fetch('https://graph.facebook.com/v19.0/' + phoneId + '/messages', {
           method: 'POST',
           headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' },
@@ -749,7 +858,7 @@ app.post('/api/leads/manual', auth('admin','vendedor'), async (req, res) => {
         } else { console.warn('[LEAD-MANUAL] Plantilla no enviada:', JSON.stringify(waJson)); }
       } catch(we) { console.error('[LEAD-MANUAL] WA exc:', we.message); }
     }
-    const team = await tRead(F.team, tenant);
+    const team = await tRead(F.users, tenant);
     const vend = (team||[]).find(u => u.username === lead.assignedTo);
     if (vend?.phone) sendWA(vend.phone, '\u{1F514} NUEVO LEAD MANUAL [' + canal + ']: ' + nombre + ' asignado a ti en FunnelOS.').catch(()=>{});
     console.log('[LEAD-MANUAL] Creado:', nombre, phone, canal, status);
@@ -844,7 +953,7 @@ app.post('/api/chileautos/webhook', async (req, res) => {
     const token = process.env.WA_TOKEN, phoneId = process.env.WA_PHONE_ID;
     if (token && phoneId && phone !== 'Pendiente') {
       try {
-        const templateName = process.env.CA_WA_TEMPLATE || 'contacto_chileautos_v1';
+        const templateName = process.env.CA_WA_TEMPLATE || 'contacto_chileautos_v2';
         const waRes = await fetch(`https://graph.facebook.com/v19.0/${phoneId}/messages`, {
           method: 'POST',
           headers: { Authorization: 'Bearer '+token, 'Content-Type': 'application/json' },
@@ -926,11 +1035,32 @@ app.get('/api/media/:mediaId', async (req, res) => {
 });
 // --- FIN PROXY ---
 
+function detectSource(text){
+  if(!text) return null;
+  const t = text.toLowerCase();
+  if(t.includes('chileautos')) return 'Chileautos';
+  if(t.includes('yapo')) return 'Yapo';
+  if(t.includes('mercadolibre')||t.includes('mercado libre')) return 'MercadoLibre';
+  if(t.includes('facebook')||t.includes('meta')||t.includes('instagram')) return 'Meta Ads';
+  if(t.includes('autocasion')||t.includes('auto casion')) return 'Autocasion';
+  if(t.includes('dercocenter')||t.includes('derco')) return 'Derco';
+  return null;
+}
 app.post('/webhook',async(req,res)=>{
   if(!req.body.object)return res.sendStatus(404);res.sendStatus(200);
   try{
     const val=req.body.entry?.[0]?.changes?.[0]?.value;const msg=val?.messages?.[0];if(!msg)return;
     const from=msg.from;let body=msg.text?.body||msg.button?.text||null;
+
+    // R2: Captura referral de Meta Ads (WhatsApp Business API)
+    const referral=msg.referral||null;
+    const adTracing=referral?{
+      ad_id:referral.headline_id||referral.source_id||referral.ad_id||null,
+      headline:referral.headline||null,
+      source_url:referral.source_url||null,
+      source_type:referral.source_type||null,
+      media_type:referral.media_type||null,
+    }:null;
 
     // --- MULTIMEDIA HANDLER V4 ---
     if (msg.type === 'image' || msg.type === 'audio') {
@@ -943,7 +1073,15 @@ app.post('/webhook',async(req,res)=>{
       if (idx === -1) {
         const assignedObj = await rrNext(tenant) || {username: 'vendedor1'};
         const n = new Date().toISOString();
-        ld[tenant].unshift({id: Date.now(), name: contactName, phone: '+' + from, source: 'WhatsApp', status: 'Nuevo', lastInteraction: n, lastClientTs: n, interest: msg.type === 'image' ? '[Foto Recibida]' : '[Audio Recibido]', assignedTo: assignedObj.username, botActive: true, alertLevel: 'none', intentSignal: 'NONE', unread: true, notes: [], chatHistory: [], media: []});
+        ld[tenant].unshift({id: Date.now(), name: contactName, phone: '+' + from, source: ((() => {
+        const txt = (typeof body === 'string' ? body : (typeof message === 'string' ? message : '')).toLowerCase();
+        if(!txt) return 'WhatsApp';
+        if(txt.includes('mercadolibre') || txt.includes('mlc-')) return 'Mercado Libre';
+        if(txt.includes('chileautos')) return 'Chileautos';
+        if(txt.includes('yapo')) return 'Yapo';
+        if(txt.includes('facebook') || txt.includes('instagram') || txt.includes('fb.me') || txt.includes('vi tu anuncio') || txt.includes('vi este anuncio')) return 'Meta Ads';
+        return 'WhatsApp';
+    })()), status: 'Nuevo', lastInteraction: n, lastClientTs: n, interest: msg.type === 'image' ? '[Foto Recibida]' : '[Audio Recibido]', assignedTo: assignedObj.username, botActive: true, alertLevel: 'none', intentSignal: 'NONE', unread: true, notes: [], chatHistory: [], media: []});
         idx = 0;
       }
 
@@ -986,7 +1124,10 @@ app.post('/webhook',async(req,res)=>{
         }
       }
       
+      ld[tenant][idx].lastClientTs=new Date().toISOString();
+      ld[tenant][idx].unread=true;ld[tenant][idx].lastClientTs=new Date().toISOString();
       await tWrite(F.leads, tenant, ld[tenant]);
+      console.log('[WH-MEDIA] Guardado media para',from);
     }
 // --- FIN MULTIMEDIA HANDLER V4 ---
     
@@ -1003,15 +1144,41 @@ app.post('/webhook',async(req,res)=>{
       let detectedInterest = body.slice(0, 80);
       let portalNote = null;
 
-      const yapoMatch = body.match(/Me interesa el anuncio\s*"([^"]+)"/i);
-      const mlMatch   = body.match(/publicaci[oó]n en Mercado Libre[^:\-]*[:\-]?\s*(.{0,60})/i);
-      const caMatch   = body.match(/auto en Chileautos[^:\-]*[:\-]?\s*(.{0,60})/i);
-      const metaMatch = body.match(/anuncio en Meta|vi su anuncio en Meta|anuncio de RMG en Meta|anuncio RMG Meta/i);
+      const yapoMatch = body.match(/(?:Me interesa el anuncio\s*"([^"]+)"|hola[^.]*(?:yapo|anuncio)[^.]*?([A-Z][A-Z0-9 ]{5,40}))/i);
+      const mlMatch   = body.match(/(?:publicaci[oó]n en Mercado Libre[^:\-]*[:\-]?\s*(.{0,60})|MLC-\d+|mercado libre[^.]*?([A-Z][A-Z0-9 ]{5,40}))/i);
+      const caMatch   = body.match(/(?:auto en Chileautos[^:\-]*[:\-]?\s*(.{0,60})|chileautos[^.]*?([A-Z][A-Z0-9 ]{5,40}))/i);
+      const metaMatchText = body.match(/anuncio en Meta|vi su anuncio|Mundialera/i);
+      const hasReferral = (adTracing && adTracing.source_type === 'ad');
+      
+      if (hasReferral || metaMatchText) {
+        detectedSource = 'Meta Ads';
+        const titularAd = hasReferral ? (adTracing.headline || '') : '';
+        const adId = hasReferral ? (adTracing.source_id || '') : '';
+        
+        let isMundialera = false;
+        let autoClicado = '';
+        
+        if (titularAd.includes('3008') || titularAd.includes('Peugeot')) {
+            autoClicado = 'Peugeot 3008 Hybrid (con TV de regalo 📺)'; isMundialera = true;
+        } else if (titularAd.includes('Silverado') || titularAd.includes('Trailboss')) {
+            autoClicado = 'Silverado Trailboss (Transferencia Gratis 📄)'; isMundialera = true;
+        } else if (titularAd.includes('Landtrek')) {
+            autoClicado = 'Landtrek Diésel (Precio Congelado ❄️)'; isMundialera = true;
+        } else if (titularAd.includes('Mundialera') || titularAd.includes('TV') || titularAd.includes('Transf') || body.match(/Mundialera/i)) {
+            isMundialera = true;
+        }
 
-      if (metaMatch) {
-        detectedSource   = 'Meta Ads';
-        detectedInterest = body.replace(/Hola[,.]?\s*/i, '').slice(0, 80) || 'Consulta desde Meta Ads';
-        portalNote = `Lead ingresó desde campaña Meta Ads. Mensaje inicial: ${body.slice(0, 80)}`;
+        if (isMundialera) {
+             detectedInterest = titularAd || 'Promoción Mundialera';
+             if (autoClicado) {
+                 portalNote = `Lead desde Meta Ads. Hizo clic en la lámina del: ${autoClicado}. INSTRUCCIÓN CRÍTICA IA: NO preguntes qué auto busca. Dile que viste su interés en el ${autoClicado} por la Promo Mundialera, confirma stock y ofrece beneficio. Mensaje del cliente: "${body.slice(0, 100)}"`;
+             } else {
+                 portalNote = `Lead desde Meta Ads. Promo Mundialera. INSTRUCCIÓN IA: Ofrece los 3 modelos de la promo (3008, Silverado, Landtrek). Mensaje del cliente: "${body.slice(0, 100)}"`;
+             }
+        } else {
+             detectedInterest = titularAd || 'Anuncio Meta Ads';
+             portalNote = `Lead Meta Ads (ID: ${adId}) — Lámina clicada: [${detectedInterest}]. Mensaje inicial: "${body.slice(0, 100)}"`;
+        }
       } else if (yapoMatch) {
         detectedSource   = 'Yapo';
         detectedInterest = yapoMatch[1].trim();
@@ -1037,7 +1204,8 @@ app.post('/webhook',async(req,res)=>{
         interest: detectedInterest,
         assignedTo: assignedObj.username, botActive: true,
         alertLevel: 'none', intentSignal: 'NONE', unread: true,
-        notes: initNotes, chatHistory: []
+        notes: initNotes, chatHistory: [],
+        adTracing: adTracing
       });
       idx = 0;
       const srcTag = detectedSource !== 'WhatsApp' ? ` [${detectedSource}]` : '';
@@ -1048,21 +1216,43 @@ app.post('/webhook',async(req,res)=>{
       ld[tenant][idx].status='Nuevo';
       ld[tenant][idx].botActive=true;
       ld[tenant][idx].unread=true;
+      const _nowActivated=new Date().toISOString();
+      ld[tenant][idx].lastClientTs=_nowActivated;
+      ld[tenant][idx].lastInteraction=_nowActivated;
+      ld[tenant][idx].alertLevel='none';
       ld[tenant][idx].notes=(ld[tenant][idx].notes||[]).concat({content:'✅ Cliente respondió. Activado en embudo desde sala de espera ('+prevSrc+').',author:'Sistema',ts:Date.now()});
       const _au=await tRead(F.users,tenant);
       const _av=_au.find(u=>u.username===ld[tenant][idx].assignedTo)||RMG_VENDORS.find(v=>v.username===ld[tenant][idx].assignedTo);
       if(_av?.phone)sendWA(_av.phone,'\u{1F514} '+prevSrc+': '+ld[tenant][idx].name+' respondio! Ya esta en tu embudo.').catch(()=>{});
     }
+    if(adTracing&&!ld[tenant][idx].adTracing)ld[tenant][idx].adTracing=adTracing;
     ld[tenant][idx].chatHistory=ld[tenant][idx].chatHistory||[];ld[tenant][idx].chatHistory.push({role:'user',content:body,ts:Date.now()});
-    ld[tenant][idx].unread=true;
+    ld[tenant][idx].unread=true;ld[tenant][idx].lastClientTs=new Date().toISOString();
     if(ld[tenant][idx].botActive!==false){
       if(body.trim().toLowerCase()==='/reset'){ld[tenant].splice(idx,1);await tWrite(F.leads,tenant,ld[tenant]);console.log('[RESET] Lead eliminado para',from,'— listo para nuevo ingreso');return;}
       const allUsersWH=await tRead(F.users,tenant);
       const assignedUserWH=allUsersWH.find(u=>u.username===ld[tenant][idx].assignedTo)||RMG_VENDORS.find(v=>v.username===ld[tenant][idx].assignedTo);
-      const assignedNameWH=assignedUserWH?.name||null;
+      const assignedNameWH=ld[tenant][idx].botPersona||assignedUserWH?.name||'Cata';
       const p=await marcela(tenant,ld[tenant][idx].chatHistory.slice(0,-1),body,ld[tenant][idx].notes,assignedNameWH);
-      ld[tenant][idx].chatHistory.push({role:'bot',content:p.reply,ts:Date.now()});applySignal(ld[tenant][idx],p);
-      if(p.reply&&p.reply.indexOf('rmgautos.cl')!==-1&&!(ld[tenant][idx].nextAction&&!ld[tenant][idx].nextAction.iaCompleted)){ld[tenant][idx].nextAction={text:'¿Pudiste ver la ficha en el enlace? Fíjate en los detalles del equipamiento 👀 ¿Qué te pareció?',date:new Date(Date.now()+2*60000).toISOString(),createdAt:new Date().toISOString(),delegateToIA:true,iaCompleted:false};}
+      applySignal(ld[tenant][idx],p);
+      
+      if(p.schedule_detected && p.schedule_text) {
+          ld[tenant][idx].notes = Array.isArray(ld[tenant][idx].notes) ? ld[tenant][idx].notes : [];
+          ld[tenant][idx].notes.push({content: '🚨 CITA AGENDADA POR IA: ' + p.schedule_text, author: 'Sistema', ts: Date.now()});
+          ld[tenant][idx].intentSignal = 'BLUE';
+          // Clavamos la cita en la agenda del vendedor
+          ld[tenant][idx].nextAction = {text: '📞 Llamar al cliente: ' + p.schedule_text, date: new Date(Date.now()+60000).toISOString(), createdAt: new Date().toISOString(), delegateToIA: false, iaCompleted: false};
+      }
+
+      let _isEnd = false;
+      if(!p.reply || p.reply.trim() === '') {
+          ld[tenant][idx].notes = Array.isArray(ld[tenant][idx].notes) ? ld[tenant][idx].notes : [];
+          ld[tenant][idx].notes.push({content: '🤫 IA detectó fin de conversación y no respondió para evitar repeticiones.', author: 'Sistema', ts: Date.now()});
+          _isEnd = true;
+      } else {
+          ld[tenant][idx].chatHistory.push({role:'bot',content:p.reply,ts:Date.now()});
+          if(p.reply.indexOf('rmgautos.cl')!==-1&&!(ld[tenant][idx].nextAction&&!ld[tenant][idx].nextAction.iaCompleted)){ld[tenant][idx].nextAction={text:'¿Pudiste ver la ficha en el enlace? Fíjate en los detalles del equipamiento 👀 ¿Qué te pareció?',date:new Date(Date.now()+3*60000).toISOString(),createdAt:new Date().toISOString(),delegateToIA:true,iaCompleted:false};}
+      }
       if(esKeywordCalif(body)&&!ld[tenant][idx].keywordAlertSent){
         ld[tenant][idx].keywordAlertSent=true;
         ld[tenant][idx].intentSignal='BLUE';
@@ -1079,10 +1269,15 @@ app.post('/webhook',async(req,res)=>{
           if(assignedUserWH?.phone)sendWA(assignedUserWH.phone,'✅ Lead Asignado: '+ld[tenant][idx].name+'. Revisa la bitácora del CRM.').catch(()=>{});
         }
       }
-      await sendWA(from,p.reply);
+      if(!_isEnd) await sendWA(from,p.reply);
     }
-    ld[tenant][idx].lastInteraction=new Date().toISOString();ld[tenant][idx].alertLevel=calcAlert(ld[tenant][idx]);
+    ld[tenant][idx].lastInteraction=new Date().toISOString();
+    ld[tenant][idx].lastClientTs=new Date().toISOString();
+    ld[tenant][idx].unread=true;ld[tenant][idx].lastClientTs=new Date().toISOString();
+    ld[tenant][idx].alertLevel=calcAlert(ld[tenant][idx]);
     await write(F.leads,ld);
+    console.log('[WH-SAVED] Lead guardado:',ld[tenant][idx].name,'phone:',from,'idx:',idx);
+    try{ await notifyTenantPush(tenant, ld[tenant]||[]); console.log('[PUSH] Notificación enviada'); }catch(ePush){ console.warn('[PUSH] error:',ePush.message); }
   }catch(e){console.error('Webhook:',e);}
 });
 
@@ -1177,36 +1372,9 @@ setInterval(async () => {
           }
         }
 
-        // ─── TAREA 2: Retargeting Post-Link a los 2 min sin respuesta ──────
-        if (lead.botActive === true && !lead.followUpSent && Array.isArray(lead.chatHistory) && lead.chatHistory.length) {
-          // Buscar el ULTIMO mensaje del bot que contiene rmgautos.cl
-          let lastLinkTs = null;
-          for (let i = lead.chatHistory.length - 1; i >= 0; i--) {
-            const m = lead.chatHistory[i];
-            if ((m.role === 'bot' || m.role === 'ia_proactiva') && m.content && m.content.indexOf('rmgautos.cl') !== -1) {
-              lastLinkTs = m.ts || null;
-              break;
-            }
-            if (m.role === 'user') break; // si el ultimo es del user, no hay link sin respuesta
-          }
-          if (lastLinkTs) {
-            const last = lead.chatHistory[lead.chatHistory.length - 1];
-            const isLastFromBot = last.role === 'bot' || last.role === 'ia_proactiva';
-            const minsDesdeLink = (Date.now() - lastLinkTs) / 60000;
-            if (isLastFromBot && minsDesdeLink >= 2) {
-              const phone = (lead.phone || '').replace(/\D/g, '');
-              if (phone) {
-                const followUp = '¿Pudiste ver la ficha en el enlace? 👀 Fíjate en el equipamiento, ¡es lo que más preguntan! ¿Qué te pareció?';
-                sendWA(phone, followUp).catch(() => {});
-                lead.chatHistory.push({ role: 'ia_proactiva', content: followUp, ts: Date.now(), agentName: 'Retargeting Bot' });
-                lead.lastInteraction = new Date().toISOString();
-                lead.followUpSent = true;
-                changed = true;
-                console.log('[Retargeting] Follow-up enviado a', lead.name);
-              }
-            }
-          }
-        }
+        /* ─── TAREA 2: ANULADA ─── 
+ Choque de trenes resuelto. IA Proactiva maneja el retargeting ahora. 
+*/
       }
 
       if (changed) await tWrite(F.leads, t, leads);
@@ -1216,7 +1384,89 @@ setInterval(async () => {
   }
 }, 30000);
 
+
+app.post('/api/leads/bulk-delete',auth('admin'),async(req,res)=>{const ids=req.body.ids||[];if(!ids.length)return res.status(400).json({error:'vacio'});let leads=await tRead(F.leads,req.tenant);const before=leads.length;leads=leads.filter(l=>!ids.includes(l.id));await tWrite(F.leads,req.tenant,leads);res.json({ok:true,deleted:before-leads.length});});
+
+app.delete('/api/leads/wipe',auth('admin'),async(req,res)=>{
+  const leads=await read(F.leads);
+  const tenant=req.tenant||'demo_automotora';
+  const prev=(leads[tenant]||[]).length;
+  leads[tenant]=[];
+  if(req.query.all==='true'){
+    for(const t of TENANTS){leads[t]=[];}
+  }
+  await write(F.leads,leads);
+  console.log('[WIPE] Leads eliminados:',prev,'tenant:',tenant);
+  res.json({ok:true,deleted:prev,tenant});
+});
+
+
+app.put('/api/config/password',auth('admin'),async(req,res)=>{
+  const{newPassword}=req.body||{};
+  if(!newPassword||newPassword.length<3)return res.status(400).json({error:'Clave muy corta'});
+  const users=await tRead(F.users,req.tenant);
+  users.forEach(u=>{u.password=newPassword;});
+  await tWrite(F.users,req.tenant,users);
+  console.log('[CONFIG] Clave actualizada para tenant:',req.tenant);
+  res.json({ok:true,updated:users.length});
+});
+
 app.use(express.static(path.join(__dirname,'public')));
+app.get('/api/push/vapid-public-key',(req,res)=>{
+  const key=process.env.VAPID_PUBLIC_KEY;
+  if(!key)return res.status(503).json({error:'VAPID no configurado'});
+  res.json({publicKey:key});
+});
+
+
+// ═══════════════════════════════════════════════════
+// AGENTE PRECIOS MERCADO — scraper Chileautos + Yapo
+// ═══════════════════════════════════════════════════
+let precioCache={ts:0,data:{}};
+const PRECIO_TTL=6*60*60*1000;
+
+async function scrapePreciosMercado(modelos){
+  const now=Date.now();
+  if(Object.keys(precioCache.data).length&&(now-precioCache.ts)<PRECIO_TTL)return precioCache.data;
+  const res2={};
+  for(const m of modelos){
+    try{
+      const q=encodeURIComponent(m.query);
+      const r1=await fetch('https://www.chileautos.cl/vehiculos/?q='+q+'&sort=precio_asc',{signal:AbortSignal.timeout(12000),headers:{'User-Agent':'Mozilla/5.0'}});
+      if(r1.ok){const h=await r1.text();const pp=[];const re=/[$]\s?([\d.]+)/g;let x;while((x=re.exec(h))!==null){const v=parseInt(x[1].replace(/\./g,''),10);if(v>=2000000&&v<=80000000)pp.push(v);}if(pp.length){pp.sort((a,b)=>a-b);res2[m.id]=res2[m.id]||{};res2[m.id].chileautos={min:pp[0],max:pp[pp.length-1],median:pp[Math.floor(pp.length/2)],count:pp.length};}}
+      await new Promise(r=>setTimeout(r,1100));
+      const r2=await fetch('https://www.yapo.cl/chile/autos_y_camionetas?q='+q+'&order=price_asc',{signal:AbortSignal.timeout(12000),headers:{'User-Agent':'Mozilla/5.0'}});
+      if(r2.ok){const h=await r2.text();const pp=[];const re=/[$]\s?([\d.]+)/g;let x;while((x=re.exec(h))!==null){const v=parseInt(x[1].replace(/\./g,''),10);if(v>=2000000&&v<=80000000)pp.push(v);}if(pp.length){pp.sort((a,b)=>a-b);res2[m.id]=res2[m.id]||{};res2[m.id].yapo={min:pp[0],max:pp[pp.length-1],median:pp[Math.floor(pp.length/2)],count:pp.length};}}
+      await new Promise(r=>setTimeout(r,1100));
+    }catch(e){console.warn('[PrecioAgent]',m.id,e.message);}
+  }
+  precioCache={ts:Date.now(),data:res2};
+  console.log('[PrecioAgent] OK:',Object.keys(res2).length,'modelos');
+  return res2;
+}
+
+app.get('/api/precios/mercado',auth('admin','vendedor'),async(req,res)=>{
+  try{
+    if(req.query.refresh==='1')precioCache.ts=0;
+    await scrapeRMG();
+    const inv=(scrapeCache.items&&scrapeCache.items.length)?scrapeCache.items:[];
+    const modelos=inv.map(i=>({id:i.id,brand:i.brand,model:i.model,year:i.year,precio_lista:i.precio_lista,precio_credito:i.precio_credito,km:i.km,link:i.link,query:(i.brand+' '+(i.model||'').split(' ').slice(0,2).join(' ')+' '+(i.year||'')).trim()}));
+    const precios=await scrapePreciosMercado(modelos);
+    const data=modelos.map(m=>{
+      const p=precios[m.id]||{};
+      const ref=p.chileautos?.median||p.yapo?.median||null;
+      const diff=ref?Math.round((m.precio_lista-ref)/ref*100):null;
+      return{...m,mercado:p,mercado_ref:ref,diff_pct:diff,posicion:diff===null?'sin datos':diff<-5?'bajo mercado':diff>5?'sobre mercado':'en mercado',ts:new Date(precioCache.ts||Date.now()).toISOString()};
+    });
+    res.json({ok:true,count:data.length,data,cache_ts:precioCache.ts});
+  }catch(e){res.status(500).json({error:e.message});}
+});
+
+app.get('/api/precios/inventario',auth('admin','vendedor'),async(req,res)=>{
+  try{await scrapeRMG();const inv=(scrapeCache.items&&scrapeCache.items.length)?scrapeCache.items:[];res.json({ok:true,count:inv.length,data:inv,ts:scrapeCache.ts});}
+  catch(e){res.status(500).json({error:e.message});}
+});
+
 app.get('*',(req,res)=>res.sendFile(path.join(__dirname,'public','index.html')));
 setInterval(async()=>{for(const t of TENANTS){try{await applySlaRules(t);}catch(e){console.error('SLA',t,e.message);}}},60000);
 
@@ -1233,8 +1483,10 @@ app.post('/api/tasacion/request', async (req, res) => {
       `Vehículo en retoma: ${ti.make || '?'} ${ti.model || '?'} ${ti.year || '?'}\n` +
       `Color: ${ti.color || '?'}\nPor favor evaluar y registrar oferta en el CRM.`;
 
-    for (const staff of STAFF_TASACION) {
-      await sendWA(staff.phone, texto);
+    const users = await tRead(F.users, tenant, []);
+    const admins = users.filter(u => u.role === 'admin' && u.status === 'Activo');
+    for (const admin of admins) {
+      if (admin.phone) await sendWA(admin.phone, texto);
     }
     res.json({ ok: true, notified: STAFF_TASACION.length });
   } catch (err) {
@@ -1302,6 +1554,38 @@ app.patch('/api/leads/:id/tradein', async (req, res) => {
 
 
 
+
+// ── PUSH endpoints ────────────────────────────────────────────────
+app.post('/api/push/subscribe',auth(),async(req,res)=>{
+  const{subscription}=req.body;
+  if(!subscription||!subscription.endpoint)return res.status(400).json({error:'subscription requerida'});
+  const key=req.tenant+':'+req.user.username;
+  _pushSubs[key]=_pushSubs[key]||[];
+  if(!_pushSubs[key].some(s=>s.endpoint===subscription.endpoint)){_pushSubs[key].push(subscription);await _saveSubs();}
+  res.json({ok:true});
+});
+app.post('/api/push/unsubscribe',auth(),async(req,res)=>{
+  const{endpoint}=req.body;
+  const key=req.tenant+':'+req.user.username;
+  if(_pushSubs[key]){_pushSubs[key]=_pushSubs[key].filter(s=>s.endpoint!==endpoint);await _saveSubs();}
+  res.json({ok:true});
+});
+// ── fin PUSH endpoints ────────────────────────────────────────────
+
+
+app.post('/markAsRead', express.json(), (req, res) => {
+    const { id } = req.body;
+    const leads = JSON.parse(fs.readFileSync('/var/data/leads.json', 'utf8'));
+    let found = false;
+    for (let tenant in leads) {
+        leads[tenant].forEach(l => {
+            if (l.id == id) { l.unread = false; found = true; }
+        });
+    }
+    if (found) fs.writeFileSync('/var/data/leads.json', JSON.stringify(leads, null, 2));
+    res.json({ success: true });
+});
+
 app.listen(PORT,()=>{console.log(`🚀 FunnelOS :${PORT} | SLA_GREEN=${SLA_GREEN} SLA_REASSIGN=${SLA_REASSIGN} SLA_YELLOW=${SLA_YELLOW}`);seed().catch(console.error);});
 
 // --- PARCHE: AUTO-RESETEO DE CLAVES ---
@@ -1318,20 +1602,114 @@ setTimeout(async () => {
   } catch(e) { console.log('Error en parche', e); }
 }, 3000);
 
-// --- PARCHE: MIGRAR LEADS A VENDEDORES REALES ---
-setTimeout(async () => {
+
+// ── WA SEQUENCE: Endpoint manual contacto_4 ──────────────────────────────────
+app.post('/api/leads/:id/send-template', auth('admin','vendedor'), async (req, res) => {
   try {
-    let leads = await tRead(F.leads, 'demo_automotora');
-    let changed = false;
-    if (leads && Array.isArray(leads)) {
-      leads.forEach(l => {
-        if (l.assignedTo === 'vendedor1') { l.assignedTo = 'daniela'; changed = true; }
-        if (l.assignedTo === 'vendedor2') { l.assignedTo = 'carlos'; changed = true; }
-      });
-      if (changed) {
-        await tWrite(F.leads, 'demo_automotora', leads);
-        console.log('✅ Leads asignados a Daniela y Carlos.');
-      }
+    const tenant = req.tenant;
+    const { templateName, params } = req.body;
+    if (!templateName) return res.status(400).json({ error: 'templateName requerido' });
+    const leads = await tRead(F.leads, tenant);
+    const lead = leads.find(l => l.id == req.params.id);
+    if (!lead) return res.status(404).json({ error: 'Lead no encontrado' });
+    const token = process.env.WA_TOKEN, phoneId = process.env.WA_PHONE_ID;
+    if (!token || !phoneId) return res.status(500).json({ error: 'WA no configurado' });
+    const phone = lead.phone?.replace(/\D/g,'');
+    if (!phone) return res.status(400).json({ error: 'Lead sin teléfono' });
+    const components = params?.length
+      ? [{ type: 'body', parameters: params.map(t => ({ type: 'text', text: t })) }]
+      : [];
+    const waRes = await fetch(`https://graph.facebook.com/v19.0/${phoneId}/messages`, {
+      method: 'POST',
+      headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        messaging_product: 'whatsapp', to: phone, type: 'template',
+        template: { name: templateName, language: { code: 'es' }, components }
+      })
+    });
+    const waJson = await waRes.json();
+    if (!waRes.ok) return res.status(502).json({ error: 'WA error', detail: waJson });
+    // Registrar en chatHistory
+    const idx = leads.findIndex(l => l.id == req.params.id);
+    leads[idx].chatHistory = leads[idx].chatHistory || [];
+    leads[idx].chatHistory.push({ role: 'bot', content: `[PLANTILLA WA ENVIADA: ${templateName}]`, ts: Date.now() });
+    if (leads[idx].waSequence) {
+      leads[idx].waSequence.step = 4;
+      leads[idx].waSequence.lastSentAt = new Date().toISOString();
     }
-  } catch(e) { console.log('Error en parche migración', e); }
-}, 4000);
+    await tWrite(F.leads, tenant, leads);
+    res.json({ ok: true });
+  } catch(e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+
+// ── WA SEQUENCE: Auto contacto_2 (30min) y contacto_3 (3h) ──────────────────
+async function sendWATemplate(phone, templateName, params) {
+  const token = process.env.WA_TOKEN, phoneId = process.env.WA_PHONE_ID;
+  if (!token || !phoneId) return false;
+  const components = params?.length
+    ? [{ type: 'body', parameters: params.map(t => ({ type: 'text', text: t })) }]
+    : [];
+  const res = await fetch(`https://graph.facebook.com/v19.0/${phoneId}/messages`, {
+    method: 'POST',
+    headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      messaging_product: 'whatsapp', to: phone, type: 'template',
+      template: { name: templateName, language: { code: 'es' }, components }
+    })
+  });
+  return res.ok;
+}
+
+setInterval(async () => {
+  try {
+    for (const tenant of TENANTS) {
+      const leads = await tRead(F.leads, tenant);
+      let changed = false;
+      for (const lead of leads) {
+        // Solo leads nuevos, con teléfono, con waSequence activa y sin respuesta
+        if (!lead.waSequence || lead.waSequence.replied) continue;
+        if (!lead.phone || lead.phone === 'Pendiente') continue;
+        if (!['Nuevo', 'Contactado'].includes(lead.status)) continue;
+        const phone = lead.phone.replace(/\D/g,'');
+        const minsSinceLastSent = (Date.now() - new Date(lead.waSequence.lastSentAt).getTime()) / 60000;
+        const step = lead.waSequence.step;
+        // contacto_2 → 30 min después de contacto_1
+        if (step === 1 && minsSinceLastSent >= 30) {
+          const ok = await sendWATemplate(phone, 'contacto_2', [
+            lead.name, 'RMG Autos', lead.interest || 'el vehículo consultado'
+          ]);
+          if (ok) {
+            lead.waSequence.step = 2;
+            lead.waSequence.lastSentAt = new Date().toISOString();
+            lead.chatHistory = lead.chatHistory || [];
+            lead.chatHistory.push({ role: 'bot', content: '[PLANTILLA WA ENVIADA: contacto_2]', ts: Date.now() });
+            changed = true;
+            console.log(`[WA-SEQ] contacto_2 enviado a ${lead.name}`);
+          }
+        }
+        // contacto_3 → 3 horas después de contacto_2
+        else if (step === 2 && minsSinceLastSent >= 180) {
+          const ok = await sendWATemplate(phone, 'contacto_3', [
+            lead.name, 'RMG Autos', lead.interest || 'el vehículo consultado'
+          ]);
+          if (ok) {
+            lead.waSequence.step = 3;
+            lead.waSequence.lastSentAt = new Date().toISOString();
+            lead.chatHistory = lead.chatHistory || [];
+            lead.chatHistory.push({ role: 'bot', content: '[PLANTILLA WA ENVIADA: contacto_3]', ts: Date.now() });
+            changed = true;
+            console.log(`[WA-SEQ] contacto_3 enviado a ${lead.name}`);
+          }
+        }
+      }
+      if (changed) await tWrite(F.leads, tenant, leads);
+    }
+  } catch(e) { console.error('[WA-SEQ]', e.message); }
+}, 60000); // cada 1 minuto
+
+// Parche de migracion zombi anulado por gerencia.
+// FORZAR DEPLOY 1781022985011
+// FIX 1781023379423
