@@ -661,9 +661,57 @@ app.get('/api/dashboard/team',auth('admin'),async(req,res)=>{
   }).filter(v=>v.total>0));
 });
 app.get('/api/analytics/channels',auth('admin'),async(req,res)=>{
-  const all=await tRead(F.leads,req.tenant);const{s,e}=parseDateRange(req.query.start,req.query.end);const leads=(s!==null||e!==null)?all.filter(l=>inRange(l,s,e)):all;const spend=await tRead(F.spend,req.tenant,{});const ch={};
-  for(const l of leads){const c=l.source||'Otro';if(!ch[c])ch[c]={channel:c,leads:0,sales:0,spend:spend[c]||0,models:{}};ch[c].leads++;if(l.status==='Cerrado'){ch[c].sales++;const m=l.model||l.interest||'—';ch[c].models[m]=(ch[c].models[m]||0)+1;}}
-  res.json(Object.values(ch).map(c=>{let top='—',tc=0;for(const[m,n]of Object.entries(c.models))if(n>tc){top=m;tc=n;}const agenda=leads.filter(l=>l.source===c.channel&&['Agendado','Calificado'].includes(l.status)).length;return{channel:c.channel,spend:c.spend,leads:c.leads,sales:c.sales,topModel:top,cpl:c.leads?Math.round(c.spend/c.leads):0,cac:c.sales?Math.round(c.spend/c.sales):0,cpa:agenda?Math.round(c.spend/agenda):0,conversion:c.leads?((c.sales/c.leads)*100).toFixed(1):'0.0'};}).sort((a,b)=>b.spend-a.spend));
+  const all=await tRead(F.leads,req.tenant);
+  const{s,e}=parseDateRange(req.query.start,req.query.end);
+  const leads=(s!==null||e!==null)?all.filter(l=>inRange(l,s,e)):all;
+  
+  const ch={};
+  for(const l of leads){
+    const src=l.source||'Otro';
+    let inter=l.interest||'Consulta Genérica';
+    if(inter.length>45) inter=inter.substring(0,42)+'...';
+    const c=src+' ➔ '+inter;
+    
+    if(!ch[c]){
+      ch[c]={channel:inter,mainSrc:src,leads:0,nuevos:0,gestionados:0,cerrados:0,abandonados:0};
+    }
+    
+    ch[c].leads++;
+    if(l.status==='Nuevo') ch[c].nuevos++;
+    else if(['Abandonado','Perdido'].includes(l.status)) ch[c].abandonados++;
+    else if(l.status==='Cerrado') ch[c].cerrados++;
+    else ch[c].gestionados++;
+  }
+  
+  const agrupado = {};
+  for(const val of Object.values(ch)) {
+      if(!agrupado[val.mainSrc]) {
+          agrupado[val.mainSrc] = {
+              mainSrc: val.mainSrc,
+              leads: 0, nuevos: 0, gestionados: 0, cerrados: 0, abandonados: 0,
+              sub: []
+          };
+      }
+      agrupado[val.mainSrc].leads += val.leads;
+      agrupado[val.mainSrc].nuevos += val.nuevos;
+      agrupado[val.mainSrc].gestionados += val.gestionados;
+      agrupado[val.mainSrc].cerrados += val.cerrados;
+      agrupado[val.mainSrc].abandonados += val.abandonados;
+      agrupado[val.mainSrc].sub.push(val);
+  }
+
+  const resultado = Object.values(agrupado).map(g => {
+      const operados = g.gestionados + g.cerrados;
+      g.efectividad = g.leads ? ((operados / g.leads) * 100).toFixed(1) + '%' : '0.0%';
+      g.sub = g.sub.map(s => {
+          const sOperados = s.gestionados + s.cerrados;
+          s.efectividad = s.leads ? ((sOperados / s.leads) * 100).toFixed(1) + '%' : '0.0%';
+          return s;
+      }).sort((a,b) => b.leads - a.leads);
+      return g;
+  }).sort((a,b) => b.leads - a.leads);
+
+  res.json(resultado);
 });
 app.get('/api/pipeline',auth(),async(req,res)=>{const cfg=await tRead(F.config,req.tenant,{});const all=await applySlaRules(req.tenant);const{s,e}=parseDateRange(req.query.start,req.query.end);let leads=byRole(all,req.user);if(s!==null||e!==null)leads=leads.filter(l=>inRange(l,s,e));if(req.query.seller&&req.user.role==='admin')leads=leads.filter(l=>l.assignedTo===req.query.seller);res.json((cfg.stages||[]).map(st=>({stage:st,leads:leads.filter(l=>l.status===st)})));});
 app.get('/api/config',auth(),async(req,res)=>res.json(await tRead(F.config,req.tenant,{})));
