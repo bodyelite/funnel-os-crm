@@ -250,86 +250,38 @@ function invStr(inv){if(!Array.isArray(inv)||!inv.length)return'(sin inventario)
 function parseJ(raw){if(!raw)return null;const a=raw.indexOf('{'),b=raw.lastIndexOf('}');if(a===-1||b===-1)return null;try{return JSON.parse(raw.slice(a,b+1));}catch{return null;}}
 function fueraH(txt){const m=(txt||'').match(/(\d{1,2})\s*(?::|\.)?\s*(\d{2})?\s*(am|pm|hrs?|h)?/i);if(!m)return false;let h=parseInt(m[1],10);const min=parseInt(m[2]||'0',10);const mer=(m[3]||'').toLowerCase();if(mer==='pm'&&h<12)h+=12;if(mer==='am'&&h===12)h=0;const total=h*60+min;return total<570||total>=1110;}
 
+
 async function marcela(tenant, history, msg, notes, assignedName) {
   try {
-    await scrapeRMG();
-    const invItems = (scrapeCache.items && scrapeCache.items.length) ? scrapeCache.items : [];
-    let invS = invItems.length
-      ? invItems.map(i => {
-          const pl = i.precio_lista ? '$' + i.precio_lista.toLocaleString('es-CL') : '';
-          const pc = i.precio_credito ? '$' + i.precio_credito.toLocaleString('es-CL') : '';
-          return `- [${i.id}] ${i.brand||''} ${i.model}${i.year?' '+i.year:''}`
-            + (i.km ? ` | ${i.km}` : '')
-            + (pl ? ` | Lista: ${pl}` : '')
-            + (pc ? ` | Crédito: ${pc}` : '')
-            + (i.fuel ? ` | ${i.fuel}` : '')
-            + (i.transmision ? ` | ${i.transmision}` : '')
-            + (i.tipo ? ` | ${i.tipo}` : '')
-            + (i.link ? ` | LINK_FICHA: ${i.link}` : '');
-        }).join('\n')
-      : (scrapeCache.data || '');
-    if (!invS) invS = '';
-
+    // 1. Obtener cerebro
     let botCfg = await tRead(F.bot, tenant, {});
-    if (!botCfg || typeof botCfg !== 'object' || Array.isArray(botCfg) || !botCfg.systemPrompt) {
-      try {
-        const seedBot = JSON.parse(fsSync.readFileSync(path.join(__dirname, 'data', 'bot.json'), 'utf8'));
-        if (seedBot && seedBot[tenant] && seedBot[tenant].systemPrompt) {
-          botCfg = Object.assign({}, botCfg, seedBot[tenant]);
-          await tWrite(F.bot, tenant, botCfg);
-          console.log('[marcela] systemPrompt restaurado desde data/bot.json para', tenant);
-        }
-      } catch(eSeed) {
-        console.error('[marcela] No se pudo cargar data/bot.json:', eSeed.message);
-      }
-    }
+    const baseSysPrompt = (botCfg && botCfg.systemPrompt) ? botCfg.systemPrompt : "Eres Cata, asistente comercial de RMG Autos.";
+    
+    // 2. Inventario rápido (Sin scrapeo en tiempo real, usamos lo que ya está en cache)
+    const invS = scrapeCache.data || '';
+    
+    // 3. Prompt puro (Sin reglas robóticas inyectadas)
+    let sysPromptProcessed = baseSysPrompt.replace(/{nombreIA}/g, assignedName || 'Cata');
+    sysPromptProcessed += '\n\nInventario disponible (consulta solo si el cliente pregunta): \n' + invS;
 
-    const baseSysPrompt = (botCfg && botCfg.systemPrompt) ? botCfg.systemPrompt : "Eres Cata, asistente comercial de RMG Autos. Eres humana, experta y conversacional.";
-    let sysPromptProcessed = baseSysPrompt.replace(/\{nombreIA\}/g, assignedName || 'Cata');
-    sysPromptProcessed += '\n\n(Eres una asesora experta: indaga primero y mantén la conversación natural)';
-
+    // 4. Llamada a OpenAI
     const completion = await openai.chat.completions.create({
       model: 'gpt-4o-mini',
-      temperature: 0.5,
+      temperature: 0.6,
       response_format: { type: 'json_object' },
       messages: [
         { role: 'system', content: sysPromptProcessed },
-        ...history.slice(-14).map(h => ({ role: h.role === 'user' ? 'user' : 'assistant', content: h.content })),
+        ...history.slice(-10).map(h => ({ role: h.role === 'user' ? 'user' : 'assistant', content: h.content })),
         { role: 'user', content: msg }
-      ].flat()
+      ]
     });
-    let p = parseJ(completion.choices?.[0]?.message?.content || '');
-    if (!p) p = { reply: '\u00a1Perdona! Algo fall\u00f3 \ud83d\ude05 \u00bfMe repites?', intent_signal: 'NONE', intent_reason: 'fallback', schedule_detected: false, schedule_text: '', end_conversation: false };
-    if (p.schedule_detected && fueraH(p.schedule_text)) { p.reply += '\n\n(Nuestro horario es 09:30-18:30 \u23f0 \u00bfTe acomoda que te contactemos ma\u00f1ana a las 09:30?)'; p.intent_signal = 'YELLOW'; }
-    return p;
+    
+    return JSON.parse(completion.choices[0].message.content);
   } catch(e) {
-    console.error('[Marcela ERROR]', e.message);
-    if (e.stack) console.error(e.stack.split('\n').slice(0,5).join('\n'));
-    if (e.response) console.error('[OpenAI status]', e.response.status, e.response.data);
-    return { reply: 'Tuve un problemita t\u00e9cnico \ud83d\ude05 \u00bfPuedes repetir?', intent_signal: 'NONE', intent_reason: 'error', schedule_detected: false, schedule_text: '', end_conversation: false };
+    console.error('[Marcela-Crash]:', e.message);
+    return { reply: '¡Hola! Estoy validando unos datos para darte la mejor info, dame un segundito. 😊', intent_signal: 'NONE' };
   }
-}
-
-function esKeywordCalif(texto){
-  if(!texto)return false;
-  const t=texto.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'');
-  return['credito','pie','seguro','retoma','parte de pago','financiamiento',
-    'cuota','mensualidad','bono','leasing','credito automotriz'].some(k=>t.includes(k));
-}
-
-function applySignal(lead,p){
-  if(p.intent_signal==='BLUE'||p.intent_signal==='YELLOW'){
-    lead.intentSignal=p.intent_signal;
-    lead.scheduleText=p.schedule_text||'';
-  } else if(!lead.intentSignal){
-    lead.intentSignal='NONE';
-  }
-}
-
-async function sendWA(to,text){
-  const token=process.env.WA_TOKEN,phoneId=process.env.WA_PHONE_ID;
-  if(!token||!phoneId){console.log('⚠️ WA no config — para:',to,'msg:',text.slice(0,60));return;}
-  try{const phone=String(to).replace(/\D/g,'');if(!phone)return;const res=await fetch(`https://graph.facebook.com/v17.0/${phoneId}/messages`,{method:'POST',headers:{'Authorization':'Bearer '+token,'Content-Type':'application/json'},body:JSON.stringify({messaging_product:'whatsapp',to:phone,type:'text',text:{body:text}})});if(!res.ok){const err=await res.text();console.error('WA DETALLE ERROR:',err);}}catch(e){console.error('WA exc:',e.message);}
+})});if(!res.ok){const err=await res.text();console.error('WA DETALLE ERROR:',err);}}catch(e){console.error('WA exc:',e.message);}
 }
 
 const SHIELD=['body elite','bodyelite','botox','lipo','lipoescultura','liposuccion','estetica','estética','masaje','masajes','doctora','tratamiento','acido hialuronico'];
