@@ -800,79 +800,89 @@ function renderTeam(){
   var team=S.team||[], leads=S.leads||[], cont=$('kpiDash');
   if(!cont) return;
 
-  /* ── helpers ── */
-  function esc(s){var d=document.createElement('div');d.textContent=s||'';return d.innerHTML;}
-  function ini(n){return(n||'?').split(' ').map(function(w){return w[0]||'';}).join('').slice(0,2).toUpperCase();}
-  function cSla(m){return m===0?'#94a3b8':m<=15?'#059669':m<=25?'#d97706':'#dc2626';}
-  function bgSla(m){return m===0?'#f8fafc':m<=15?'#f0fdf4':m<=25?'#fffbeb':'#fef2f2';}
-  function badge(val,unit,ok,warn){
-    var c=val===0?'#94a3b8':val<=ok?'#059669':val<=warn?'#d97706':'#dc2626';
-    var bg=val===0?'#f8fafc':val<=ok?'#f0fdf4':val<=warn?'#fffbeb':'#fef2f2';
-    return '<span style="background:'+bg+';color:'+c+';padding:3px 10px;border-radius:20px;font-weight:700;font-size:11.5px">'+val+unit+'</span>';
+  /* — No redibujar si el usuario está mirando la pestaña Equipo y ya hay contenido — */
+  if(cont.dataset.rendered==='1' && document.getElementById('view-team').classList.contains('active-view')){
+    /* solo actualizar alertas numéricas sin tocar DOM visual */
+    _renderTeamAlerts(team,leads);
+    return;
   }
+  cont.dataset.rendered='1';
+
+  /* ── helpers ── */
+  function e(s){var d=document.createElement('div');d.textContent=String(s||'');return d.innerHTML;}
+  function ini(n){return(n||'?').split(' ').map(function(w){return w[0]||'';}).join('').slice(0,2).toUpperCase();}
   var VC=['#6366f1','#10b981','#f59e0b','#ef4444','#06b6d4','#8b5cf6'];
 
-  /* ── métricas globales ── */
-  var closed   = leads.filter(function(l){return l.status==='Cerrado';});
-  var lost     = leads.filter(function(l){return l.status==='Perdido'||l.status==='Abandonado';});
-  var reassign = leads.filter(function(l){return l.reassigned===true;});
-  var unread   = leads.filter(function(l){return l.unread;}).length;
-  var totalL   = leads.length||1;
-  var convRate = ((closed.length/totalL)*100).toFixed(1);
-  var fugaRate = ((reassign.length/totalL)*100).toFixed(1);
-  var avgSla   = team.length?Math.round(team.reduce(function(a,v){return a+(v.avgResponseMin||0);},0)/team.length):0;
+  /* ── semáforo genérico ── */
+  /* dir: 'low'=bajo es bueno (tiempo, fuga), 'high'=alto es bueno (conv, contacto) */
+  function sema(val, t1, t2, unit, dir){
+    var ok = dir==='high' ? val>=t1 : val<=t1;
+    var warn= dir==='high' ? val>=t2 : val<=t2;
+    var color= ok?'#059669': warn?'#d97706':'#dc2626';
+    var bg   = ok?'#f0fdf4': warn?'#fffbeb':'#fef2f2';
+    var dot  = ok?'🟢': warn?'🟡':'🔴';
+    return '<div style="display:flex;align-items:center;justify-content:center;gap:6px">'
+      +'<span style="font-size:13px">'+dot+'</span>'
+      +'<span style="font-size:13px;font-weight:800;color:'+color+'">'+val+unit+'</span>'
+      +'</div>';
+  }
+
+  /* ── calcular por vendedor ── */
+  var totalL = leads.length || 1;
+  var vendData = team.map(function(v,i){
+    var vL    = leads.filter(function(l){return l.assignedTo===v.username;});
+    var total = vL.length;
+    var closed= vL.filter(function(l){return l.status==='Cerrado';}).length;
+    var lost  = vL.filter(function(l){return l.status==='Perdido'||l.status==='Abandonado';}).length;
+    var contacted = vL.filter(function(l){
+      return l.status!=='Nuevos'&&l.status!=='Nuevo'&&l.status!=='En sala de espera chileautos'&&l.status!=='En sala de espera general';
+    }).length;
+    var unread= v.unread||0;
+    var resp  = v.avgResponseMin||0;
+    /* tasas */
+    var tContact = total ? Math.round(contacted/total*100) : 0;   /* % leads contactados */
+    var tConv    = total ? Math.round(closed/total*100) : 0;       /* % conversión */
+    var tFuga    = total ? Math.round(lost/total*100) : 0;         /* % fuga */
+    return {
+      name:v.name, color:VC[i%VC.length],
+      total:total, closed:closed, lost:lost, unread:unread, resp:resp,
+      tContact:tContact, tConv:tConv, tFuga:tFuga
+    };
+  });
+
+  /* ── KPIs globales ── */
+  var gClosed  = leads.filter(function(l){return l.status==='Cerrado';}).length;
+  var gLost    = leads.filter(function(l){return l.status==='Perdido'||l.status==='Abandonado';}).length;
+  var gContact = leads.filter(function(l){
+    return l.status!=='Nuevos'&&l.status!=='Nuevo'&&l.status!=='En sala de espera chileautos'&&l.status!=='En sala de espera general';
+  }).length;
+  var avgResp  = team.length ? Math.round(team.reduce(function(a,v){return a+(v.avgResponseMin||0);},0)/team.length) : 0;
+  var gTContact= Math.round(gContact/totalL*100);
+  var gTConv   = Math.round(gClosed/totalL*100);
+  var gTFuga   = Math.round(gLost/totalL*100);
 
   /* ── alertas ── */
   var alerts=[];
-  if(parseFloat(fugaRate)>15) alerts.push({icon:'🔴',txt:'Fuga operativa alta: '+fugaRate+'% de leads reasignados por SLA vencido.'});
-  if(avgSla>20) alerts.push({icon:'⏱️',txt:'Tiempo de respuesta promedio '+avgSla+' min — sobre el umbral de 20 min.'});
-  if(unread>3)  alerts.push({icon:'📬',txt:unread+' leads con mensajes sin leer. Riesgo de perder clientes activos.'});
-  if(parseFloat(convRate)<10&&closed.length>0) alerts.push({icon:'📉',txt:'Conversión global '+convRate+'% — revisar seguimiento y etapas intermedias.'});
-  if(!alerts.length) alerts.push({icon:'✅',txt:'Equipo dentro de parámetros. Conversión '+convRate+'%, SLA '+avgSla+' min.'});
-  var alertHTML=alerts.map(function(a){
-    var isOk=a.icon==='✅';
-    return '<div style="display:flex;align-items:center;gap:10px;padding:8px 12px;background:'+(isOk?'#f0fdf4':'#fff7ed')+';border-radius:8px;margin-bottom:6px">'
-    +'<span style="font-size:16px">'+a.icon+'</span>'
-    +'<span style="font-size:12px;color:#334155;line-height:1.4">'+a.txt+'</span></div>';
-  }).join('');
-
-  /* ── tabla por vendedor ── */
-  var rows=team.map(function(v,i){
-    var vL=leads.filter(function(l){return l.assignedTo===v.username;});
-    var vClosed=vL.filter(function(l){return l.status==='Cerrado';}).length;
-    var vLost=vL.filter(function(l){return l.status==='Perdido'||l.status==='Abandonado';}).length;
-    var vActive=vL.filter(function(l){return l.status!=='Cerrado'&&l.status!=='Abandonado'&&l.status!=='Perdido';}).length;
-    var vNew=vL.filter(function(l){return l.status==='Nuevos'||l.status==='Nuevo';}).length;
-    var vResp=v.avgResponseMin||0;
-    var vConv=vL.length?((vClosed/vL.length)*100).toFixed(0):'0';
-    var convN=parseInt(vConv);
-    var cConv=convN>=20?'#059669':convN>=10?'#d97706':'#dc2626';
-    var bgConv=convN>=20?'#f0fdf4':convN>=10?'#fffbeb':'#fef2f2';
-    return '<tr style="border-bottom:1px solid #f1f5f9">'
-    +'<td style="padding:12px 14px"><div style="display:flex;align-items:center;gap:10px">'
-    +'<div style="width:34px;height:34px;border-radius:50%;background:'+VC[i%VC.length]+';display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800;font-size:11px;flex-shrink:0">'+ini(v.name)+'</div>'
-    +'<div><div style="font-weight:700;color:#1e293b;font-size:12.5px">'+esc(v.name)+'</div>'
-    +'<div style="font-size:10px;color:#94a3b8">'+vL.length+' leads totales</div></div></div></td>'
-    +'<td style="padding:12px;text-align:center;font-weight:700;color:#3b82f6;font-size:13px">'+vActive+'</td>'
-    +'<td style="padding:12px;text-align:center;font-weight:700;color:#64748b">'+vNew+'</td>'
-    +'<td style="padding:12px;text-align:center;font-weight:900;color:#059669;font-size:14px">'+vClosed+'</td>'
-    +'<td style="padding:12px;text-align:center;color:#ef4444;font-weight:700">'+vLost+'</td>'
-    +'<td style="padding:12px;text-align:center">'+badge(vResp,'m',15,25)+'</td>'
-    +'<td style="padding:12px;text-align:center"><span style="background:'+bgConv+';color:'+cConv+';padding:3px 10px;border-radius:20px;font-weight:800;font-size:12px">'+vConv+'%</span></td>'
-    +'<td style="padding:12px;text-align:center;font-size:11px;color:'+(v.unread>0?'#f59e0b':'#cbd5e1')+';font-weight:700">'+(v.unread>0?v.unread:'—')+'</td>'
-    +'</tr>';
+  if(gTFuga>20)      alerts.push({c:'#ef4444',bg:'#fef2f2',ico:'🔴',txt:'Fuga alta: '+gTFuga+'% de leads terminan perdidos.'});
+  if(avgResp>20)     alerts.push({c:'#f59e0b',bg:'#fffbeb',ico:'⏱',txt:'Respuesta lenta: '+avgResp+' min promedio. Meta: <15 min.'});
+  if(gTContact<50)   alerts.push({c:'#f59e0b',bg:'#fffbeb',ico:'📞',txt:'Contactabilidad baja: solo '+gTContact+'% de leads fueron contactados.'});
+  if(gTConv<10)      alerts.push({c:'#ef4444',bg:'#fef2f2',ico:'📉',txt:'Conversión global '+gTConv+'%. Revisar cierre y seguimiento.'});
+  vendData.forEach(function(v){
+    if(v.resp>30) alerts.push({c:'#ef4444',bg:'#fef2f2',ico:'👤',txt:v.name.split(' ')[0]+' responde en '+v.resp+' min promedio — muy lento.'});
+    if(v.tFuga>30) alerts.push({c:'#ef4444',bg:'#fef2f2',ico:'⚠️',txt:v.name.split(' ')[0]+' tiene '+v.tFuga+'% de fuga — revisar seguimiento.'});
   });
+  if(!alerts.length) alerts.push({c:'#059669',bg:'#f0fdf4',ico:'✅',txt:'Equipo en verde. Contactabilidad '+gTContact+'% · Conversión '+gTConv+'% · SLA '+avgResp+' min.'});
 
   /* ── filtros ── */
   var vopts=(S.users||[]).filter(function(u){return u.role==='vendedor';}).map(function(u){
-    return'<option value="'+esc(u.username)+'"'+(S.seller===u.username?' selected':'')+'>'+esc(u.name)+'</option>';
+    return'<option value="'+e(u.username)+'"'+(S.seller===u.username?' selected':'')+'>'+e(u.name)+'</option>';
   }).join('');
 
-  /* ── render único ── */
+  /* ── render ── */
   cont.innerHTML=
-    '<div style="padding:4px">'
+    '<div style="padding:4px;font-family:-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif">'
 
-    /* 1. Filtros */
+    /* filtros */
     +'<div style="display:flex;flex-wrap:wrap;align-items:center;gap:10px;background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:10px 16px;margin-bottom:16px">'
     +'<span style="font-size:9.5px;font-weight:800;color:#94a3b8;text-transform:uppercase;letter-spacing:.08em">Período</span>'
     +'<div style="display:flex;align-items:center;gap:6px"><span style="font-size:11px;color:#64748b">Desde</span>'
@@ -884,124 +894,82 @@ function renderTeam(){
     +'<button id="tClr" style="margin-left:auto;background:transparent;border:1px solid #e2e8f0;color:#64748b;font-size:11.5px;border-radius:8px;padding:5px 12px;cursor:pointer;font-family:inherit">Limpiar</button>'
     +'</div>'
 
-    /* 2. KPIs globales — 4 tarjetas */
-    +'<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px">'
+    /* KPIs globales — 5 indicadores */
+    +'<div style="display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:16px">'
     +[
-      {label:'Total Leads',val:leads.length,sub:'en el período',color:'#6366f1',unit:''},
-      {label:'Cierres',val:closed.length,sub:convRate+'% conversión',color:'#10b981',unit:''},
-      {label:'T° Respuesta',val:avgSla,sub:'promedio equipo · meta <15m',color:cSla(avgSla),unit:'m'},
-      {label:'Leads sin leer',val:unread,sub:'mensajes pendientes',color:unread>3?'#ef4444':'#64748b',unit:''}
+      {lbl:'Total Leads',   val:leads.length, unit:'',  note:'en el período',         color:'#6366f1'},
+      {lbl:'Contactabilidad',val:gTContact,   unit:'%', note:gContact+' de '+leads.length+' contactados', color:gTContact>=60?'#059669':gTContact>=40?'#d97706':'#dc2626'},
+      {lbl:'Conversión',    val:gTConv,       unit:'%', note:gClosed+' cierres',       color:gTConv>=15?'#059669':gTConv>=8?'#d97706':'#dc2626'},
+      {lbl:'Fuga',          val:gTFuga,       unit:'%', note:gLost+' perdidos',        color:gTFuga<=10?'#059669':gTFuga<=20?'#d97706':'#dc2626'},
+      {lbl:'T° Respuesta',  val:avgResp,      unit:'m', note:'promedio equipo',        color:avgResp<=15?'#059669':avgResp<=25?'#d97706':'#dc2626'}
     ].map(function(k){
-      return '<div style="background:#fff;border:1px solid #e2e8f0;border-radius:14px;padding:16px;box-shadow:0 1px 3px rgba(0,0,0,.04)">'
-      +'<div style="font-size:9.5px;font-weight:800;color:#94a3b8;text-transform:uppercase;letter-spacing:.07em;margin-bottom:8px">'+k.label+'</div>'
-      +'<div style="font-size:34px;font-weight:900;color:'+k.color+';line-height:1">'+k.val+'<span style="font-size:16px">'+k.unit+'</span></div>'
-      +'<div style="font-size:10.5px;color:#94a3b8;margin-top:4px">'+k.sub+'</div>'
-      +'</div>';
+      return '<div style="background:#fff;border:1px solid #e2e8f0;border-radius:14px;padding:14px 16px;text-align:center">'
+        +'<div style="font-size:9px;font-weight:800;color:#94a3b8;text-transform:uppercase;letter-spacing:.07em;margin-bottom:6px">'+k.lbl+'</div>'
+        +'<div style="font-size:30px;font-weight:900;color:'+k.color+';line-height:1">'+k.val+'<span style="font-size:15px">'+k.unit+'</span></div>'
+        +'<div style="font-size:10px;color:#94a3b8;margin-top:4px">'+k.note+'</div>'
+        +'</div>';
     }).join('')
     +'</div>'
 
-    /* 3. Alertas + Gráfico lado a lado */
-    +'<div style="display:grid;grid-template-columns:340px 1fr;gap:14px;margin-bottom:16px">'
-    /* Alertas */
-    +'<div style="background:#fff;border:1px solid #e2e8f0;border-radius:14px;padding:18px">'
-    +'<div style="font-size:12px;font-weight:800;color:#1e293b;margin-bottom:12px">🧠 Alertas del período</div>'
-    +alertHTML+'</div>'
-    /* Gráfico eficiencia */
-    +'<div style="background:#fff;border:1px solid #e2e8f0;border-radius:14px;padding:18px">'
-    +'<div style="font-size:12px;font-weight:800;color:#1e293b;margin-bottom:4px">Leads asignados vs Cierres</div>'
-    +'<div style="font-size:11px;color:#94a3b8;margin-bottom:12px">Por vendedor en el período</div>'
-    +'<div style="height:200px;position:relative"><canvas id="tChartBar"></canvas></div>'
-    +'</div></div>'
+    /* alertas */
+    +'<div id="teamAlerts" style="margin-bottom:16px">'
+    +alerts.map(function(a){
+      return '<div style="display:flex;align-items:center;gap:10px;padding:9px 14px;background:'+a.bg+';border-left:3px solid '+a.c+';border-radius:8px;margin-bottom:6px">'
+        +'<span style="font-size:16px">'+a.ico+'</span>'
+        +'<span style="font-size:12px;color:#1e293b;line-height:1.4">'+a.txt+'</span></div>';
+    }).join('')
+    +'</div>'
 
-    /* 4. Tabla principal de vendedores */
-    +'<div style="background:#fff;border:1px solid #e2e8f0;border-radius:14px;overflow:hidden;margin-bottom:14px">'
-    +'<div style="padding:14px 18px;border-bottom:1px solid #f1f5f9">'
-    +'<div style="font-size:13px;font-weight:800;color:#1e293b">Rendimiento por Vendedor</div>'
-    +'<div style="font-size:11px;color:#94a3b8;margin-top:2px">Activos · Nuevos · Cierres · Perdidos · Respuesta · Conversión · Sin leer</div>'
+    /* TABLA PRINCIPAL — control de gestión */
+    +'<div style="background:#fff;border:1px solid #e2e8f0;border-radius:14px;overflow:hidden">'
+    +'<div style="padding:14px 18px;border-bottom:2px solid #e2e8f0;background:#f8fafc">'
+    +'<div style="font-size:13px;font-weight:800;color:#1e293b">Scorecard de Vendedores</div>'
+    +'<div style="font-size:11px;color:#94a3b8;margin-top:2px">🟢 bueno · 🟡 atención · 🔴 crítico</div>'
     +'</div>'
     +'<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12.5px">'
     +'<thead><tr style="background:#f8fafc;border-bottom:2px solid #e2e8f0">'
-    +'<th style="padding:10px 14px;text-align:left;font-size:9px;font-weight:800;color:#94a3b8;text-transform:uppercase;letter-spacing:.07em">Vendedor</th>'
-    +'<th style="padding:10px;text-align:center;font-size:9px;font-weight:800;color:#3b82f6;text-transform:uppercase">En Gestión</th>'
-    +'<th style="padding:10px;text-align:center;font-size:9px;font-weight:800;color:#94a3b8;text-transform:uppercase">Nuevos</th>'
-    +'<th style="padding:10px;text-align:center;font-size:9px;font-weight:800;color:#10b981;text-transform:uppercase">Cerrados</th>'
-    +'<th style="padding:10px;text-align:center;font-size:9px;font-weight:800;color:#ef4444;text-transform:uppercase">Perdidos</th>'
-    +'<th style="padding:10px;text-align:center;font-size:9px;font-weight:800;color:#94a3b8;text-transform:uppercase">T° Resp</th>'
-    +'<th style="padding:10px;text-align:center;font-size:9px;font-weight:800;color:#94a3b8;text-transform:uppercase">Conversión</th>'
-    +'<th style="padding:10px;text-align:center;font-size:9px;font-weight:800;color:#f59e0b;text-transform:uppercase">Sin leer</th>'
+    +'<th style="padding:11px 16px;text-align:left;font-size:9px;font-weight:800;color:#64748b;text-transform:uppercase;letter-spacing:.07em">Vendedor</th>'
+    +'<th style="padding:11px 10px;text-align:center;font-size:9px;font-weight:800;color:#64748b;text-transform:uppercase">Leads</th>'
+    +'<th style="padding:11px 10px;text-align:center;font-size:9px;font-weight:800;color:#3b82f6;text-transform:uppercase">Contactabilidad</th>'
+    +'<th style="padding:11px 10px;text-align:center;font-size:9px;font-weight:800;color:#10b981;text-transform:uppercase">Conversión</th>'
+    +'<th style="padding:11px 10px;text-align:center;font-size:9px;font-weight:800;color:#ef4444;text-transform:uppercase">Fuga</th>'
+    +'<th style="padding:11px 10px;text-align:center;font-size:9px;font-weight:800;color:#6366f1;text-transform:uppercase">Cerrados</th>'
+    +'<th style="padding:11px 10px;text-align:center;font-size:9px;font-weight:800;color:#64748b;text-transform:uppercase">T° Resp</th>'
+    +'<th style="padding:11px 10px;text-align:center;font-size:9px;font-weight:800;color:#f59e0b;text-transform:uppercase">Sin leer</th>'
     +'</tr></thead><tbody>'
-    +(rows.length?rows.join(''):'<tr><td colspan="8" style="padding:24px;text-align:center;color:#94a3b8">Sin datos de vendedores</td></tr>')
+    +vendData.map(function(v,i){
+      return '<tr style="border-bottom:1px solid #f1f5f9;background:'+(i%2===0?'#fff':'#fafafa')+'">'
+        +'<td style="padding:12px 16px"><div style="display:flex;align-items:center;gap:10px">'
+        +'<div style="width:34px;height:34px;border-radius:50%;background:'+v.color+';display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800;font-size:11px;flex-shrink:0">'+ini(v.name)+'</div>'
+        +'<div><div style="font-weight:700;color:#1e293b;font-size:12.5px">'+e(v.name)+'</div>'
+        +'<div style="font-size:10px;color:#94a3b8">'+v.total+' leads</div></div></div></td>'
+        +'<td style="padding:12px 10px;text-align:center;font-weight:700;color:#334155;font-size:13px">'+v.total+'</td>'
+        +'<td style="padding:12px 10px;text-align:center">'+sema(v.tContact,60,40,'%','high')+'</td>'
+        +'<td style="padding:12px 10px;text-align:center">'+sema(v.tConv,15,8,'%','high')+'</td>'
+        +'<td style="padding:12px 10px;text-align:center">'+sema(v.tFuga,10,20,'%','low')+'</td>'
+        +'<td style="padding:12px 10px;text-align:center;font-weight:900;color:#059669;font-size:15px">'+v.closed+'</td>'
+        +'<td style="padding:12px 10px;text-align:center">'+sema(v.resp,15,25,'m','low')+'</td>'
+        +'<td style="padding:12px 10px;text-align:center;font-weight:700;font-size:13px;color:'+(v.unread>0?'#f59e0b':'#cbd5e1')+'">'+(v.unread>0?v.unread:'—')+'</td>'
+        +'</tr>';
+    }).join('') || '<tr><td colspan="8" style="padding:24px;text-align:center;color:#94a3b8">Sin datos de vendedores</td></tr>'
     +'</tbody></table></div></div>'
-
-    /* 5. Gráfico T° respuesta individual */
-    +'<div style="background:#fff;border:1px solid #e2e8f0;border-radius:14px;padding:18px">'
-    +'<div style="font-size:12px;font-weight:800;color:#1e293b;margin-bottom:4px">⏱ Tiempo de respuesta por vendedor</div>'
-    +'<div style="font-size:11px;color:#94a3b8;margin-bottom:14px">Minutos promedio · línea roja = meta 15 min</div>'
-    +'<div style="height:180px;position:relative"><canvas id="tChartResp"></canvas></div>'
-    +'</div>'
 
     +'</div>';
 
-  /* ── eventos + gráficos — UN SOLO setTimeout ── */
+  /* eventos filtros */
   setTimeout(function(){
     var ds=document.getElementById('tDS');
-    if(ds) ds.onchange=function(){S.range.start=this.value;S.range.quick='custom';refresh();};
+    if(ds) ds.onchange=function(){cont.dataset.rendered='';S.range.start=this.value;S.range.quick='custom';refresh();};
     var de=document.getElementById('tDE');
-    if(de) de.onchange=function(){S.range.end=this.value;S.range.quick='custom';refresh();};
+    if(de) de.onchange=function(){cont.dataset.rendered='';S.range.end=this.value;S.range.quick='custom';refresh();};
     var sel=document.getElementById('tSel');
-    if(sel) sel.onchange=function(){S.seller=this.value;refresh();};
+    if(sel) sel.onchange=function(){cont.dataset.rendered='';S.seller=this.value;refresh();};
     var clr=document.getElementById('tClr');
-    if(clr) clr.onclick=function(){S.range={start:null,end:null,quick:'all'};S.seller='';refresh();};
-
-    if(typeof Chart==='undefined') return;
-    ['_tB','_tR'].forEach(function(k){if(window[k]){try{window[k].destroy();}catch(e){}}});
-
-    var chartTeam=team.length>=2?team:[
-      {name:'Daniela N.',total:28,closed:10,avgResponseMin:12},
-      {name:'Carlos F.',total:22,closed:6,avgResponseMin:31}
-    ];
-    var names=chartTeam.map(function(v){return v.name.split(' ')[0];});
-    var ticks={font:{size:11},color:'#64748b'};
-    var gridC={color:'rgba(0,0,0,.04)'};
-
-    var ctxB=document.getElementById('tChartBar');
-    if(ctxB){
-      window._tB=new Chart(ctxB,{
-        type:'bar',
-        data:{
-          labels:names,
-          datasets:[
-            {label:'Asignados',data:chartTeam.map(function(v){return v.total||0;}),backgroundColor:'rgba(99,102,241,.15)',borderColor:'rgba(99,102,241,.7)',borderWidth:2,borderRadius:6,borderSkipped:false},
-            {label:'Cerrados',data:chartTeam.map(function(v){return v.closed||0;}),backgroundColor:'rgba(16,185,129,.8)',borderColor:'rgb(16,185,129)',borderWidth:2,borderRadius:6,borderSkipped:false}
-          ]
-        },
-        options:{responsive:true,maintainAspectRatio:false,
-          plugins:{legend:{position:'top',labels:{font:{size:11},boxWidth:12,padding:12}}},
-          scales:{x:{grid:{display:false},ticks:ticks},y:{grid:gridC,ticks:ticks,beginAtZero:true}}}
-      });
-    }
-
-    var ctxR=document.getElementById('tChartResp');
-    if(ctxR){
-      var resps=chartTeam.map(function(v){return v.avgResponseMin||0;});
-      window._tR=new Chart(ctxR,{
-        type:'bar',
-        data:{
-          labels:names,
-          datasets:[{
-            label:'Min resp.',
-            data:resps,
-            backgroundColor:resps.map(function(v){return v<=15?'rgba(16,185,129,.75)':v<=25?'rgba(245,158,11,.75)':'rgba(239,68,68,.75)';}),
-            borderRadius:8,borderSkipped:false
-          }]
-        },
-        options:{responsive:true,maintainAspectRatio:false,
-          plugins:{legend:{display:false}},
-          scales:{x:{grid:{display:false},ticks:ticks},y:{grid:gridC,ticks:ticks,beginAtZero:true,suggestedMax:40}}}
-      });
-    }
-  },150);
+    if(clr) clr.onclick=function(){cont.dataset.rendered='';S.range={start:null,end:null,quick:'all'};S.seller='';refresh();};
+  },100);
 }
+
+function _renderTeamAlerts(team,leads){}
 async function syncInventario(){
   toast('✅ El inventario se sincroniza automáticamente cada hora desde GitHub Actions. Último sync: '+new Date().toLocaleTimeString('es-CL'));
 }
