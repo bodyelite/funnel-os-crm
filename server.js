@@ -1087,7 +1087,25 @@ app.post('/webhook',async(req,res)=>{
   if(!req.body.object)return res.sendStatus(404);res.sendStatus(200);
   try{
     const val=req.body.entry?.[0]?.changes?.[0]?.value;const msg=val?.messages?.[0];if(!msg)return;
-    const from=msg.from;let body=msg.text?.body||msg.button?.text||null;
+    const from=msg.from;
+    // Extracción robusta: cubre text, button, interactive (reply/list), template, order y sticker
+    let body=
+      msg.text?.body                                        // mensaje de texto normal
+      || msg.button?.text                                   // clic en botón rápido
+      || msg.interactive?.button_reply?.title               // botón interactivo
+      || msg.interactive?.list_reply?.title                 // selección de lista
+      || (msg.interactive?.nfm_reply?.response_json         // formulario (lead gen)
+            ? (() => { try { const d=JSON.parse(msg.interactive.nfm_reply.response_json); return Object.values(d).join(' '); } catch(e){return null;} })()
+            : null)
+      || (msg.type==='order' ? '[ORDEN RECIBIDA]' : null)   // orden de catálogo
+      || (msg.type==='sticker' ? '[STICKER]' : null)        // sticker — no null para no perder el lead
+      || null;
+    // Si el tipo es template el portal ya envió plantilla — creamos lead de todas formas
+    if(!body && msg.type==='template') body='[Mensaje de plantilla automática]';
+    // Log de tipos desconocidos para debugging
+    if(!body && msg.type && !['image','audio','video','document'].includes(msg.type)){
+      console.warn('[WH-UNKNOWN-TYPE] Tipo de mensaje no capturado:',msg.type,'from:',from,'payload:',JSON.stringify(msg).slice(0,200));
+    }
 
     // R2: Captura referral de Meta Ads (WhatsApp Business API)
     const referral=msg.referral||null;
@@ -1168,6 +1186,8 @@ app.post('/webhook',async(req,res)=>{
     }
 // --- FIN MULTIMEDIA HANDLER V4 ---
     
+    // Si body sigue null pero hay referral (clic desde anuncio), creamos lead igual
+    if(!body && adTracing) body='[Contacto desde anuncio]';
     if(!body)return;
     if(isShield(body)){await sendWA(from,SHIELD_R);return;}
 
