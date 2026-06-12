@@ -55,13 +55,38 @@ app.use((req,res,next)=>{res.header('Access-Control-Allow-Origin','*');res.heade
 
 function applySignal(lead, p) { if (p && p.intent_signal && p.intent_signal !== 'NONE') { lead.intentSignal = p.intent_signal; } }
 function esKeywordCalif(text) { if(!text) return false; const t = text.toLowerCase(); return t.includes('credito') || t.includes('crédito') || t.includes('financiamiento') || t.includes('retoma') || t.includes('pie'); }
-async function sendWA(to, text, retries = 2) {
+async function sendWA(to, text) {
   const token = process.env.WA_TOKEN;
   const phoneId = process.env.WA_PHONE_ID;
-  if (!token || !phoneId) {
-    console.warn('[WA] Token o Phone ID no configurado');
+  if (!token || !phoneId) return false;
+  
+  // 1. BLINDAJE DE TEXTO: Si OpenAI devuelve el JSON mal escrito o un objeto, lo extraemos a la fuerza.
+  let safeText = "¡Hola! Estoy aquí."; 
+  if (typeof text === 'string') {
+      safeText = text;
+  } else if (text && typeof text === 'object') {
+      safeText = text.reply || text.Reply || text.mensaje || JSON.stringify(text);
+  }
+  
+  const payload = { messaging_product: 'whatsapp', to: to.replace(/\D/g, ''), type: 'text', text: { body: safeText } };
+  console.log('[WA-DEBUG] Enviando a Meta:', JSON.stringify(payload));
+
+  try {
+    const res = await fetch('https://graph.facebook.com/v19.0/' + phoneId + '/messages', {
+      method: 'POST',
+      headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    
+    if(res.ok) return true;
+    const errText = await res.text();
+    console.error('[WA HTTP Error]', errText);
+    return false;
+  } catch(e) {
+    console.error('[WA Catch]', e.message);
     return false;
   }
+}
   
   const payload = { messaging_product: 'whatsapp', to: to.replace(/\D/g, ''), type: 'text', text: { body: text } };
 
