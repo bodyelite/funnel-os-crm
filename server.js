@@ -873,18 +873,13 @@ app.post('/api/leads/manual', auth('admin','vendedor'), async (req, res) => {
     if (token && phoneId && phone !== 'Pendiente') {
       try {
         const phoneClean = phone.replace(/\D/g,'');
-        const templateName = process.env.CA_WA_TEMPLATE || 'contacto_chileautos_v2';
+        const templateName = 'saludo1';
         const waRes = await fetch('https://graph.facebook.com/v19.0/' + phoneId + '/messages', {
           method: 'POST',
           headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' },
           body: JSON.stringify({
             messaging_product: 'whatsapp', to: phoneClean, type: 'template',
-            template: { name: templateName, language: { code: 'es' },
-              components: [{ type: 'body', parameters: [
-                { type: 'text', text: nombre },
-                { type: 'text', text: interes || 'vehiculo consultado' }
-              ]}]
-            }
+            template: { name: templateName, language: { code: 'es' } }
           })
         });
         const waJson = await waRes.json();
@@ -994,19 +989,14 @@ app.post('/api/chileautos/webhook', async (req, res) => {
     const token = (process.env.WA_TOKEN || '').trim(), phoneId = (process.env.WA_PHONE_ID || '').trim();
     if (token && phoneId && phone !== 'Pendiente') {
       try {
-        const templateName = process.env.CA_WA_TEMPLATE || 'contacto_chileautos_v2';
+        const templateName = 'saludo1';
         const waRes = await fetch(`https://graph.facebook.com/v19.0/${phoneId}/messages`, {
           method: 'POST',
           headers: { Authorization: 'Bearer '+token, 'Content-Type': 'application/json' },
           body: JSON.stringify({
             messaging_product: 'whatsapp', to: phoneClean,
             type: 'template',
-            template: { name: templateName, language: { code: 'es' },
-              components: [{ type: 'body', parameters: [
-                { type: 'text', text: firstName || name },
-                { type: 'text', text: vehicleTitle }
-              ]}]
-            }
+            template: { name: templateName, language: { code: 'es' } }
           })
         });
         const waJson = await waRes.json();
@@ -1749,9 +1739,7 @@ app.post('/api/leads/:id/send-template', auth('admin','vendedor'), async (req, r
     if (!token || !phoneId) return res.status(500).json({ error: 'WA no configurado' });
     const phone = lead.phone?.replace(/\D/g,'');
     if (!phone) return res.status(400).json({ error: 'Lead sin teléfono' });
-    const components = params?.length
-      ? [{ type: 'body', parameters: params.map(t => ({ type: 'text', text: t })) }]
-      : [];
+    const components = [];
     const waRes = await fetch(`https://graph.facebook.com/v19.0/${phoneId}/messages`, {
       method: 'POST',
       headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' },
@@ -1782,9 +1770,7 @@ app.post('/api/leads/:id/send-template', auth('admin','vendedor'), async (req, r
 async function sendWATemplate(phone, templateName, params) {
   const token = (process.env.WA_TOKEN || '').trim(), phoneId = (process.env.WA_PHONE_ID || '').trim();
   if (!token || !phoneId) return false;
-  const components = params?.length
-    ? [{ type: 'body', parameters: params.map(t => ({ type: 'text', text: t })) }]
-    : [];
+  const components = [];
   const res = await fetch(`https://graph.facebook.com/v19.0/${phoneId}/messages`, {
     method: 'POST',
     headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' },
