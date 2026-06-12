@@ -78,7 +78,7 @@ async function sendWA(to, text) {
 async function marcela(tenant, history, msg, notes, assignedName) {
   try {
     let botCfg = await tRead(F.bot, tenant, {});
-    const baseSysPrompt = botCfg?.demo_automotora?.systemPrompt;
+    const baseSysPrompt = botCfg?.systemPrompt;
     if (!baseSysPrompt) {
       console.error('[Bot-Config-Error] systemPrompt no encontrado en bot.json para tenant:', tenant);
       return { reply: 'Dame un segundito, estoy validando la info en el sistema...', intent_signal: 'NONE' };
