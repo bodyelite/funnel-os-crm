@@ -663,7 +663,10 @@ app.get('/api/dashboard/team',auth('admin'),async(req,res)=>{
 app.get('/api/analytics/channels',auth('admin'),async(req,res)=>{
   const all=await tRead(F.leads,req.tenant);
   const{s,e}=parseDateRange(req.query.start,req.query.end);
-  const leads=(s!==null||e!==null)?all.filter(l=>inRange(l,s,e)):all;
+  let leads=(s!==null||e!==null)?all.filter(l=>inRange(l,s,e)):all;
+  
+  // ¡El Selector de Vendedor ahora filtra la analítica!
+  if(req.query.seller) leads = leads.filter(l => l.assignedTo === req.query.seller);
   
   const ch={};
   for(const l of leads){
@@ -702,10 +705,12 @@ app.get('/api/analytics/channels',auth('admin'),async(req,res)=>{
 
   const resultado = Object.values(agrupado).map(g => {
       const operados = g.gestionados + g.cerrados;
-      g.efectividad = g.leads ? ((operados / g.leads) * 100).toFixed(1) + '%' : '0.0%';
+      g.contactabilidad = g.leads ? ((operados / g.leads) * 100).toFixed(1) + '%' : '0.0%';
+      g.fuga = g.leads ? ((g.abandonados / g.leads) * 100).toFixed(1) + '%' : '0.0%';
       g.sub = g.sub.map(s => {
           const sOperados = s.gestionados + s.cerrados;
-          s.efectividad = s.leads ? ((sOperados / s.leads) * 100).toFixed(1) + '%' : '0.0%';
+          s.contactabilidad = s.leads ? ((sOperados / s.leads) * 100).toFixed(1) + '%' : '0.0%';
+          s.fuga = s.leads ? ((s.abandonados / s.leads) * 100).toFixed(1) + '%' : '0.0%';
           return s;
       }).sort((a,b) => b.leads - a.leads);
       return g;
