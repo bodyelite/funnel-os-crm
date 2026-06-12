@@ -253,18 +253,16 @@ function fueraH(txt){const m=(txt||'').match(/(\d{1,2})\s*(?::|\.)?\s*(\d{2})?\s
 
 async function marcela(tenant, history, msg, notes, assignedName) {
   try {
-    // 1. Obtener cerebro
     let botCfg = await tRead(F.bot, tenant, {});
-    const baseSysPrompt = (botCfg && botCfg.systemPrompt) ? botCfg.systemPrompt : "Eres Cata, asistente comercial de RMG Autos.";
-    
-    // 2. Inventario rápido (Sin scrapeo en tiempo real, usamos lo que ya está en cache)
+    const baseSysPrompt = (botCfg && botCfg.systemPrompt) ? botCfg.systemPrompt : "Eres Cata, asesora comercial de RMG Autos.";
     const invS = scrapeCache.data || '';
-    
-    // 3. Prompt puro (Sin reglas robóticas inyectadas)
-    let sysPromptProcessed = baseSysPrompt.replace(/{nombreIA}/g, assignedName || 'Cata');
-    sysPromptProcessed += '\n\nInventario disponible (consulta solo si el cliente pregunta): \n' + invS;
 
-    // 4. Llamada a OpenAI
+    let sysPromptProcessed = baseSysPrompt.replace(/\{nombreIA\}/g, assignedName || 'Cata');
+    sysPromptProcessed += '\n\nInventario disponible (usa solo si preguntan detalles específicos):\n' + invS;
+    
+    // REGLA CRÍTICA PARA QUE OPENAI NO FALLE
+    sysPromptProcessed += '\n\nIMPORTANTE: Tu respuesta DEBE ser un objeto JSON válido con esta estructura exacta: {"reply": "tu respuesta conversacional y humana", "intent_signal": "NONE", "schedule_detected": false, "schedule_text": ""}';
+
     const completion = await openai.chat.completions.create({
       model: 'gpt-4o-mini',
       temperature: 0.6,
@@ -275,15 +273,13 @@ async function marcela(tenant, history, msg, notes, assignedName) {
         { role: 'user', content: msg }
       ]
     });
-    
+
     return JSON.parse(completion.choices[0].message.content);
   } catch(e) {
     console.error('[Marcela-Crash]:', e.message);
-    return { reply: '¡Hola! Estoy validando unos datos para darte la mejor info, dame un segundito. 😊', intent_signal: 'NONE' };
+    return { reply: '¡Hola! Estoy validando la información en el sistema, dame un segundito. 😊', intent_signal: 'NONE' };
   }
-})});if(!res.ok){const err=await res.text();console.error('WA DETALLE ERROR:',err);}}catch(e){console.error('WA exc:',e.message);}
 }
-
 const SHIELD=['body elite','bodyelite','botox','lipo','lipoescultura','liposuccion','estetica','estética','masaje','masajes','doctora','tratamiento','acido hialuronico'];
 const SHIELD_R='¡Hola! Este número es de Automotora Andes 🚗 Para Body Elite ve a su Instagram. ¡Gracias!';
 function isShield(t){if(!t)return false;const n=t.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');return SHIELD.some(k=>n.includes(k.normalize('NFD').replace(/[\u0300-\u036f]/g,'')));}
