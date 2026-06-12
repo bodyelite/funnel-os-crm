@@ -75,6 +75,35 @@ async function sendWA(to, text) {
     return false;
   }
 }
+async function marcela(tenant, history, msg, notes, assignedName) {
+  try {
+    let botCfg = await tRead(F.bot, tenant, {});
+    const baseSysPrompt = (botCfg && botCfg.demo_automotora && botCfg.demo_automotora.systemPrompt) ? botCfg.demo_automotora.systemPrompt : "Eres Cata, asesora comercial experta de RMG Autos.";
+    const invS = scrapeCache.data || '';
+
+    let sysPromptProcessed = baseSysPrompt.replace(/\{nombreIA\}/g, assignedName || 'Cata');
+    
+    const sysNotes = (notes||[]).filter(n => n.author === 'Sistema' || n.author === 'Bot').slice(-3).map(n => n.content).join(' | ');
+    if (sysNotes) sysPromptProcessed += '\n\nCONTEXTO DEL PORTAL: ' + sysNotes;
+
+    sysPromptProcessed += '\n\nInventario disponible:\n' + invS;
+
+    const completion = await openai.chat.completions.create({
+      model: 'gpt-4o-mini',
+      temperature: 0.6,
+      messages: [
+        { role: 'system', content: sysPromptProcessed },
+        ...history.slice(-10).map(h => ({ role: h.role === 'user' ? 'user' : 'assistant', content: h.content })),
+        { role: 'user', content: msg }
+      ]
+    });
+
+    return { reply: completion.choices[0].message.content, intent_signal: 'NONE' };
+  } catch(e) {
+    console.error('[Marcela-Crash]:', e.message);
+    return { reply: 'Dame un segundito, estoy validando la info en el sistema...', intent_signal: 'NONE' };
+  }
+}
 const F={users:path.join(DATA,'users.json'),leads:path.join(DATA,'leads.json'),config:path.join(DATA,'config.json'),bot:path.join(DATA,'bot.json'),inventory:path.join(DATA,'inventory.json'),rr:path.join(DATA,'rr.json'),spend:path.join(DATA,'spend.json')};
 const TENANTS=['demo_automotora','demo_clinica'];
 const sessions=new Map();
