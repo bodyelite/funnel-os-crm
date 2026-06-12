@@ -56,8 +56,8 @@ app.use((req,res,next)=>{res.header('Access-Control-Allow-Origin','*');res.heade
 function applySignal(lead, p) { if (p && p.intent_signal && p.intent_signal !== 'NONE') { lead.intentSignal = p.intent_signal; } }
 function esKeywordCalif(text) { if(!text) return false; const t = text.toLowerCase(); return t.includes('credito') || t.includes('crédito') || t.includes('financiamiento') || t.includes('retoma') || t.includes('pie'); }
 async function sendWA(to, text, retries = 2) {
-  const token = process.env.WA_TOKEN;
-  const phoneId = process.env.WA_PHONE_ID;
+  const token = (process.env.WA_TOKEN || '').trim();
+  const phoneId = (process.env.WA_PHONE_ID || '').trim();
   if (!token || !phoneId) return false;
 
   let safeText = "¡Hola! Estoy aquí.";
@@ -874,7 +874,7 @@ app.post('/api/leads/manual', auth('admin','vendedor'), async (req, res) => {
       waSequence: { step: 1, lastSentAt: n, replied: false } };
     leads.unshift(lead);
     await tWrite(F.leads, tenant, leads);
-    const token = process.env.WA_TOKEN, phoneId = process.env.WA_PHONE_ID;
+    const token = (process.env.WA_TOKEN || '').trim(), phoneId = (process.env.WA_PHONE_ID || '').trim();
     if (token && phoneId && phone !== 'Pendiente') {
       try {
         const phoneClean = phone.replace(/\D/g,'');
@@ -996,7 +996,7 @@ app.post('/api/chileautos/webhook', async (req, res) => {
     };
     leads.unshift(newLead);
     await tWrite(F.leads, tenant, leads);
-    const token = process.env.WA_TOKEN, phoneId = process.env.WA_PHONE_ID;
+    const token = (process.env.WA_TOKEN || '').trim(), phoneId = (process.env.WA_PHONE_ID || '').trim();
     if (token && phoneId && phone !== 'Pendiente') {
       try {
         const templateName = process.env.CA_WA_TEMPLATE || 'contacto_chileautos_v2';
@@ -1045,7 +1045,7 @@ app.get('/api/media/:mediaId', async (req, res) => {
   try {
     const mediaId = req.params.mediaId;
     if (!mediaId || mediaId === 'undefined') return res.status(400).send('ID invalido');
-    const token = process.env.WA_TOKEN;
+    const token = (process.env.WA_TOKEN || '').trim();
     if (!token) return res.status(500).send('Error: Sin token WA_TOKEN configurado en el servidor');
     
     const uRes = await fetch(`https://graph.facebook.com/v19.0/${mediaId}`, { 
@@ -1161,11 +1161,11 @@ app.post('/webhook',async(req,res)=>{
       if (msg.type === 'audio') {
         try {
           const audioId = msg.audio.id;
-          const metaUrlRes = await fetch(`https://graph.facebook.com/v19.0/${audioId}`, { headers: { Authorization: `Bearer ${process.env.WA_TOKEN}` } });
+          const metaUrlRes = await fetch(`https://graph.facebook.com/v19.0/${audioId}`, { headers: { Authorization: `Bearer ${(process.env.WA_TOKEN || '').trim()}` } });
           const metaUrlData = await metaUrlRes.json();
           
           if (metaUrlData.url) {
-            const audioRes = await fetch(metaUrlData.url, { headers: { Authorization: `Bearer ${process.env.WA_TOKEN}` } });
+            const audioRes = await fetch(metaUrlData.url, { headers: { Authorization: `Bearer ${(process.env.WA_TOKEN || '').trim()}` } });
             const arrayBuffer = await audioRes.arrayBuffer();
             const audioBuffer = Buffer.from(arrayBuffer);
             
@@ -1762,7 +1762,7 @@ app.post('/api/leads/:id/send-template', auth('admin','vendedor'), async (req, r
     const leads = await tRead(F.leads, tenant);
     const lead = leads.find(l => l.id == req.params.id);
     if (!lead) return res.status(404).json({ error: 'Lead no encontrado' });
-    const token = process.env.WA_TOKEN, phoneId = process.env.WA_PHONE_ID;
+    const token = (process.env.WA_TOKEN || '').trim(), phoneId = (process.env.WA_PHONE_ID || '').trim();
     if (!token || !phoneId) return res.status(500).json({ error: 'WA no configurado' });
     const phone = lead.phone?.replace(/\D/g,'');
     if (!phone) return res.status(400).json({ error: 'Lead sin teléfono' });
@@ -1797,7 +1797,7 @@ app.post('/api/leads/:id/send-template', auth('admin','vendedor'), async (req, r
 
 // ── WA SEQUENCE: Auto contacto_2 (30min) y contacto_3 (3h) ──────────────────
 async function sendWATemplate(phone, templateName, params) {
-  const token = process.env.WA_TOKEN, phoneId = process.env.WA_PHONE_ID;
+  const token = (process.env.WA_TOKEN || '').trim(), phoneId = (process.env.WA_PHONE_ID || '').trim();
   if (!token || !phoneId) return false;
   const components = params?.length
     ? [{ type: 'body', parameters: params.map(t => ({ type: 'text', text: t })) }]
