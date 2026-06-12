@@ -1211,15 +1211,15 @@ app.post('/webhook',async(req,res)=>{
         }
       } else if (yapoMatch) {
         detectedSource   = 'Yapo';
-        detectedInterest = yapoMatch[1].trim();
+        detectedInterest = (yapoMatch[1] || yapoMatch[2] || '').trim() || body.slice(0, 80);
         portalNote = `Lead ingresó desde Yapo. Vehículo consultado: ${detectedInterest}`;
       } else if (mlMatch) {
         detectedSource   = 'MercadoLibre';
-        detectedInterest = mlMatch[1].trim() || body.slice(0, 80);
+        detectedInterest = (mlMatch[1] || mlMatch[2] || '').trim() || body.slice(0, 80);
         portalNote = `Lead ingresó desde MercadoLibre. Interés: ${detectedInterest}`;
       } else if (caMatch) {
         detectedSource   = 'Chileautos';
-        detectedInterest = caMatch[1].trim() || body.slice(0, 80);
+        detectedInterest = (caMatch[1] || caMatch[2] || '').trim() || body.slice(0, 80);
         portalNote = `Lead ingresó desde Chileautos vía WA directo. Interés: ${detectedInterest}`;
       }
 
