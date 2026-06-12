@@ -78,7 +78,11 @@ async function sendWA(to, text) {
 async function marcela(tenant, history, msg, notes, assignedName) {
   try {
     let botCfg = await tRead(F.bot, tenant, {});
-    const baseSysPrompt = (botCfg && botCfg.demo_automotora && botCfg.demo_automotora.systemPrompt) ? botCfg.demo_automotora.systemPrompt : "Eres Cata, asesora comercial experta de RMG Autos.";
+    const baseSysPrompt = botCfg?.demo_automotora?.systemPrompt;
+    if (!baseSysPrompt) {
+      console.error('[Bot-Config-Error] systemPrompt no encontrado en bot.json para tenant:', tenant);
+      return { reply: 'Dame un segundito, estoy validando la info en el sistema...', intent_signal: 'NONE' };
+    }
     const invS = scrapeCache.data || '';
 
     let sysPromptProcessed = baseSysPrompt.replace(/\{nombreIA\}/g, assignedName || 'Cata');
@@ -452,12 +456,18 @@ async function seed(){
   if(!cfg.demo_clinica)cfg.demo_clinica={businessName:'Clínica Vital',accentColor:'#0d9488',stages:['Nuevo','En Proceso','Contactado','Agendado','Calificado','Atendido','Seguimiento','Cerrado','Abandonado']};
   await write(F.config,cfg);
   const bot=await read(F.bot);
-  if(!bot.demo_automotora||!bot.demo_automotora.systemPrompt){
-    const _botSrc=await new Promise((res,rej)=>{
-      try{res(JSON.parse(require('fs').readFileSync(require('path').join(__dirname,'data','bot.json'),'utf8')));}catch(e){res({});}
-    });
-    bot.demo_automotora=_botSrc.demo_automotora||{greeting:'¡Hola! Soy Marcela de Automotora Andes 🚗✨ ¿Qué auto estás buscando?'};
-  }
+  // Sincronizar siempre systemPrompt y tone desde repo → /var/data/ (fuente de verdad: bot.json del repo)
+  try {
+    const _botRepo=JSON.parse(require('fs').readFileSync(require('path').join(__dirname,'data','bot.json'),'utf8'));
+    if(_botRepo.demo_automotora){
+      if(!bot.demo_automotora) bot.demo_automotora={};
+      // Siempre sincroniza personalidad desde repo; preserva el resto (enabled, greeting, etc.)
+      bot.demo_automotora.systemPrompt = _botRepo.demo_automotora.systemPrompt;
+      if(_botRepo.demo_automotora.tone) bot.demo_automotora.tone = _botRepo.demo_automotora.tone;
+      if(!bot.demo_automotora.greeting) bot.demo_automotora.greeting = _botRepo.demo_automotora.greeting || '¡Hola! 👋 Soy Cata de RMG Autos. ¿Qué modelo te tiene entusiasmado hoy?';
+      if(bot.demo_automotora.enabled===undefined) bot.demo_automotora.enabled = true;
+    }
+  } catch(e) { console.error('[initData] No se pudo leer bot.json del repo:', e.message); }
   if(!bot.demo_clinica)bot.demo_clinica={greeting:'Hola 👋 Soy la asistente de Clínica Vital. ¿En qué te puedo ayudar?'};
   await write(F.bot,bot);
   const inv=await read(F.inventory);
