@@ -463,18 +463,11 @@ async function seed(){
   if(!cfg.demo_clinica)cfg.demo_clinica={businessName:'Clínica Vital',accentColor:'#0d9488',stages:['Nuevo','En Proceso','Contactado','Agendado','Calificado','Atendido','Seguimiento','Cerrado','Abandonado']};
   await write(F.config,cfg);
   const bot=await read(F.bot);
-  // Sincronizar siempre systemPrompt y tone desde repo → /var/data/ (fuente de verdad: bot.json del repo)
-  try {
-    const _botRepo=JSON.parse(require('fs').readFileSync(require('path').join(__dirname,'data','bot.json'),'utf8'));
-    if(_botRepo.demo_automotora){
-      if(!bot.demo_automotora) bot.demo_automotora={};
-      // Siempre sincroniza personalidad desde repo; preserva el resto (enabled, greeting, etc.)
-      bot.demo_automotora.systemPrompt = _botRepo.demo_automotora.systemPrompt;
-      if(_botRepo.demo_automotora.tone) bot.demo_automotora.tone = _botRepo.demo_automotora.tone;
-      if(!bot.demo_automotora.greeting) bot.demo_automotora.greeting = _botRepo.demo_automotora.greeting || '¡Hola! 👋 Soy Cata de RMG Autos. ¿Qué modelo te tiene entusiasmado hoy?';
-      if(bot.demo_automotora.enabled===undefined) bot.demo_automotora.enabled = true;
-    }
-  } catch(e) { console.error('[initData] No se pudo leer bot.json del repo:', e.message); }
+  // Inyección maestra de Personalidad (A prueba de reinicios)
+  if (!bot.demo_automotora) bot.demo_automotora = {};
+  if (!bot.demo_automotora.systemPrompt || !bot.demo_automotora.systemPrompt.includes('Santander')) {
+      bot.demo_automotora.systemPrompt = "Eres Cata, la asesora comercial estrella de RMG Autos. Tu objetivo es VENDER de forma humana, empática y consultiva.\n\nREGLAS DE ORO:\n1. VALIDA EL ANUNCIO Y EMPATIZA: Si el cliente envía una plantilla automática con precio y km, JAMÁS repitas esa información. Valida su elección: '¡Hola! 👋 Excelente elección el [Modelo], es una máquina increíble y súper buscada'.\n2. LA BUENA NOTICIA DEL CRÉDITO: Usa el financiamiento como gancho. 'Te cuento que este modelo tiene un bono especial si lo llevas con financiamiento, quedando a un precio increíble. ¡El proceso es rápido!'.\n3. INDAGA POR RETOMA: Siempre pregunta si tienen un vehículo para dejar en parte de pago.\n4. PARTNERS FINANCIEROS: Si te preguntan con quién financiamos, menciona con orgullo a nuestros partners: Santander, Tanner, Forum, Eurocapital, Amicar, Autofin y Falabella.\n5. CERCANÍA Y CIERRE: Usa emojis (🚗, 😊, 📄). Habla en máximo 2 párrafos MUY cortos. Termina SIEMPRE tu mensaje con una pregunta de cierre (Ej: '¿De cuánto pie dispones?' o '¿Para qué uso lo buscas principalmente?').";
+  }
   if(!bot.demo_clinica)bot.demo_clinica={greeting:'Hola 👋 Soy la asistente de Clínica Vital. ¿En qué te puedo ayudar?'};
   await write(F.bot,bot);
   const inv=await read(F.inventory);
@@ -1129,7 +1122,7 @@ app.post('/webhook',async(req,res)=>{
         const assignedObj = await rrNext(tenant) || {username: 'vendedor1'};
         const n = new Date().toISOString();
         ld[tenant].unshift({id: Date.now(), name: contactName, phone: '+' + from, source: ((() => {
-        const txt = (typeof body === 'string' ? body : (typeof message === 'string' ? message : '')).toLowerCase();
+        const txt = (typeof body === 'string' ? body : '').toLowerCase();
         if(!txt) return 'WhatsApp';
         if(txt.includes('mercadolibre') || txt.includes('mlc-')) return 'Mercado Libre';
         if(txt.includes('chileautos')) return 'Chileautos';
