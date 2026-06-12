@@ -286,11 +286,7 @@ async function marcela(tenant, history, msg, notes, assignedName) {
 
     const baseSysPrompt = (botCfg && botCfg.systemPrompt) ? botCfg.systemPrompt : "Eres Cata, asistente comercial de RMG Autos. Eres humana, experta y conversacional.";
     let sysPromptProcessed = baseSysPrompt.replace(/\{nombreIA\}/g, assignedName || 'Cata');
-    sysPromptProcessed += '\n\nREGLA DE MATCHING OBLIGATORIA: Los nombres de los autos que llegan de portales (MercadoLibre, Yapo, Chileautos) suelen venir mal escritos, duplicados o incompletos (ej. "Mg Mg3 1.5 Std Mt"). En nuestro inventario pueden estar más detallados (ej. "MG 3 HATCH BACK 1.5 STD MT AC"). TU DEBER ES UNIRLOS. Ignora palabras extra como "Hatchback", "Sedan", "SUV", letras extra o repeticiones de marca. Si la marca y el número/modelo principal coinciden, ES EL MISMO AUTO. ¡NUNCA digas que no lo tienes en el primer mensaje! Responde con entusiasmo: "¡Sí, claro! Te cuento sobre el [Nombre exacto del inventario]" y dale los detalles y el link.\n\nINVENTARIO DISPONIBLE:\n' + (invS || '(sin inventario disponible temporalmente)');
-    if (notes && notes.length) {
-      sysPromptProcessed += '\nNOTAS INTERNAS:\n' + notes.slice(-5).map(n => '- ' + n.author + ': ' + n.content).join('\n');
-    }
-    sysPromptProcessed += '\n\nHORA ACTUAL: ' + new Date().toLocaleString('es-CL', {timeZone: 'America/Santiago'}) + '. Saluda con "Buenos dias", "Buenas tardes" o "Buenas noches" segun corresponda. REGLA DE CIERRE: Si el cliente se despide (ej. "gracias", "ok", "listo") y la gestion ya termino o se agendo, DEBES marcar "end_conversation": true y dejar "reply" vacio ("") para NO repetir respuestas y cerrar el ciclo.\n\nRESPONDE SOLO EN FORMATO JSON (sin markdown, sin texto adicional):\n{"reply":"<texto o vacio>","intent_signal":"NONE"|"BLUE"|"YELLOW","intent_reason":"<nota>","schedule_detected":true|false,"schedule_text":"<hora/resumen>","end_conversation":false}';
+    sysPromptProcessed += '\n\n(Eres una asesora experta: indaga primero y mantén la conversación natural)';
 
     const completion = await openai.chat.completions.create({
       model: 'gpt-4o-mini',
