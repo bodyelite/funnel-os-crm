@@ -78,8 +78,7 @@ async function sendWA(to, text) {
 async function marcela(tenant, history, msg, notes, assignedName) {
   try {
     let botCfg = await tRead(F.bot, tenant, {});
-    // tRead ya devuelve el objeto del tenant (demo_automotora), no el padre
-    const baseSysPrompt = botCfg?.systemPrompt;
+    const baseSysPrompt = botCfg?.demo_automotora?.systemPrompt;
     if (!baseSysPrompt) {
       console.error('[Bot-Config-Error] systemPrompt no encontrado en bot.json para tenant:', tenant);
       return { reply: 'Dame un segundito, estoy validando la info en el sistema...', intent_signal: 'NONE' };
@@ -92,6 +91,13 @@ async function marcela(tenant, history, msg, notes, assignedName) {
     if (sysNotes) sysPromptProcessed += '\n\nCONTEXTO DEL PORTAL: ' + sysNotes;
 
     sysPromptProcessed += '\n\nInventario disponible:\n' + invS;
+
+    // Inyectar knowledge dinámico aprendido vía "cata aprende"
+    const knowledge = botCfg?.knowledge || [];
+    if (knowledge.length > 0) {
+      sysPromptProcessed += '\n\nCONOCIMIENTO ADICIONAL (información actualizada que debes usar):\n' +
+        knowledge.map(k => '- ' + k.content).join('\n');
+    }
 
     const completion = await openai.chat.completions.create({
       model: 'gpt-4o-mini',
@@ -1164,6 +1170,45 @@ app.post('/webhook',async(req,res)=>{
     
     if(!body)return;
     if(isShield(body)){await sendWA(from,SHIELD_R);return;}
+
+    // ── CATA APRENDE: comando de entrenamiento vía WhatsApp ──
+    if(from.replace(/\D/g,'').includes('56983302067') && body.toLowerCase().startsWith('cata aprende')) {
+      const conocimiento = body.replace(/^cata aprende[,:\s]*/i,'').trim();
+      if(conocimiento) {
+        const botData = await read(F.bot);
+        if(!botData.demo_automotora) botData.demo_automotora = {};
+        if(!botData.demo_automotora.knowledge) botData.demo_automotora.knowledge = [];
+        const entrada = { ts: new Date().toISOString(), content: conocimiento };
+        botData.demo_automotora.knowledge.push(entrada);
+        await write(F.bot, botData);
+        await sendWA(from, '✅ Aprendido. Ya tengo esa info para mis próximas conversaciones.');
+      } else {
+        await sendWA(from, '⚠️ No entendí qué debo aprender. Usa: *cata aprende, [información]*');
+      }
+      return;
+    }
+
+    // ── CATA OLVIDA: borra todo el knowledge ──
+    if(from.replace(/\D/g,'').includes('56983302067') && body.toLowerCase().startsWith('cata olvida todo')) {
+      const botData = await read(F.bot);
+      if(botData.demo_automotora) botData.demo_automotora.knowledge = [];
+      await write(F.bot, botData);
+      await sendWA(from, '🗑️ Listo, borré todo lo que había aprendido.');
+      return;
+    }
+
+    // ── CATA QUÉ SABES: lista el knowledge actual ──
+    if(from.replace(/\D/g,'').includes('56983302067') && body.toLowerCase().startsWith('cata qué sabes')) {
+      const botData = await read(F.bot);
+      const know = botData.demo_automotora?.knowledge || [];
+      if(know.length === 0) {
+        await sendWA(from, 'No tengo conocimiento adicional guardado aún.');
+      } else {
+        const lista = know.map((k,i) => `${i+1}. ${k.content}`).join('\n');
+        await sendWA(from, `📚 Lo que sé:\n${lista}`);
+      }
+      return;
+    }
     const contactName=val.contacts?.[0]?.profile?.name||'WhatsApp Lead';const tenant='demo_automotora';
     const ld=await read(F.leads);if(!ld[tenant])ld[tenant]=[];
     let idx=ld[tenant].findIndex(l=>l.phone&&l.phone.replace(/\D/g,'').includes(from.replace(/\D/g,'')));
