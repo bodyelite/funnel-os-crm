@@ -55,25 +55,41 @@ app.use((req,res,next)=>{res.header('Access-Control-Allow-Origin','*');res.heade
 
 function applySignal(lead, p) { if (p && p.intent_signal && p.intent_signal !== 'NONE') { lead.intentSignal = p.intent_signal; } }
 function esKeywordCalif(text) { if(!text) return false; const t = text.toLowerCase(); return t.includes('credito') || t.includes('crédito') || t.includes('financiamiento') || t.includes('retoma') || t.includes('pie'); }
-async function sendWA(to, text) {
+async function sendWA(to, text, retries = 2) {
   const token = process.env.WA_TOKEN;
   const phoneId = process.env.WA_PHONE_ID;
   if (!token || !phoneId) {
     console.warn('[WA] Token o Phone ID no configurado');
     return false;
   }
-  try {
-    const res = await fetch('https://graph.facebook.com/v19.0/' + phoneId + '/messages', {
-      method: 'POST',
-      headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ messaging_product: 'whatsapp', to: to.replace(/\D/g, ''), type: 'text', text: { body: text } })
-    });
-    if(!res.ok) console.error('[WA HTTP Error]', await res.text());
-    return res.ok;
-  } catch(e) {
-    console.error('[WA Catch]', e.message);
-    return false;
+  
+  const payload = { messaging_product: 'whatsapp', to: to.replace(/\D/g, ''), type: 'text', text: { body: text } };
+
+  for (let i = 0; i <= retries; i++) {
+    try {
+      const res = await fetch('https://graph.facebook.com/v19.0/' + phoneId + '/messages', {
+        method: 'POST',
+        headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      
+      if(res.ok) return true;
+      
+      const errText = await res.text();
+      console.error(`[WA HTTP Error - Intento ${i+1}]`, errText);
+      
+      // Si es el último intento, nos rendimos
+      if (i === retries) return false;
+      
+      // Esperar 1.5 segundos antes del próximo intento (Backoff)
+      await new Promise(r => setTimeout(r, 1500));
+    } catch(e) {
+      console.error(`[WA Catch - Intento ${i+1}]`, e.message);
+      if (i === retries) return false;
+      await new Promise(r => setTimeout(r, 1500));
+    }
   }
+  return false;
 }
 async function marcela(tenant, history, msg, notes, assignedName) {
   try {
