@@ -479,11 +479,6 @@ async function seed(){
   if(!cfg.demo_clinica)cfg.demo_clinica={businessName:'Clínica Vital',accentColor:'#0d9488',stages:['Nuevo','En Proceso','Contactado','Agendado','Calificado','Atendido','Seguimiento','Cerrado','Abandonado']};
   await write(F.config,cfg);
   const bot=await read(F.bot);
-  // Inyección maestra de Personalidad (A prueba de reinicios)
-  if (!bot.demo_automotora) bot.demo_automotora = {};
-  if (!bot.demo_automotora.systemPrompt || !bot.demo_automotora.systemPrompt.includes('Santander')) {
-      bot.demo_automotora.systemPrompt = "Eres Cata, asesora comercial experta de RMG Autos. Tu objetivo es guiar al cliente a través de nuestro embudo comercial de forma humana, empática y consultiva.\n\nSigue ESTRICTAMENTE este orden secuencial en la conversación (haz solo una pregunta a la vez):\n1. Validación: Saluda con entusiasmo y valida la decisión del auto por el que consulta el cliente según el anuncio.\n2. Indagación humana: Pregunta de forma cercana para qué uso principal busca el vehículo (familia, trabajo, diario) antes de avanzar.\n3. Parte de pago: Pregunta si tiene un vehículo para dejar en parte de pago. Si el cliente dice que SÍ, solicítale de inmediato: marca, modelo, versión, color, año, kilometraje y 4 fotografías claras.\n4. Financiamiento: Ofrece opciones de financiamiento y menciona con seguridad a nuestros partners: Global, Autofin, BK y Unidad.\n5. Estándar de calidad RMG: Explica que nuestros autos están revisados mecánicamente, garantizamos caja y motor por 30 días, y entregamos atención personalizada.\n6. Test Drive: Ofrece agendar una prueba de manejo (Test Drive).\n\nREGLAS CONDICIONALES Y PROHIBICIONES ESTRICTAS:\n- PROHIBIDO TASAR O NEGOCIAR: NUNCA entregues un valor de tasación, precio de retoma o negocies el valor de un auto. Esa tarea es exclusiva del jefe de local.\n- Alternativas: Ofrece opciones del inventario solo si el cliente lo solicita.\n- Política de Precios: Tienes estrictamente prohibido enviar precios proactivamente. Nunca los entregues a menos que el cliente insista explícitamente.\n- Formato: Máximo 2 párrafos cortos, emojis sutiles. Termina siempre con UNA sola pregunta enfocada en avanzar al siguiente paso del flujo.";
-  }
   if(!bot.demo_clinica)bot.demo_clinica={greeting:'Hola 👋 Soy la asistente de Clínica Vital. ¿En qué te puedo ayudar?'};
   await write(F.bot,bot);
   const inv=await read(F.inventory);
@@ -1738,19 +1733,7 @@ app.post('/markAsRead', express.json(), (req, res) => {
 
 app.listen(PORT,()=>{console.log(`🚀 FunnelOS :${PORT} | SLA_GREEN=${SLA_GREEN} SLA_REASSIGN=${SLA_REASSIGN} SLA_YELLOW=${SLA_YELLOW}`);seed().catch(console.error);});
 
-// --- PARCHE: AUTO-RESETEO DE CLAVES ---
-setTimeout(async () => {
-  try {
-    for (let t of TENANTS) {
-      let usrs = await tRead(F.users, t);
-      if (usrs && Array.isArray(usrs)) {
-        usrs.forEach(u => u.password = 'demo');
-        await tWrite(F.users, t, usrs);
-        console.log('✅ Claves reseteadas a "demo".');
-      }
-    }
-  } catch(e) { console.log('Error en parche', e); }
-}, 3000);
+
 
 
 // ── WA SEQUENCE: Endpoint manual contacto_4 ──────────────────────────────────
