@@ -55,6 +55,26 @@ app.use((req,res,next)=>{res.header('Access-Control-Allow-Origin','*');res.heade
 
 function applySignal(lead, p) { if (p && p.intent_signal && p.intent_signal !== 'NONE') { lead.intentSignal = p.intent_signal; } }
 function esKeywordCalif(text) { if(!text) return false; const t = text.toLowerCase(); return t.includes('credito') || t.includes('crédito') || t.includes('financiamiento') || t.includes('retoma') || t.includes('pie'); }
+async function sendWA(to, text) {
+  const token = process.env.WA_TOKEN;
+  const phoneId = process.env.WA_PHONE_ID;
+  if (!token || !phoneId) {
+    console.warn('[WA] Token o Phone ID no configurado');
+    return false;
+  }
+  try {
+    const res = await fetch('https://graph.facebook.com/v19.0/' + phoneId + '/messages', {
+      method: 'POST',
+      headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ messaging_product: 'whatsapp', to: to.replace(/\D/g, ''), type: 'text', text: { body: text } })
+    });
+    if(!res.ok) console.error('[WA HTTP Error]', await res.text());
+    return res.ok;
+  } catch(e) {
+    console.error('[WA Catch]', e.message);
+    return false;
+  }
+}
 const F={users:path.join(DATA,'users.json'),leads:path.join(DATA,'leads.json'),config:path.join(DATA,'config.json'),bot:path.join(DATA,'bot.json'),inventory:path.join(DATA,'inventory.json'),rr:path.join(DATA,'rr.json'),spend:path.join(DATA,'spend.json')};
 const TENANTS=['demo_automotora','demo_clinica'];
 const sessions=new Map();
