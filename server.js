@@ -1471,7 +1471,7 @@ setInterval(async()=>{
         if(new Date(na.date)>new Date())continue;
         try{
           const histSnip=(lead.chatHistory||[]).slice(-10).map(m=>(m.role==='user'?'Cliente':m.role==='agent'?'Vendedor':'IA')+': '+m.content).join('\n');
-          const comp=await openai.chat.completions.create({model:'gpt-4o-mini',temperature:0.6,max_tokens:160,messages:[{role:'user',content:'Eres asesor de ventas. Redacta mensaje breve de seguimiento en español chileno para WhatsApp (max 3 oraciones, emoji). Instrucción: "'+na.text+'". Historial:\n'+histSnip}]});
+          const comp=await openai.chat.completions.create({model:'gpt-4o-mini',temperature:0.6,max_tokens:160,messages:[{role:'user',content:'Eres Cata, asesora de RMG Autos. Redacta mensaje breve de seguimiento en español chileno (max 2 oraciones, un emoji). Instrucción: "'+na.text+'". Historial:\n'+histSnip+'\n\nREGLA CRÍTICA: TIENES ESTRICTAMENTE PROHIBIDO INVENTAR PRECIOS, TASAR VEHÍCULOS O NEGOCIAR VALORES DE RETOMA. Jamás des una oferta de dinero por un auto en parte de pago, esa es tarea exclusiva del humano. Limítate al seguimiento sin involucrar montos de dinero.'}]});
           const iaMsg=(comp.choices?.[0]?.message?.content||'').trim();
           if(!iaMsg)continue;
           const phone=(lead.phone||'').replace(/\D/g,'');
