@@ -60,7 +60,6 @@ async function sendWA(to, text, retries = 2) {
   const phoneId = process.env.WA_PHONE_ID;
   if (!token || !phoneId) return false;
 
-  // Extracción a prueba de balas
   let safeText = "¡Hola! Estoy aquí.";
   if (typeof text === 'string') {
       safeText = text;
