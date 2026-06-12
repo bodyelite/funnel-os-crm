@@ -273,35 +273,7 @@ function parseJ(raw){if(!raw)return null;const a=raw.indexOf('{'),b=raw.lastInde
 function fueraH(txt){const m=(txt||'').match(/(\d{1,2})\s*(?::|\.)?\s*(\d{2})?\s*(am|pm|hrs?|h)?/i);if(!m)return false;let h=parseInt(m[1],10);const min=parseInt(m[2]||'0',10);const mer=(m[3]||'').toLowerCase();if(mer==='pm'&&h<12)h+=12;if(mer==='am'&&h===12)h=0;const total=h*60+min;return total<570||total>=1110;}
 
 
-async function marcela(tenant, history, msg, notes, assignedName) {
-  try {
-    let botCfg = await tRead(F.bot, tenant, {});
-    const baseSysPrompt = (botCfg && botCfg.systemPrompt) ? botCfg.systemPrompt : "Eres Cata, asesora comercial de RMG Autos.";
-    const invS = scrapeCache.data || '';
 
-    let sysPromptProcessed = baseSysPrompt.replace(/\{nombreIA\}/g, assignedName || 'Cata');
-    sysPromptProcessed += '\n\nInventario disponible (usa solo si preguntan detalles específicos):\n' + invS;
-    
-    // REGLA CRÍTICA PARA QUE OPENAI NO FALLE
-    sysPromptProcessed += '\n\nIMPORTANTE: Tu respuesta DEBE ser un objeto JSON válido con esta estructura exacta: {"reply": "tu respuesta conversacional y humana", "intent_signal": "NONE", "schedule_detected": false, "schedule_text": ""}';
-
-    const completion = await openai.chat.completions.create({
-      model: 'gpt-4o-mini',
-      temperature: 0.6,
-      response_format: { type: 'json_object' },
-      messages: [
-        { role: 'system', content: sysPromptProcessed },
-        ...history.slice(-10).map(h => ({ role: h.role === 'user' ? 'user' : 'assistant', content: h.content })),
-        { role: 'user', content: msg }
-      ]
-    });
-
-    return JSON.parse(completion.choices[0].message.content);
-  } catch(e) {
-    console.error('[Marcela-Crash]:', e.message);
-    return { reply: '¡Hola! Estoy validando la información en el sistema, dame un segundito. 😊', intent_signal: 'NONE' };
-  }
-}
 const SHIELD=['body elite','bodyelite','botox','lipo','lipoescultura','liposuccion','estetica','estética','masaje','masajes','doctora','tratamiento','acido hialuronico'];
 const SHIELD_R='¡Hola! Este número es de Automotora Andes 🚗 Para Body Elite ve a su Instagram. ¡Gracias!';
 function isShield(t){if(!t)return false;const n=t.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');return SHIELD.some(k=>n.includes(k.normalize('NFD').replace(/[\u0300-\u036f]/g,'')));}
