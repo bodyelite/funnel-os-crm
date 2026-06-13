@@ -520,7 +520,7 @@ app.get('/api/leads',auth(),async(req,res)=>{
   const all=await applySlaRules(req.tenant);const{s,e}=parseDateRange(req.query.start,req.query.end);
   let leads=byRole(all,req.user);if(s!==null||e!==null)leads=leads.filter(l=>inRange(l,s,e));
   if(req.query.seller&&req.user.role==='admin')leads=leads.filter(l=>l.assignedTo===req.query.seller);
-  leads.forEach(l=>{if(!Array.isArray(l.chatHistory))l.chatHistory=[];if(!Array.isArray(l.notes))l.notes=[];if(!l.intentSignal)l.intentSignal='NONE';if(!l.lastClientTs)l.lastClientTs=l.lastInteraction||new Date(0).toISOString();});
+  leads.forEach(l=>{if(!Array.isArray(l.chatHistory))l.chatHistory=[];if(!Array.isArray(l.notes))l.notes=[];if(!l.intentSignal)l.intentSignal='NONE';if(!l.lastClientTs)l.lastClientTs=l.lastInteraction||new Date().toISOString();});
   leads.sort((a,b)=>new Date(b.lastClientTs||0)-new Date(a.lastClientTs||0));res.json(leads);
 });
 app.get('/api/leads/:id',auth(),async(req,res)=>{await applySlaRules(req.tenant);const leads=await tRead(F.leads,req.tenant);const l=leads.find(x=>x.id==req.params.id);if(!l)return res.status(404).json({error:'No encontrado'});if(req.user.role==='vendedor'&&l.assignedTo!==req.user.username)return res.status(403).json({error:'Sin permisos'});res.json(l);});
@@ -528,7 +528,7 @@ app.patch('/api/leads/:id',auth(),async(req,res)=>{
   const leads=await tRead(F.leads,req.tenant);const idx=leads.findIndex(x=>x.id==req.params.id);
   if(idx===-1)return res.status(404).json({error:'No encontrado'});
   if(req.user.role==='vendedor'&&leads[idx].assignedTo!==req.user.username)return res.status(403).json({error:'Sin permisos'});
-  const ALLOWED=['status','interest','name','phone','botActive','nextAction','pastActions'];if(req.user.role!=='vendedor')ALLOWED.push('assignedTo');
+  const ALLOWED=['status','interest','name','phone','botActive','nextAction','pastActions','source'];if(req.user.role!=='vendedor')ALLOWED.push('assignedTo');
   // Borrado individual via patch status '_delete_'
   if(req.body.status==='_delete_'){
     const before=leads.length;
@@ -861,7 +861,7 @@ app.post('/api/leads/manual', auth('admin','vendedor'), async (req, res) => {
       status, botActive: status === 'Nuevo',
       alertLevel: 'none', intentSignal: 'NONE', unread: true,
       assignedTo: asignado || req.user?.username || 'vendedor1',
-      lastInteraction: n, lastClientTs: status === 'Nuevo' ? n : new Date(0).toISOString(), createdAt: n,
+      lastInteraction: n, lastClientTs: status === 'Nuevo' ? n : new Date().toISOString(), createdAt: n,
       notes: initNotes, chatHistory: [], media: [], pastActions: [], nextAction: { text: '📞 Llamar al cliente (Plantilla WA enviada)', date: new Date(Date.now() + 30 * 60000).toISOString(), createdAt: n, delegateToIA: false, iaCompleted: false },
       waSequence: { step: 1, lastSentAt: n, replied: false } };
     leads.unshift(lead);
@@ -962,7 +962,7 @@ app.post('/api/chileautos/webhook', async (req, res) => {
       leads[existing].isMulticotizante = false;
       leads[existing].botActive = false;
       leads[existing].lastInteraction = n;
-      leads[existing].lastClientTs = new Date(0).toISOString();
+      leads[existing].lastClientTs = new Date().toISOString();
       leads[existing].history = [{ ts: Date.now(), content: 'Lead recibido desde Chileautos: ' + vehicleTitle }];
       leads[existing].notes = [{ content: 'Lead recibido desde Chileautos. Vehículo: ' + vehicleTitle, author: 'Bot', ts: Date.now() }];
       leads[existing].chatHistory = [];

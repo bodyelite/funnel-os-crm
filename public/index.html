@@ -234,6 +234,7 @@ document.addEventListener('visibilitychange', () => {
 <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:14px">
   <div class="st" style="margin-bottom:0">Leads</div>
   <button id="btnBulkDelete" onclick="bulkDelete()" style="display:none;background:var(--bd2);color:#fff;border:none;border-radius:8px;padding:8px 16px;font-size:13px;font-weight:600;cursor:pointer;margin-right:10px">🗑 Borrar Seleccionados</button>
+<button id="btnExportChats" onclick="exportChatsCsv()" style="background:#10b981;color:#fff;border:none;border-radius:8px;padding:8px 16px;font-size:13px;font-weight:600;cursor:pointer;margin-right:10px">📥 Exportar a CSV</button>
 <button id="btnNuevoLead" onclick="openNuevoLeadModal()" style="background:var(--ac);color:#fff;border:none;border-radius:8px;padding:8px 16px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:6px">＋ Nuevo Lead</button>
 </div>
 <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;background:var(--p);border:1px solid var(--bd);border-radius:var(--r);padding:10px 14px;margin-bottom:12px">
@@ -1204,7 +1205,7 @@ function renderModal(){const l=findLead(S.mid);if(!l){closeModal();return;}$('mT
     // ──────────────────────────────────────────────────────────────────────────
 
 }
-function renderModalCtx(l){const ctx=$('mCtx');if(!l.interest&&!l.ai_summary){ctx.style.display='none';return;}ctx.style.display='block';ctx.innerHTML=`${l.interest?`<div class="ctx-row"><span class="ctx-key">🚗 Interés</span><span class="ctx-val">${esc(l.interest)}</span></div>`:''}${l.source?`<div class="ctx-row"><span class="ctx-key">📡 Canal</span><span class="ctx-val">${cSrc(l.source)}</span></div>`:''}${l.lastClientTs?`<div class="ctx-row"><span class="ctx-key">📅 Origen</span><span class="ctx-val">${fDT(l.lastClientTs)}</span></div>`:''}${l.ai_summary?`<div class="ctx-row" style="margin-top:4px"><span class="ctx-key" style="color:var(--ac)">🧠 Nota IA</span><span class="ctx-note" style="color:var(--ts);font-style:normal">${esc(l.ai_summary)}</span></div>`:''}`;};;
+function renderModalCtx(l){const ctx=$('mCtx');if(!l.interest&&!l.ai_summary){ctx.style.display='none';return;}ctx.style.display='block';ctx.innerHTML=`${l.interest?`<div class="ctx-row"><span class="ctx-key">🚗 Interés</span><span class="ctx-val">${esc(l.interest)}</span></div>`:''}${l.source?`<div class="ctx-row"><span class="ctx-key">📡 Canal</span><span class="ctx-val">${cSrc(l.source)}</span>${(S.user && S.user.role === 'admin') ? ` <span style="cursor:pointer;font-size:11px;margin-left:6px" onclick="window.editLeadSource(${l.id}, '${l.source}')" title="Editar Origen">✏️</span>` : ''}</div>`:''}${l.lastClientTs?`<div class="ctx-row"><span class="ctx-key">📅 Origen</span><span class="ctx-val">${fDT(l.lastClientTs)}</span></div>`:''}${l.ai_summary?`<div class="ctx-row" style="margin-top:4px"><span class="ctx-key" style="color:var(--ac)">🧠 Nota IA</span><span class="ctx-note" style="color:var(--ts);font-style:normal">${esc(l.ai_summary)}</span></div>`:''}`;};;
 function renderModalChat(l){
   const h = Array.isArray(l.chatHistory) ? l.chatHistory : [];
   const mc = $('mChat');
@@ -1861,6 +1862,49 @@ async function sendContacto4() {
 }
 </script>
 
+
+<script>
+window.editLeadName = async function(id) {
+    const newName = prompt('Ingrese el nuevo nombre para el cliente:');
+    if(!newName || !newName.trim()) return;
+    try {
+        await api('PATCH', '/api/leads/'+id, {name: newName.trim()});
+        toast('Nombre actualizado ✓');
+        const idx = S.leads.findIndex(x=>x.id===id);
+        if(idx!==-1) S.leads[idx].name = newName.trim();
+        refreshModalSilent();
+        refresh();
+    } catch(e) { toast('Error: '+e.message, true); }
+};
+
+window.editLeadSource = async function(id, current) {
+    const newSrc = prompt('Editar Canal/Origen (ej: WhatsApp, Chileautos, Meta Ads, Referido):', current);
+    if(!newSrc || newSrc.trim() === current) return;
+    try {
+        await api('PATCH', '/api/leads/'+id, {source: newSrc.trim()});
+        toast('Canal actualizado ✓');
+        const idx = S.leads.findIndex(x=>x.id===id);
+        if(idx!==-1) S.leads[idx].source = newSrc.trim();
+        refreshModalSilent();
+        refresh();
+    } catch(e) { toast('Error: '+e.message, true); }
+};
+
+window.exportChatsCsv = function() {
+    let csv = "ID,Nombre,Telefono,Canal,Estado,Fecha_Ultima_Interaccion,Historial_Chat\n";
+    S.leads.forEach(l => {
+        let chatText = (l.chatHistory || []).map(m => `[${m.role === 'user' ? 'Cliente' : m.role === 'bot' ? 'Cata IA' : 'Vendedor'}] ${m.content}`).join(" | ").replace(/"/g, '""');
+        let dateVal = l.lastClientTs || l.lastInteraction || '';
+        csv += `"${l.id}","${l.name}","${l.phone}","${l.source}","${l.status}","${dateVal}","${chatText}"\n`;
+    });
+    const blob = new Blob(["\ufeff"+csv], {type: 'text/csv;charset=utf-8;'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = 'RMG_Chats_' + new Date().toISOString().slice(0,10) + '.csv';
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    toast('Descarga de CSV iniciada');
+};
+</script>
 </body>
 </html>
 
