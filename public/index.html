@@ -1221,7 +1221,7 @@ function renderModalChat(l){
   const newHtml = h.map(m => {
     const cls = m.role === 'user' ? 'us' : m.role === 'agent' ? 'an' : 'bo';
     const tag = m.role === 'user' ? '' : '<span class="at">' + esc(m.agentName || 'Agente') + '</span>';
-    return '<div class="bb ' + cls + '">' + tag + esc(m.content) + (m.ts ? '<span class="ts3">' + fTM(m.ts) + '</span>' : '') + '</div>';
+    return '<div class="bb ' + cls + '">' + tag + esc(m.content) + (m.ts ? '<span class="ts3">' + fDT(m.ts) + '</span>' : '') + '</div>';
   }).join('');
 
   // Si el contenido visual es IDENTICO, abortamos para que no parpadee la pantalla
