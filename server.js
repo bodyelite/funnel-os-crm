@@ -528,7 +528,7 @@ app.patch('/api/leads/:id',auth(),async(req,res)=>{
   const leads=await tRead(F.leads,req.tenant);const idx=leads.findIndex(x=>x.id==req.params.id);
   if(idx===-1)return res.status(404).json({error:'No encontrado'});
   if(req.user.role==='vendedor'&&leads[idx].assignedTo!==req.user.username)return res.status(403).json({error:'Sin permisos'});
-  const ALLOWED=['status','interest','name','phone','botActive','nextAction','pastActions','source'];if(req.user.role!=='vendedor')ALLOWED.push('assignedTo');
+  const ALLOWED=['status','interest','name','phone','botActive','nextAction','pastActions','source','lastClientTs','lastInteraction','createdAt'];if(req.user.role!=='vendedor')ALLOWED.push('assignedTo');
   // Borrado individual via patch status '_delete_'
   if(req.body.status==='_delete_'){
     const before=leads.length;
@@ -547,7 +547,7 @@ app.patch('/api/leads/:id',auth(),async(req,res)=>{
   patch.alertLevel='none';
 }
   Object.assign(leads[idx],patch);
-  leads[idx].lastInteraction=new Date().toISOString();leads[idx].unread=false;leads[idx].alertLevel=calcAlert(leads[idx]);
+  if(patch.lastInteraction===undefined) leads[idx].lastInteraction=new Date().toISOString();leads[idx].unread=false;leads[idx].alertLevel=calcAlert(leads[idx]);
   await tWrite(F.leads,req.tenant,leads);res.json(leads[idx]);
 });
 app.put('/api/leads/:id',auth(),async(req,res)=>{const leads=await tRead(F.leads,req.tenant);const idx=leads.findIndex(x=>x.id==req.params.id);if(idx===-1)return res.status(404).json({error:'No encontrado'});if(req.user.role==='vendedor'&&leads[idx].assignedTo!==req.user.username)return res.status(403).json({error:'Sin permisos'});if(req.user.role==='vendedor')delete req.body.assignedTo;leads[idx]={...leads[idx],...req.body,lastInteraction:new Date().toISOString()};leads[idx].alertLevel=calcAlert(leads[idx]);await tWrite(F.leads,req.tenant,leads);res.json(leads[idx]);});
@@ -621,7 +621,7 @@ app.post('/api/leads/:id/message',auth('admin','vendedor'),async(req,res)=>{
   leads[idx].chatHistory=leads[idx].chatHistory||[];
   leads[idx].chatHistory.push({role:'agent',content,ts:Date.now(),agent:req.user.username,agentName:req.user.name||req.user.username});
   leads[idx].botPersona=req.user.name||req.user.username;
-  leads[idx].unread=false;leads[idx].lastInteraction=new Date().toISOString();leads[idx].alertLevel=calcAlert(leads[idx]);
+  leads[idx].unread=false;if(patch.lastInteraction===undefined) leads[idx].lastInteraction=new Date().toISOString();leads[idx].alertLevel=calcAlert(leads[idx]);
   await tWrite(F.leads,req.tenant,leads);
   const phone=(leads[idx].phone||'').replace(/\D/g,'');if(phone)sendWA(phone,content).catch(()=>{});
   res.json(leads[idx]);
