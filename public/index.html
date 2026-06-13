@@ -1877,14 +1877,45 @@ window.editLeadName = async function(id) {
     } catch(e) { toast('Error: '+e.message, true); }
 };
 
-window.editLeadSource = async function(id, current) {
-    const newSrc = prompt('Editar Canal/Origen (ej: WhatsApp, Chileautos, Meta Ads, Referido):', current);
-    if(!newSrc || newSrc.trim() === current) return;
+window.editLeadSource = function(id, current) {
+    let existing = document.getElementById('editSourceModal');
+    if(existing) existing.remove();
+    const modalHtml = `
+    <div id="editSourceModal" style="position:fixed;inset:0;background:rgba(0,0,0,0.65);z-index:3000;display:flex;align-items:center;justify-content:center">
+      <div style="background:var(--p);border-radius:12px;padding:20px;width:300px;box-shadow:0 10px 25px rgba(0,0,0,0.5)">
+        <h3 style="margin-top:0;margin-bottom:15px;font-size:14px;color:var(--tx)">Editar Canal de Origen</h3>
+        <select id="esSelect" style="width:100%;padding:10px;border-radius:6px;border:1px solid var(--bd);background:var(--p2);color:var(--tx);margin-bottom:15px;font-size:13px;outline:none">
+          <option value="WhatsApp">WhatsApp</option>
+          <option value="Chileautos">Chileautos</option>
+          <option value="Yapo">Yapo</option>
+          <option value="MercadoLibre">MercadoLibre</option>
+          <option value="Meta Ads">Meta Ads</option>
+          <option value="Referido">Referido</option>
+          <option value="Llamada">Llamada</option>
+          <option value="Otro">Otro</option>
+        </select>
+        <div style="display:flex;gap:10px">
+          <button onclick="document.getElementById('editSourceModal').remove()" style="flex:1;padding:8px;background:var(--p2);border:1px solid var(--bd);border-radius:6px;cursor:pointer;color:var(--ts);font-weight:bold">Cancelar</button>
+          <button onclick="window.saveLeadSource(${id})" style="flex:1;padding:8px;background:var(--ac);border:none;border-radius:6px;cursor:pointer;color:#fff;font-weight:bold">Guardar</button>
+        </div>
+      </div>
+    </div>`;
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
+    
+    // Mapeo inteligente para posicionar el select aunque el origen actual esté mal escrito
+    const norm = (current||'').toLowerCase().trim();
+    const map = {'meta ads':'Meta Ads', 'meta':'Meta Ads', 'facebook':'Meta Ads', 'ig':'Meta Ads', 'yapo':'Yapo', 'mercadolibre':'MercadoLibre', 'mercado libre':'MercadoLibre', 'chileautos':'Chileautos', 'whatsapp':'WhatsApp'};
+    document.getElementById('esSelect').value = map[norm] || current || 'Otro';
+};
+
+window.saveLeadSource = async function(id) {
+    const newSrc = document.getElementById('esSelect').value;
+    document.getElementById('editSourceModal').remove();
     try {
-        await api('PATCH', '/api/leads/'+id, {source: newSrc.trim()});
+        await api('PATCH', '/api/leads/'+id, {source: newSrc});
         toast('Canal actualizado ✓');
         const idx = S.leads.findIndex(x=>x.id===id);
-        if(idx!==-1) S.leads[idx].source = newSrc.trim();
+        if(idx!==-1) S.leads[idx].source = newSrc;
         refreshModalSilent();
         refresh();
     } catch(e) { toast('Error: '+e.message, true); }
