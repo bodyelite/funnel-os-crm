@@ -489,10 +489,7 @@ async function seed(){
   if(!spend.demo_automotora)spend.demo_automotora={'Meta Ads':1200000,'Google Ads':900000,'Chileautos':600000,'WhatsApp':0,'Instagram':350000,'Landing Page':0,'Referido':0};
   if(!spend.demo_clinica)spend.demo_clinica={'Meta Ads':620000,'Google Ads':880000,'Instagram':310000,'Landing Page':0};
   await write(F.spend,spend);
-  const leadsDB=await read(F.leads);
-  if(!leadsDB.demo_automotora)leadsDB.demo_automotora=[];
-  if(!leadsDB.demo_clinica)leadsDB.demo_clinica=[];
-  await write(F.leads,leadsDB);
+  // 🛡️ AUTO-BORRADO DE LEADS DESACTIVADO POR SEGURIDAD
 }
 
 const auth=(...roles)=>async(req,res,next)=>{
