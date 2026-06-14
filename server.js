@@ -111,7 +111,7 @@ async function marcela(tenant, history, msg, notes, assignedName) {
     // Inyectar knowledge dinámico aprendido vía "cata aprende"
     const knowledge = botCfg?.knowledge || [];
     if (knowledge.length > 0) {
-      sysPromptProcessed += '\n\nCONOCIMIENTO ADICIONAL (información actualizada que debes usar):\n' +
+      sysPromptProcessed += '\n\nHECHOS Y PROMOCIONES VIGENTES (Información del entorno. Asume estos datos como verdades absolutas e intégralos con naturalidad en tus respuestas SOLO si aplican al contexto, manteniendo estrictamente intacto tu flujo secuencial de 6 pasos):\n' +
         knowledge.map(k => '- ' + k.content).join('\n');
     }
 
