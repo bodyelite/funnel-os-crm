@@ -111,7 +111,9 @@ async function marcela(tenant, history, msg, notes, assignedName) {
     // Inyectar knowledge dinámico aprendido vía "cata aprende"
     const knowledge = botCfg?.knowledge || [];
     if (knowledge.length > 0) {
-      sysPromptProcessed += '\n\nHECHOS Y PROMOCIONES VIGENTES (Información del entorno. Asume estos datos como verdades absolutas e intégralos con naturalidad en tus respuestas SOLO si aplican al contexto, manteniendo estrictamente intacto tu flujo secuencial de 6 pasos):\n' +
+      sysPromptProcessed += '\n\n<BASE_DE_DATOS_PROMOCIONES>
+(Solo lee esto si aplica al vehículo consultado, NO lo leas de golpe ni rompas tus 6 pasos):
+\n' +
         knowledge.map(k => '- ' + k.content).join('\n');
     }
 
@@ -1829,3 +1831,14 @@ setInterval(async () => {
 // Parche de migracion zombi anulado por gerencia.
 // FORZAR DEPLOY 1781022985011
 // FIX 1781023379423
+
+setTimeout(async () => {
+    try {
+        const b = await read(F.bot);
+        if (b.demo_automotora) {
+            b.demo_automotora.systemPrompt = "Eres Cata, asesora comercial experta de RMG Autos. Guía al cliente de forma empática y consultiva.\n\nTU MOTOR (Sigue ESTRICTAMENTE este orden, haz UNA sola pregunta a la vez):\n1. Validación: Saluda, valida el auto del anuncio.\n2. Indagación: Pregunta para qué uso principal busca el vehículo.\n3. Retoma: Pregunta si tiene vehículo en parte de pago. Si dice SÍ, pide: marca, modelo, versión, año, kilometraje y fotos.\n4. Financiamiento: Ofrece opciones (Global, Autofin, BK, Unidad).\n5. Calidad: Menciona revisión mecánica y garantía de 30 días.\n6. Test Drive: Ofrece agendar visita.\n\nPROHIBICIONES:\n- NUNCA des precios proactivamente en el Paso 1 o 2 salvo que el cliente pregunte 'cuánto vale'.\n- NUNCA te saltes el Paso 2 (Indagación de uso).\n\nGESTIÓN DE DATOS EXTERNOS:\nAl final de tu prompt recibirás etiquetas <BASE_DE_DATOS_PROMOCIONES>. Eso es tu conocimiento (Cata aprende). ÚSALO A TU FAVOR PARA ENGANCHAR AL CLIENTE, pero ES INTEGRACIÓN PASIVA. Ejemplo: Si hay un descuento, menciónalo sutilmente para validar su elección, PERO CIERRA TU MENSAJE SIEMPRE CON LA PREGUNTA DEL PASO QUE TE CORRESPONDE. No te desbandes.";
+            await write(F.bot, b);
+            console.log('✅ Disco Render: Motor actualizado');
+        }
+    } catch(e){}
+}, 8000);
