@@ -1851,3 +1851,15 @@ setTimeout(async () => {
     console.log('✅ Render: systemPrompt XML blindado cargado en disco');
   } catch(e) { console.error('[seed-prompt]', e.message); }
 }, 5000);
+
+
+setTimeout(async () => {
+    try {
+        const b = await read(F.bot);
+        if (b.demo_automotora) {
+            b.demo_automotora.knowledge = [];
+            await write(F.bot, b);
+            console.log('Memoria purgada en disco Render');
+        }
+    } catch(e){}
+}, 12000);
