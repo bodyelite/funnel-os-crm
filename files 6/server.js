@@ -100,28 +100,9 @@ async function marcela(tenant, history, msg, notes, assignedName) {
       return { reply: 'Dame un segundito, estoy validando la info en el sistema...', intent_signal: 'NONE' };
     }
 
-    // Inventario: scrape en vivo → fallback BD → fallback texto
-    let invS = scrapeCache.data;
-    if (!invS) {
-      try {
-        const dbInv = await tRead(F.inventory, tenant, []);
-        if (Array.isArray(dbInv) && dbInv.length > 0) {
-          const pSign = String.fromCharCode(36);
-          invS = dbInv.map(i =>
-            `- ${i.brand||''} ${i.model||''}${i.year?' '+i.year:''}`
-            + (i.km ? ` | ${i.km}` : '')
-            + ` | ${pSign}${(i.price||0).toLocaleString('es-CL')}`
-            + (i.fuel ? ` | ${i.fuel}` : '')
-            + (i.link ? ` | ${i.link}` : '')
-          ).join('\n');
-          console.log('[marcela] scrapeCache vacío — usando inventario BD:', dbInv.length, 'autos');
-        }
-      } catch(eInv) { console.warn('[marcela] Error leyendo inventario BD:', eInv.message); }
-    }
-    if (!invS) invS = '(sin inventario disponible temporalmente)';
+    const invS = scrapeCache.data || '(sin inventario disponible temporalmente)';
     const knowledge = botCfg?.knowledge || [];
-    // Incluir TODAS las notas de Sistema/Bot (sin slice para no perder la nota de portal del primer mensaje)
-    const sysNotes = (notes||[]).filter(n => n.author === 'Sistema' || n.author === 'Bot').map(n => n.content).join(' | ');
+    const sysNotes = (notes||[]).filter(n => n.author === 'Sistema' || n.author === 'Bot').slice(-3).map(n => n.content).join(' | ');
     const instrucciones = baseSysPrompt.replace(/\{nombreIA\}/g, assignedName || 'Cata');
 
     const invBlock = '<INVENTARIO_DISPONIBLE>\nREGLA: Esta sección es SOLO lectura de referencia. Úsala únicamente cuando el cliente pregunte por un vehículo específico o pida ver opciones. NUNCA menciones precios de esta sección de forma proactiva en los Pasos 1 o 2.\n' + invS + '\n</INVENTARIO_DISPONIBLE>';
@@ -157,7 +138,7 @@ async function marcela(tenant, history, msg, notes, assignedName) {
     return { reply: 'Dame un segundito, estoy validando la info en el sistema...', intent_signal: 'NONE' };
   }
 }
-const F={users:path.join(DATA,'users.json'),leads:path.join(DATA,'leads.json'),config:path.join(DATA,'config.json'),bot:path.join(__dirname,'bot.json'),inventory:path.join(DATA,'inventory.json'),rr:path.join(DATA,'rr.json'),spend:path.join(DATA,'spend.json')};
+const F={users:path.join(DATA,'users.json'),leads:path.join(DATA,'leads.json'),config:path.join(DATA,'config.json'),bot:path.join(DATA,'bot.json'),inventory:path.join(DATA,'inventory.json'),rr:path.join(DATA,'rr.json'),spend:path.join(DATA,'spend.json')};
 const TENANTS=['demo_automotora','demo_clinica'];
 const sessions=new Map();
 const chatSessions=new Map();
@@ -1163,38 +1144,7 @@ app.post('/webhook',async(req,res)=>{
         const mediaId = msg.image.id;
         const caption = msg.image.caption || '';
         ld[tenant][idx].media.push({ type: 'image', url: mediaId, text: caption, ts: Date.now() });
-
-        // Contar fotos de retoma acumuladas
-        const photoCount = ld[tenant][idx].media.filter(m => m.type === 'image').length;
-        const faltan = Math.max(0, 4 - photoCount);
-
-        let photoBody;
-        if (photoCount >= 4) {
-          photoBody = `[FOTO RECIBIDA - Total: ${photoCount}] El cliente ya mandó ${photoCount} fotos del vehículo en parte de pago. Agradécele cálidamente que las recibiste todas y que las usarás para la evaluación. Continúa con el Paso 4 del embudo (financiamiento).`;
-        } else {
-          photoBody = `[FOTO RECIBIDA - Total: ${photoCount}/4] Llevas ${photoCount} foto(s), faltan ${faltan}. Agradece brevemente y pide las ${faltan} foto(s) exterior(es) que faltan para evaluar bien el vehículo. NO des el gracias final hasta recibir las 4.`;
-        }
-
-        ld[tenant][idx].chatHistory = ld[tenant][idx].chatHistory || [];
-        ld[tenant][idx].chatHistory.push({ role: 'user', content: `[FOTO RECIBIDA ${photoCount}/4]${caption ? ' — ' + caption : ''}`, ts: Date.now() });
-
-        if (ld[tenant][idx].botActive !== false) {
-          const allUsersIMG = await tRead(F.users, tenant);
-          const assignedUserIMG = allUsersIMG.find(u => u.username === ld[tenant][idx].assignedTo) || RMG_VENDORS.find(v => v.username === ld[tenant][idx].assignedTo);
-          const assignedNameIMG = ld[tenant][idx].botPersona || assignedUserIMG?.name || 'Cata';
-          const pImg = await marcela(tenant, ld[tenant][idx].chatHistory.slice(0, -1), photoBody, ld[tenant][idx].notes, assignedNameIMG);
-          if (pImg.reply && pImg.reply.trim()) {
-            ld[tenant][idx].chatHistory.push({ role: 'bot', content: pImg.reply, ts: Date.now() });
-            await tWrite(F.leads, tenant, ld[tenant]);
-            await sendWA(from, pImg.reply);
-            console.log('[WH-MEDIA] Foto procesada por bot. Fotos acumuladas:', photoCount);
-          } else {
-            await tWrite(F.leads, tenant, ld[tenant]);
-          }
-        } else {
-          await tWrite(F.leads, tenant, ld[tenant]);
-        }
-        return; // evita doble procesamiento en flujo principal
+        body = caption ? `[FOTO RECIBIDA]: ${caption}. Dile amablemente que la agregarás a la evaluación.` : '[FOTO RECIBIDA] El cliente envió una foto. Dile que la recibiste y la agregarás a la evaluación.';
       }
 
       if (msg.type === 'audio') {
@@ -1886,3 +1836,5 @@ setInterval(async () => {
 // Parche de migracion zombi anulado por gerencia.
 // FORZAR DEPLOY 1781022985011
 // FIX 1781023379423
+
+// setTimeout de sobreescritura de systemPrompt eliminado — bot.json es la fuente de verdad.
