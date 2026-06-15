@@ -357,7 +357,7 @@ function fueraH(txt){const m=(txt||'').match(/(\d{1,2})\s*(?::|\.)?\s*(\d{2})?\s
 
 
 const SHIELD=['body elite','bodyelite','botox','lipo','lipoescultura','liposuccion','estetica','estética','masaje','masajes','doctora','tratamiento','acido hialuronico'];
-const SHIELD_R='¡Hola! Este número es de RMG Autos 🚗 Para Body Elite visita su Instagram. ¡Gracias!';
+const SHIELD_R='¡Hola! Este número es de Automotora Andes 🚗 Para Body Elite ve a su Instagram. ¡Gracias!';
 function isShield(t){if(!t)return false;const n=t.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');return SHIELD.some(k=>n.includes(k.normalize('NFD').replace(/[\u0300-\u036f]/g,'')));}
 
 async function getSellers(tenant) {
@@ -647,7 +647,7 @@ app.post('/api/leads/:id/message',auth('admin','vendedor'),async(req,res)=>{
   leads[idx].chatHistory=leads[idx].chatHistory||[];
   leads[idx].chatHistory.push({role:'agent',content,ts:Date.now(),agent:req.user.username,agentName:req.user.name||req.user.username});
   leads[idx].botPersona=req.user.name||req.user.username;
-  leads[idx].unread=false;if(patch.lastInteraction===undefined) leads[idx].lastInteraction=new Date().toISOString();leads[idx].alertLevel=calcAlert(leads[idx]);
+  leads[idx].unread=false;leads[idx].lastInteraction=new Date().toISOString();leads[idx].alertLevel=calcAlert(leads[idx]);
   await tWrite(F.leads,req.tenant,leads);
   const phone=(leads[idx].phone||'').replace(/\D/g,'');if(phone)sendWA(phone,content).catch(()=>{});
   res.json(leads[idx]);
@@ -1464,7 +1464,7 @@ app.post('/webhook',async(req,res)=>{
     ld[tenant][idx].lastClientTs=new Date().toISOString();
     ld[tenant][idx].unread=true;ld[tenant][idx].lastClientTs=new Date().toISOString();
     ld[tenant][idx].alertLevel=calcAlert(ld[tenant][idx]);
-    await tWrite(F.leads,tenant,ld[tenant]);
+    await write(F.leads,ld);
     console.log('[WH-SAVED] Lead guardado:',ld[tenant][idx].name,'phone:',from,'idx:',idx);
     try{ await notifyTenantPush(tenant, ld[tenant]||[]); console.log('[PUSH] Notificación enviada'); }catch(ePush){ console.warn('[PUSH] error:',ePush.message); }
   }catch(e){console.error('Webhook:',e);}
@@ -1662,7 +1662,7 @@ setInterval(async()=>{for(const t of TENANTS){try{await applySlaRules(t);}catch(
 // ── SPRINT 4: Tasación Request ──────────────────────────────────────────────
 app.post('/api/tasacion/request', async (req, res) => {
   try {
-    const { leadId, tenant = 'demo_automotora' } = req.body;
+    const { leadId, tenant = 'default' } = req.body;
     const leads = await tRead(F.leads, tenant, []);
     const lead = leads.find(l => l.id === leadId);
     if (!lead) return res.status(404).json({ error: 'Lead no encontrado' });
@@ -1677,7 +1677,7 @@ app.post('/api/tasacion/request', async (req, res) => {
     for (const admin of admins) {
       if (admin.phone) await sendWA(admin.phone, texto);
     }
-    res.json({ ok: true, notified: admins.length });
+    res.json({ ok: true, notified: STAFF_TASACION.length });
   } catch (err) {
     console.error('/api/tasacion/request error:', err);
     res.status(500).json({ error: err.message });
@@ -1688,7 +1688,7 @@ app.post('/api/tasacion/request', async (req, res) => {
 // ── SPRINT 4: Tasación Offer ─────────────────────────────────────────────────
 app.post('/api/tasacion/offer', async (req, res) => {
   try {
-    const { leadId, offerAmount, tenant = 'demo_automotora' } = req.body;
+    const { leadId, offerAmount, tenant = 'default' } = req.body;
     const leads = await tRead(F.leads, tenant, []);
     const lead = leads.find(l => l.id === leadId);
     if (!lead) return res.status(404).json({ error: 'Lead no encontrado' });
@@ -1721,7 +1721,7 @@ app.post('/api/tasacion/offer', async (req, res) => {
 // ── SPRINT 4: PATCH tradeIn fields ──────────────────────────────────────────
 app.patch('/api/leads/:id/tradein', async (req, res) => {
   try {
-    const { tenant = 'demo_automotora' } = req.query;
+    const { tenant = 'default' } = req.query;
     const leads = await tRead(F.leads, tenant, []);
     const lead = leads.find(l => l.id === req.params.id);
     if (!lead) return res.status(404).json({ error: 'Lead no encontrado' });
