@@ -636,7 +636,8 @@ async function requestNotifPermission(){
 }
 // ═══════════════════════════════════════════════════
 
-\n
+
+
 function renderSlaCards(){
   const nv=S.leads.filter(l=>l.status==='Nuevo');
   $('scF').textContent=nv.filter(l=>l.alertLevel==='fresh').length;
