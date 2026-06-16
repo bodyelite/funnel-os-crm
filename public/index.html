@@ -207,7 +207,8 @@ document.addEventListener('visibilitychange', () => {
 <body>
 <div id="lv" class="lw"><div class="lw-bg"></div><div class="lw-grid"></div><div class="lc"><h1>FunnelOS CRM</h1><div class="sub">Torre de Control · Cata IA</div><label>Empresa</label><select id="liT"><option value="demo_automotora">RMG Autos</option></select><label>Usuario</label><input id="liU" value="gerente" placeholder="gerente|vendedor1|vendedor2"><label>Contraseña</label><input id="liP" type="password" value="demo"><button id="liB">Entrar</button><div class="err" id="liE"></div><div class="hint">Demo: <strong>gerente / demo</strong> &nbsp;·&nbsp; daniela / demo &nbsp;·&nbsp; carlos / demo</div></div></div>
 <div id="av" class="app" style="display:none">
-<aside class="sb"><h1 id="bizName">FunnelOS</h1><div class="who" id="uBadge">—</div><nav><button class="active" data-view="dashboard">📊 Operación</button><button data-view="leads">📋 Leads</button><button data-view="chileautos" id="navCA" style="background:#e8f5e9;color:#2e7d32;font-weight:700">🏷 Chileautos</button><button data-view="espera-general" id="navEG" style="background:#ede9fe;color:#6d28d9;font-weight:700;display:none">⏳ En Espera</button><button data-view="pipeline">🗂 Pipeline</button><button data-view="analytics" id="navA">📈 Analítica</button><button data-view="team" id="navT">👥 Equipo</button><button data-view="inventario" id="navInv">🚗 Inventario</button><button id="btnSyncInv" style="background:linear-gradient(135deg,#16a34a,#15803d);color:#fff;border:none;border-radius:8px;padding:7px 13px;font-size:12px;font-weight:700;cursor:pointer;margin-left:4px" onclick="syncInventario()">🔄 Sync RMG</button><button data-view="bi" id="navBI" style="background:linear-gradient(135deg,#1a1a2e,#16213e);color:#a78bfa;border:none;border-radius:8px;padding:7px 13px;font-size:12px;font-weight:700;cursor:pointer;margin-left:4px;font-family:inherit">🧠 BI</button><button data-view="config" id="navC">⚙️ Config</button></nav><button id="btnInstallApp" onclick="installApp()" style="display:none;margin-top:8px;background:linear-gradient(135deg,#D4A843,#F2C955);color:#0f172a;border:none;border-radius:8px;padding:8px 12px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;align-items:center;gap:6px;letter-spacing:.04em">📲 Instalar App</button>
+<aside class="sb"><h1 id="bizName">FunnelOS</h1><div class="who" id="uBadge">—</div><nav><button class="active" data-view="dashboard">📊 Operación</button><button data-view="leads">📋 Leads</button><button data-view="chileautos" id="navCA" style="background:#e8f5e9;color:#2e7d32;font-weight:700">🏷 Chileautos</button><button data-view="espera-general" id="navEG" style="background:#ede9fe;color:#6d28d9;font-weight:700;display:none">⏳ En Espera</button><button data-view="compras" id="navCompras" style="background:#fff7ed;color:#d97706;font-weight:700">🛍 Compras RMG</button>
+<button data-view="pipeline">🗂 Pipeline</button><button data-view="analytics" id="navA">📈 Analítica</button><button data-view="team" id="navT">👥 Equipo</button><button data-view="inventario" id="navInv">🚗 Inventario</button><button id="btnSyncInv" style="background:linear-gradient(135deg,#16a34a,#15803d);color:#fff;border:none;border-radius:8px;padding:7px 13px;font-size:12px;font-weight:700;cursor:pointer;margin-left:4px" onclick="syncInventario()">🔄 Sync RMG</button><button data-view="bi" id="navBI" style="background:linear-gradient(135deg,#1a1a2e,#16213e);color:#a78bfa;border:none;border-radius:8px;padding:7px 13px;font-size:12px;font-weight:700;cursor:pointer;margin-left:4px;font-family:inherit">🧠 BI</button><button data-view="config" id="navC">⚙️ Config</button></nav><button id="btnInstallApp" onclick="installApp()" style="display:none;margin-top:8px;background:linear-gradient(135deg,#D4A843,#F2C955);color:#0f172a;border:none;border-radius:8px;padding:8px 12px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;align-items:center;gap:6px;letter-spacing:.04em">📲 Instalar App</button>
 <button class="lout" id="loutB">Cerrar sesión</button></aside>
 <main class="mn">
 <div class="tb" id="mainTb"><span class="lbl">Rango</span><div class="qk"><button data-q="all">Todo</button><button data-q="today">Hoy</button><button data-q="yesterday">Ayer</button><button data-q="7d">7d</button><button data-q="30d">30d</button></div><span class="lbl">Desde</span><input type="date" id="dS"><span class="lbl">Hasta</span><input type="date" id="dE"><button class="clr" id="dC">Limpiar</button><span class="lbl" id="lblS">Vendedor</span><select id="selF"><option value="">Todos</option></select><span class="ri" id="rI">Sin filtro</span></div>
@@ -336,6 +337,11 @@ document.addEventListener('visibilitychange', () => {
   </div>
 </div>
 </div>
+<section id="view-compras" class="view">
+<div class="st" style="color:#d97706">🛍 Pipeline de Compras Directas</div>
+<div style="font-size:13px;color:var(--tm);margin-bottom:12px">Solo gerencia. Leads con origen "Compra Directa" o "Compramos tu Auto".</div>
+<div class="kb" id="kbnCompras" style="display:flex;gap:7px;overflow-x:auto;padding-bottom:10px;min-height:300px;"></div>
+</section>
 <section id="view-pipeline" class="view"><div class="st">Pipeline Kanban</div><div class="kb" id="kbn"></div><div class="cw"><div class="bt" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">Agenda de la Semana<div class="cal-nav" style="display:flex;align-items:center;gap:6px"><button id="calPrev" style="background:var(--p2);border:1px solid var(--bd);color:var(--ts);padding:5px 11px;border-radius:7px;font-size:12px;cursor:pointer;font-family:inherit">&laquo; Anterior</button><button id="calHoy" style="background:var(--ac);color:#fff;border:none;padding:5px 11px;border-radius:7px;font-size:12px;cursor:pointer;font-family:inherit;font-weight:600">Hoy</button><button id="calNext" style="background:var(--p2);border:1px solid var(--bd);color:var(--ts);padding:5px 11px;border-radius:7px;font-size:12px;cursor:pointer;font-family:inherit">Siguiente &raquo;</button></div></div><div style="overflow-x:auto;width:100%"><div class="cg" id="calG" style="width:100%"></div></div></div></section>
 <section id="view-analytics" class="view"><div class="st">Analítica de Canales</div><div class="ct" id="chBx"></div></section>
 <section id="view-team" class="view"><div id="kpiDash"></div></section>
@@ -400,6 +406,30 @@ document.addEventListener('visibilitychange', () => {
 <div class="toast" id="tst"></div>
 <script>
 var calWeekOffset=0;
+function renderComprasPipeline() {
+  const cont = document.getElementById('kbnCompras');
+  if(!cont) return;
+  const stages = ['Nueva Oferta', 'Evaluando', 'Oferta Lanzada', 'Comprado', 'Descartado'];
+  const leads = (window.S && S.leads ? S.leads : []).filter(l => l.source === 'Compra Directa' || l.source === 'Compramos tu Auto');
+  
+  let html = '';
+  stages.forEach(st => {
+    const stLeads = leads.filter(l => l.status === st);
+    html += `<div class="kbc" style="flex:0 0 240px;max-width:240px;background:var(--p);border:1px solid var(--bd);border-radius:var(--r);display:flex;flex-direction:column;max-height:calc(80vh - 40px)">
+      <div class="kbh" style="padding:8px 10px;border-bottom:1px solid var(--bd);font-size:11px;font-weight:700;color:var(--tm);text-transform:uppercase;">
+        ${st} <span class="cnt" style="background:var(--p2);color:var(--ts);padding:2px 6px;border-radius:999px;margin-left:auto">${stLeads.length}</span>
+      </div>
+      <div class="kbs" style="flex:1;overflow-y:auto;padding:8px;display:flex;flex-direction:column;gap:6px;">
+        ${stLeads.map(l => `<div class="kc" onclick="if(typeof openModal === 'function') openModal(${l.id})" style="background:var(--p2);border:1px solid var(--bd);border-radius:7px;padding:10px;cursor:pointer;display:flex;flex-direction:column;gap:4px">
+          <div style="font-weight:700;font-size:12.5px;color:var(--tx)">${esc(l.name)}</div>
+          <div style="font-size:11px;color:var(--tm);white-space:normal;line-height:1.2">${esc(l.interest || 'Vejículo a tasar')}</div>
+          <div style="font-size:10.5px;color:var(--ac);font-weight:600">${esc(l.phone || '')}</div>
+        </div>`).join('')}
+      </div>
+    </div>`;
+  });
+  cont.innerHTML = html;
+}
 const S={token:localStorage.getItem('ft')||null,user:JSON.parse(localStorage.getItem('fu')||'null'),tenant:localStorage.getItem('ftn')||'demo_automotora',config:null,leads:[],team:[],channels:[],users:[],range:{start:null,end:null,quick:'all'},seller:'',acc:new Set(JSON.parse(localStorage.getItem('fa')||'[]')),pollTimer:null,mid:null,slaOpen:null,funOpen:null,view:'dashboard'};
 const $=id=>document.getElementById(id);
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -428,7 +458,7 @@ $('liB').addEventListener('click',login);$('liP').addEventListener('keydown',e=>
 async function login(){$('liE').textContent='';try{const d=await api('POST','/api/auth/login',{username:$('liU').value.trim(),password:$('liP').value,tenant:$('liT').value});S.token=d.token;S.user=d.user;S.tenant=d.tenant;localStorage.setItem('fos_token',d.token);localStorage.setItem('ft',d.token);localStorage.setItem('fu',JSON.stringify(d.user));localStorage.setItem('ftn',d.tenant);enterApp();}catch(e){$('liE').textContent=e.message;}}
 function logout(){if(S.pollTimer)clearInterval(S.pollTimer);S.token=null;S.user=null;localStorage.removeItem('ft');localStorage.removeItem('fu');$('av').style.display='none';$('lv').style.display='grid';}
 $('loutB').addEventListener('click',()=>{api('POST','/api/auth/logout').catch(()=>{});logout();});
-async function enterApp(){$('lv').style.display='none';$('av').style.display='grid';requestNotifPermission();setTimeout(()=>initWebPush().catch(()=>{}),2000);$('uBadge').textContent=(S.user?.name||'')+' · '+(S.user?.role||'');const isA=S.user?.role==='admin';['navA','navT','navC','lblS','selF'].forEach(id=>{const el=$(id);if(el)el.style.display=isA?'':'none';});try{S.config=await api('GET','/api/config');$('bizName').textContent=S.config.businessName||'FunnelOS';if(S.config.accentColor)document.documentElement.style.setProperty('--ac',S.config.accentColor);// Carga usuarios siempre (admin y vendedor) para que cUsr() resuelva nombres reales
+async function enterApp(){$('lv').style.display='none';$('av').style.display='grid';requestNotifPermission();setTimeout(()=>initWebPush().catch(()=>{}),2000);$('uBadge').textContent=(S.user?.name||'')+' · '+(S.user?.role||'');const isA=S.user?.role==='admin';['navA','navT','navC','lblS','selF','navCompras'].forEach(id=>{const el=$(id);if(el)el.style.display=isA?'':'none';});try{S.config=await api('GET','/api/config');$('bizName').textContent=S.config.businessName||'FunnelOS';if(S.config.accentColor)document.documentElement.style.setProperty('--ac',S.config.accentColor);// Carga usuarios siempre (admin y vendedor) para que cUsr() resuelva nombres reales
   const users=await api('GET','/api/users').catch(()=>[]);S.users=users;
   if(isA){const sel=$('selF');sel.innerHTML='<option value="">Todos</option>';users.filter(u=>u.role==='vendedor').forEach(u=>{const o=document.createElement('option');o.value=u.username;o.textContent=u.name;sel.appendChild(o);});}}catch(e){}await refresh();if(S.pollTimer)clearInterval(S.pollTimer);S.pollTimer=setInterval(refresh,4000);}
 function setQ(q){S.range.quick=q;const t=new Date();t.setHours(0,0,0,0);const fmt=d=>d.toISOString().slice(0,10);if(q==='all'){S.range.start=null;S.range.end=null;}else if(q==='today'){S.range.start=fmt(t);S.range.end=fmt(t);}else if(q==='yesterday'){const y=new Date(t);y.setDate(y.getDate()-1);S.range.start=fmt(y);S.range.end=fmt(y);}else if(q==='7d'){const s=new Date(t);s.setDate(s.getDate()-6);S.range.start=fmt(s);S.range.end=fmt(t);}else if(q==='30d'){const s=new Date(t);s.setDate(s.getDate()-29);S.range.start=fmt(s);S.range.end=fmt(t);}$('dS').value=S.range.start||'';$('dE').value=S.range.end||'';syncQ();updRI();refresh();}
@@ -633,7 +663,7 @@ async function requestNotifPermission(){
 }
 // ═══════════════════════════════════════════════════
 
-function renderAll(){const isA=S.user?.role==='admin';if(isA)renderDash();renderLeads();renderChileautos();renderEsperaGeneral();renderKanban();renderCalendar();if(isA){renderAnalytics();renderTeam();}if(S.mid&&$('mbg').classList.contains('show'))refreshModalSilent();if(S.slaOpen)renderSlaPanel(S.slaOpen);if(S.funOpen)renderFunPanel(S.funOpen);try{checkNotifications();}catch(e){}}
+function renderAll(){const isA=S.user?.role==='admin';if(isA)renderDash();renderLeads();renderChileautos();renderEsperaGeneral();renderKanban(); renderComprasPipeline();renderCalendar();if(isA){renderAnalytics();renderTeam();}if(S.mid&&$('mbg').classList.contains('show'))refreshModalSilent();if(S.slaOpen)renderSlaPanel(S.slaOpen);if(S.funOpen)renderFunPanel(S.funOpen);try{checkNotifications();}catch(e){}}
 
 function renderSlaCards(){
   const nv=S.leads.filter(l=>l.status==='Nuevo');
