@@ -338,9 +338,24 @@ document.addEventListener('visibilitychange', () => {
 </div>
 </div>
 <section id="view-compras" class="view">
-<div class="st" style="color:#d97706">🛍 Pipeline de Compras Directas</div>
-<div style="font-size:13px;color:var(--tm);margin-bottom:12px">Solo gerencia. Leads con origen "Compra Directa" o "Compramos tu Auto".</div>
-<div class="kb" id="kbnCompras" style="display:flex;gap:7px;overflow-x:auto;padding-bottom:10px;min-height:300px;"></div>
+    <div class="st" style="color:#d97706; margin-bottom: 4px;">🛍 Sub-mundo: Compras RMG</div>
+    <div style="font-size:13px;color:var(--tm);margin-bottom:14px">Entorno aislado exclusivo para la gerencia de adquisición de vehículos.</div>
+    
+    <div style="display:flex; gap:16px; margin-bottom:15px; border-bottom: 2px solid var(--bd);">
+        <button class="mtab" style="color:#d97706; padding:8px 4px; background:none; border:none; border-bottom:2px solid #d97706; cursor:pointer; font-weight:600; font-size:13px;" onclick="switchComprasTab('leads', this)">📋 Lista de Leads</button>
+        <button class="mtab" style="color:var(--tm); padding:8px 4px; background:none; border:none; border-bottom:2px solid transparent; cursor:pointer; font-weight:600; font-size:13px;" onclick="switchComprasTab('pipeline', this)">🗂 Pipeline Kanban</button>
+        <button class="mtab" style="color:var(--tm); padding:8px 4px; background:none; border:none; border-bottom:2px solid transparent; cursor:pointer; font-weight:600; font-size:13px;" onclick="switchComprasTab('analitica', this)">📈 Analítica</button>
+    </div>
+
+    <div id="compras-leads" style="display:block;">
+        <div class="tw" id="compras-leads-tbl"></div>
+    </div>
+    <div id="compras-pipeline" style="display:none;">
+        <div class="kb" id="kbnCompras" style="display:flex;gap:7px;overflow-x:auto;padding-bottom:10px;min-height:300px;"></div>
+    </div>
+    <div id="compras-analitica" style="display:none;">
+        <div id="compras-analitica-box"></div>
+    </div>
 </section>
 <section id="view-pipeline" class="view"><div class="st">Pipeline Kanban</div><div class="kb" id="kbn"></div><div class="cw"><div class="bt" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">Agenda de la Semana<div class="cal-nav" style="display:flex;align-items:center;gap:6px"><button id="calPrev" style="background:var(--p2);border:1px solid var(--bd);color:var(--ts);padding:5px 11px;border-radius:7px;font-size:12px;cursor:pointer;font-family:inherit">&laquo; Anterior</button><button id="calHoy" style="background:var(--ac);color:#fff;border:none;padding:5px 11px;border-radius:7px;font-size:12px;cursor:pointer;font-family:inherit;font-weight:600">Hoy</button><button id="calNext" style="background:var(--p2);border:1px solid var(--bd);color:var(--ts);padding:5px 11px;border-radius:7px;font-size:12px;cursor:pointer;font-family:inherit">Siguiente &raquo;</button></div></div><div style="overflow-x:auto;width:100%"><div class="cg" id="calG" style="width:100%"></div></div></div></section>
 <section id="view-analytics" class="view"><div class="st">Analítica de Canales</div><div class="ct" id="chBx"></div></section>
@@ -406,6 +421,54 @@ document.addEventListener('visibilitychange', () => {
 <div class="toast" id="tst"></div>
 <script>
 var calWeekOffset=0;
+function switchComprasTab(tab, btn) {
+    document.querySelectorAll('#view-compras .mtab').forEach(b => { b.style.color='var(--tm)'; b.style.borderBottomColor='transparent'; });
+    btn.style.color = '#d97706'; btn.style.borderBottomColor = '#d97706';
+    document.getElementById('compras-leads').style.display = 'none';
+    document.getElementById('compras-pipeline').style.display = 'none';
+    document.getElementById('compras-analitica').style.display = 'none';
+    document.getElementById('compras-' + tab).style.display = 'block';
+}
+
+function renderComprasFull() {
+    const leads = (window.S && S.leads ? S.leads : []).filter(l => l.source === 'Compra Directa' || l.source === 'Compramos tu Auto');
+
+    // 1. Lista de Leads
+    const gc = 'grid-template-columns:10px 1.5fr 1fr 1.5fr 1fr 1fr 0.8fr auto';
+    let lh = `<div class="tr2 hd" style="${gc}"><div></div><div>Cliente</div><div>Teléfono</div><div>Vejículo a vender</div><div>Estado</div><div>Ingreso</div><div>Últ. Acción</div><div></div></div>`;
+    let lr = leads.length ? leads.map(l => {
+        return `<div class="tr2" style="${gc}" onclick="if(typeof openModal==='function')openModal(${l.id})">
+            <div class="sd b"></div>
+            <div><strong>${esc(l.name)}</strong></div>
+            <div style="font-size:11.5px;color:var(--tm)">${esc(l.phone||'')}</div>
+            <div style="font-size:11.5px;color:var(--tm);font-weight:600">${esc(l.interest||'')}</div>
+            <div><span class="sp">${esc(l.status)}</span></div>
+            <div style="font-size:11px;color:var(--tm)">${fDT(l.createdAt||l.lastInteraction)}</div>
+            <div style="font-size:11px;color:var(--tm)">${fMin(mAgo(l.lastInteraction))}</div>
+            <div><button class="bs" style="padding:2px 6px;font-size:10px">Abrir</button></div>
+        </div>`;
+    }).join('') : '<div class="ke" style="padding:20px">No hay leads de compra registrados aún.</div>';
+    const cl = document.getElementById('compras-leads-tbl');
+    if(cl) cl.innerHTML = lh + lr;
+
+    // 2. Pipeline (Kanban)
+    if(typeof renderComprasPipeline === 'function') renderComprasFull();
+
+    // 3. Analítica (KPIs Básicos)
+    const ca = document.getElementById('compras-analitica-box');
+    if(ca) {
+         const total = leads.length;
+         const evaluando = leads.filter(l=>l.status==='Evaluando').length;
+         const ofertados = leads.filter(l=>l.status==='Oferta Lanzada').length;
+         const comprados = leads.filter(l=>l.status==='Comprado').length;
+         ca.innerHTML = `<div class="kpi-grid">
+            <div class="kpi-card"><div class="kpi-stat"><div class="ks-n">${total}</div><div class="ks-l">Total Solicitudes</div></div></div>
+            <div class="kpi-card"><div class="kpi-stat"><div class="ks-n" style="color:#f59e0b">${evaluando}</div><div class="ks-l">En Evaluación</div></div></div>
+            <div class="kpi-card"><div class="kpi-stat"><div class="ks-n" style="color:#3b82f6">${ofertados}</div><div class="ks-l">Ofertas Lanzadas</div></div></div>
+            <div class="kpi-card"><div class="kpi-stat"><div class="ks-n" style="color:#10b981">${comprados}</div><div class="ks-l">Autos Comprados</div></div></div>
+         </div>`;
+    }
+}
 function renderComprasPipeline() {
   const cont = document.getElementById('kbnCompras');
   if(!cont) return;
@@ -663,7 +726,7 @@ async function requestNotifPermission(){
 }
 // ═══════════════════════════════════════════════════
 
-function renderAll(){const isA=S.user?.role==='admin';if(isA)renderDash();renderLeads();renderChileautos();renderEsperaGeneral();renderKanban(); renderComprasPipeline();renderCalendar();if(isA){renderAnalytics();renderTeam();}if(S.mid&&$('mbg').classList.contains('show'))refreshModalSilent();if(S.slaOpen)renderSlaPanel(S.slaOpen);if(S.funOpen)renderFunPanel(S.funOpen);try{checkNotifications();}catch(e){}}
+function renderAll(){const isA=S.user?.role==='admin';if(isA)renderDash();renderLeads();renderChileautos();renderEsperaGeneral();renderKanban(); renderComprasFull();renderCalendar();if(isA){renderAnalytics();renderTeam();}if(S.mid&&$('mbg').classList.contains('show'))refreshModalSilent();if(S.slaOpen)renderSlaPanel(S.slaOpen);if(S.funOpen)renderFunPanel(S.funOpen);try{checkNotifications();}catch(e){}}
 
 function renderSlaCards(){
   const nv=S.leads.filter(l=>l.status==='Nuevo');
