@@ -43,8 +43,17 @@ async function notifyTenantPush(tenant,leads){
     const last=unreads[unreads.length-1];
     const msg=(last.chatHistory||[]).filter(m=>m.role==='user').slice(-1)[0];
     const payload={title:'RMG CRM — '+last.name,body:msg?msg.content.slice(0,80):'Nuevo mensaje',count:unreads.length,leadId:last.id};
+    
+    const users = await tRead(F.users, tenant, []);
+    const admins = users.filter(u => u.role === 'admin').map(u => u.username);
+    const assigned = last.assignedTo;
+    const allowedUsernames = new Set([...admins, assigned]);
+
     for(const k of Object.keys(_pushSubs).filter(k=>k.startsWith(tenant+':'))){
-      await sendWebPush(tenant,k.split(':')[1],payload);
+      const username = k.split(':')[1];
+      if (allowedUsernames.has(username)) {
+        await sendWebPush(tenant,username,payload);
+      }
     }
   }catch(e){console.warn('[PUSH] error:',e.message);}
 }
@@ -1662,10 +1671,29 @@ setInterval(async()=>{for(const t of TENANTS){try{await applySlaRules(t);}catch(
 // ── SPRINT 4: Tasación Request ──────────────────────────────────────────────
 app.post('/api/tasacion/request', async (req, res) => {
   try {
-    const { leadId, tenant = 'default' } = req.body;
+    const { leadId, tenant = 'demo_automotora' } = req.body;
     const leads = await tRead(F.leads, tenant, []);
-    const lead = leads.find(l => l.id === leadId);
+    const lead = leads.find(l => l.id == leadId);
     if (!lead) return res.status(404).json({ error: 'Lead no encontrado' });
+
+    const ti = lead.tradeIn || {};
+    const texto = `📋 SOLICITUD DE TASACIÓN:\nLead: ${lead.name}\nVehículo en retoma: ${ti.make || '?'} ${ti.model || '?'} ${ti.year || '?'}\nColor/Patente: ${ti.color || '?'}\nPor favor evaluar y registrar oferta en el CRM.`;
+
+    const users = await tRead(F.users, tenant, []);
+    const admins = users.filter(u => u.role === 'admin' && u.status === 'Activo');
+    let notifiedCount = 0;
+    for (const admin of admins) {
+      if (admin.phone) {
+        await sendWA(admin.phone, texto);
+        notifiedCount++;
+      }
+    }
+    res.json({ ok: true, notified: notifiedCount });
+  } catch (err) {
+    console.error('/api/tasacion/request error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
 
     const ti = lead.tradeIn || {};
     const texto = `📋 SOLICITUD DE TASACIÓN:\nLead: ${lead.name}\n` +
@@ -1688,10 +1716,32 @@ app.post('/api/tasacion/request', async (req, res) => {
 // ── SPRINT 4: Tasación Offer ─────────────────────────────────────────────────
 app.post('/api/tasacion/offer', async (req, res) => {
   try {
-    const { leadId, offerAmount, tenant = 'default' } = req.body;
+    const { leadId, offerAmount, tenant = 'demo_automotora' } = req.body;
     const leads = await tRead(F.leads, tenant, []);
-    const lead = leads.find(l => l.id === leadId);
+    const lead = leads.find(l => l.id == leadId);
     if (!lead) return res.status(404).json({ error: 'Lead no encontrado' });
+
+    if (!lead.tradeIn) lead.tradeIn = { make:'', model:'', year:'', color:'', status:'Pendiente', offer:0 };
+    lead.tradeIn.offer = Number(offerAmount);
+    lead.tradeIn.status = 'Evaluado';
+
+    await tWrite(F.leads, tenant, leads);
+
+    const fmt = new Intl.NumberFormat('es-CL', { style:'currency', currency:'CLP', maximumFractionDigits:0 }).format(lead.tradeIn.offer);
+    if (lead.assignedTo) {
+      const users = await tRead(F.users, tenant, []);
+      const vendedor = users.find(u => u.username === lead.assignedTo) || RMG_VENDORS.find(v => v.username === lead.assignedTo);
+      if (vendedor && vendedor.phone) {
+        const msg = `✅ TASACIÓN LISTA\nLead: ${lead.name}\nRetoma: ${lead.tradeIn.make} ${lead.tradeIn.model} ${lead.tradeIn.year}\nOferta taller: ${fmt}\nYa puedes informar al cliente.`;
+        await sendWA(vendedor.phone, msg);
+      }
+    }
+    res.json({ ok: true, offer: lead.tradeIn.offer, status: lead.tradeIn.status });
+  } catch (err) {
+    console.error('/api/tasacion/offer error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
 
     if (!lead.tradeIn) lead.tradeIn = { make:'', model:'', year:'', color:'', status:'Pendiente', offer:0 };
     lead.tradeIn.offer = Number(offerAmount);
