@@ -100,10 +100,14 @@ async function sendWA(to, text, retries = 2) {
   return false;
 }
 
-async function marcela(tenant, history, msg, notes, assignedName) {
+async function marcela(tenant, history, msg, notes, assignedName, leadSource) {
   try {
     let botCfg = await tRead(F.bot, tenant, {});
-    const baseSysPrompt = botCfg?.systemPrompt;
+    let baseSysPrompt = botCfg?.systemPrompt;
+    if (leadSource === 'Compra Directa' && botCfg?.compras_rmg?.systemPrompt) {
+      baseSysPrompt = botCfg.compras_rmg.systemPrompt;
+      console.log('[BOT] Modo COMPRADORA activado (origen:', leadSource, ')');
+    }
     if (!baseSysPrompt) {
       console.error('[Bot-Config-Error] systemPrompt no encontrado en bot.json para tenant:', tenant);
       return { reply: 'Dame un segundito, estoy validando la info en el sistema...', intent_signal: 'NONE' };
@@ -821,7 +825,7 @@ app.post('/api/chat',async(req,res)=>{
     if(message.trim().toLowerCase()==='/reset'){leads.splice(idx,1);await tWrite(F.leads,tenant,leads);return res.json({reply:'🔄 Lead eliminado. Listo para nuevo ingreso desde Chileautos.',status:'eliminado',alertLevel:'none'});}
     const assignedUserChat=allUsers.find(u=>u.username===leads[idx].assignedTo)||RMG_VENDORS.find(v=>v.username===leads[idx].assignedTo);
     const assignedNameChat=leads[idx].botPersona||assignedUserChat?.name||'Cata';
-    const p=await marcela(tenant,leads[idx].chatHistory.slice(0,-1),message,leads[idx].notes,assignedNameChat);
+    const p=await marcela(tenant,leads[idx].chatHistory.slice(0,-1),message,leads[idx].notes,assignedNameChat,leads[idx].source);
     applySignal(leads[idx],p);
     
     if(p.schedule_detected && p.schedule_text) {
@@ -1228,7 +1232,7 @@ app.post('/webhook',async(req,res)=>{
           const allUsersIMG = await tRead(F.users, tenant);
           const assignedUserIMG = allUsersIMG.find(u => u.username === ld[tenant][idx].assignedTo) || RMG_VENDORS.find(v => v.username === ld[tenant][idx].assignedTo);
           const assignedNameIMG = ld[tenant][idx].botPersona || assignedUserIMG?.name || 'Cata';
-          const pImg = await marcela(tenant, ld[tenant][idx].chatHistory.slice(0, -1), photoBody, ld[tenant][idx].notes, assignedNameIMG);
+          const pImg = await marcela(tenant, ld[tenant][idx].chatHistory.slice(0, -1), photoBody, ld[tenant][idx].notes, assignedNameIMG, ld[tenant][idx].source);
           if (pImg.reply && pImg.reply.trim()) {
             ld[tenant][idx].chatHistory.push({ role: 'bot', content: pImg.reply, ts: Date.now() });
             await tWrite(F.leads, tenant, ld[tenant]);
@@ -1344,6 +1348,10 @@ app.post('/webhook',async(req,res)=>{
         detectedSource = 'Meta Ads';
         const titularAd = hasReferral ? (adTracing.headline || '') : '';
         const adId = hasReferral ? (adTracing.source_id || '') : '';
+
+        if (titularAd.toLowerCase().includes('compra') || (typeof body === 'string' && body.match(/compra directa/i))) {
+            detectedSource = 'Compra Directa';
+        }
         
         let isMundialera = false;
         let autoClicado = '';
@@ -1424,7 +1432,7 @@ app.post('/webhook',async(req,res)=>{
     let newInterest = null;
 
     if (mt_meta) {
-        newSource = 'Meta Ads';
+        newSource = (adTracing && adTracing.headline && adTracing.headline.toLowerCase().includes('compra')) ? 'Compra Directa' : 'Meta Ads';
         newInterest = (adTracing && adTracing.headline) ? adTracing.headline : 'Anuncio Meta Ads';
         if (newInterest.includes('3008') || newInterest.includes('Peugeot')) newInterest = 'Peugeot 3008 Hybrid (con TV de regalo 📺)';
         else if (newInterest.includes('Silverado') || newInterest.includes('Trailboss')) newInterest = 'Silverado Trailboss (Transferencia Gratis 📄)';
@@ -1468,7 +1476,7 @@ app.post('/webhook',async(req,res)=>{
       const allUsersWH=await tRead(F.users,tenant);
       const assignedUserWH=allUsersWH.find(u=>u.username===ld[tenant][idx].assignedTo)||RMG_VENDORS.find(v=>v.username===ld[tenant][idx].assignedTo);
       const assignedNameWH=ld[tenant][idx].botPersona||assignedUserWH?.name||'Cata';
-      const p=await marcela(tenant,ld[tenant][idx].chatHistory.slice(0,-1),body,ld[tenant][idx].notes,assignedNameWH);
+      const p=await marcela(tenant,ld[tenant][idx].chatHistory.slice(0,-1),body,ld[tenant][idx].notes,assignedNameWH,ld[tenant][idx].source);
       applySignal(ld[tenant][idx],p);
       
       if(p.schedule_detected && p.schedule_text) {
