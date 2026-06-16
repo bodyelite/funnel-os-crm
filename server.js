@@ -375,7 +375,44 @@ async function getSellers(tenant) {
 }
 async function rrNext(tenant,exclude=null){const sl=await getSellers(tenant);if(!sl.length)return null;const pool=exclude?sl.filter(s=>s.username!==exclude):sl;const list=pool.length?pool:sl;const rr=await read(F.rr);const idx=(rr[tenant]||0)%list.length;rr[tenant]=(idx+1)%list.length;await write(F.rr,rr);return list[idx];}
 
+
+function enHorarioHabil() {
+  const d = new Date();
+  // Ajuste a hora de Chile (UTC-4 o UTC-3 dependiendo de la época, asumimos zona local del servidor)
+  // Lo ideal es fijarlo a la zona horaria de Chile si el servidor está en otra parte.
+  // Usaremos Intl.DateTimeFormat para estar seguros.
+  const options = { timeZone: 'America/Santiago', hour: 'numeric', minute: 'numeric', hour12: false, weekday: 'long' };
+  const formatter = new Intl.DateTimeFormat('es-CL', options);
+  const parts = formatter.formatToParts(d);
+  
+  let hour = 0, minute = 0, weekday = '';
+  for (const p of parts) {
+    if (p.type === 'hour') hour = parseInt(p.value, 10);
+    if (p.type === 'minute') minute = parseInt(p.value, 10);
+    if (p.type === 'weekday') weekday = p.value.toLowerCase();
+  }
+
+  // Si es Domingo, nunca es hábil
+  if (weekday === 'domingo') return false;
+
+  const totalMins = hour * 60 + minute;
+  const startMins = 10 * 60; // 10:00
+  const endMins = 18 * 60 + 30; // 18:30
+
+  // Si es Sábado, el cierre es a las 14:00 según lo que me comentaste antes
+  if (weekday === 'sábado' || weekday === 'sabado') {
+      return totalMins >= startMins && totalMins <= (14 * 60);
+  }
+
+  return totalMins >= startMins && totalMins <= endMins;
+}
+
 function calcAlert(lead){
+  // Si no estamos en horario hábil, el SLA se congela en 'fresh' (a menos que ya estuviera crítico/en riesgo antes de cerrar)
+  if (!enHorarioHabil()) {
+      return lead.alertLevel || 'none'; 
+  }
+
   if(FINAL_ST.has(lead.status))return'none';
   if(lead.status==='esperando_respuesta_chileautos'||lead.status==='esperando_respuesta_general')return'none';
   if(lead.status==='Reservado'){
@@ -416,7 +453,7 @@ async function applySlaRules(tenant){
     if(lead.status==='Nuevo'){
       const ref=(lead.status==='esperando_respuesta_chileautos'||lead.status==='esperando_respuesta_general')?lead.lastInteraction:(lead.lastClientTs||lead.lastInteraction);
       const mins=ref?(Date.now()-new Date(ref).getTime())/60000:0;
-      if(mins>SLA_REASSIGN&&!lead.reassigned){
+      if(mins>SLA_REASSIGN&&!lead.reassigned && enHorarioHabil()){
         const nextObj=await rrNext(tenant,lead.assignedTo);
         if(nextObj&&nextObj.username!==lead.assignedTo){
           const aiSumR=lead.ai_summary?' Resumen IA: '+lead.ai_summary:'';
