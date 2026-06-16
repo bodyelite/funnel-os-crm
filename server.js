@@ -1695,23 +1695,6 @@ app.post('/api/tasacion/request', async (req, res) => {
   }
 });
 
-    const ti = lead.tradeIn || {};
-    const texto = `📋 SOLICITUD DE TASACIÓN:\nLead: ${lead.name}\n` +
-      `Vehículo en retoma: ${ti.make || '?'} ${ti.model || '?'} ${ti.year || '?'}\n` +
-      `Color: ${ti.color || '?'}\nPor favor evaluar y registrar oferta en el CRM.`;
-
-    const users = await tRead(F.users, tenant, []);
-    const admins = users.filter(u => u.role === 'admin' && u.status === 'Activo');
-    for (const admin of admins) {
-      if (admin.phone) await sendWA(admin.phone, texto);
-    }
-    res.json({ ok: true, notified: STAFF_TASACION.length });
-  } catch (err) {
-    console.error('/api/tasacion/request error:', err);
-    res.status(500).json({ error: err.message });
-  }
-});
-
 
 // ── SPRINT 4: Tasación Offer ─────────────────────────────────────────────────
 app.post('/api/tasacion/offer', async (req, res) => {
@@ -1733,30 +1716,6 @@ app.post('/api/tasacion/offer', async (req, res) => {
       const vendedor = users.find(u => u.username === lead.assignedTo) || RMG_VENDORS.find(v => v.username === lead.assignedTo);
       if (vendedor && vendedor.phone) {
         const msg = `✅ TASACIÓN LISTA\nLead: ${lead.name}\nRetoma: ${lead.tradeIn.make} ${lead.tradeIn.model} ${lead.tradeIn.year}\nOferta taller: ${fmt}\nYa puedes informar al cliente.`;
-        await sendWA(vendedor.phone, msg);
-      }
-    }
-    res.json({ ok: true, offer: lead.tradeIn.offer, status: lead.tradeIn.status });
-  } catch (err) {
-    console.error('/api/tasacion/offer error:', err);
-    res.status(500).json({ error: err.message });
-  }
-});
-
-    if (!lead.tradeIn) lead.tradeIn = { make:'', model:'', year:'', color:'', status:'Pendiente', offer:0 };
-    lead.tradeIn.offer = Number(offerAmount);
-    lead.tradeIn.status = 'Evaluado';
-
-    await tWrite(F.leads, tenant, leads);
-
-    const fmt = new Intl.NumberFormat('es-CL', { style:'currency', currency:'CLP', maximumFractionDigits:0 }).format(lead.tradeIn.offer);
-    if (lead.assignedTo) {
-      const users = await tRead(F.users, tenant, []);
-      const vendedor = users.find(u => u.name === lead.assignedTo || u.id === lead.assignedTo);
-      if (vendedor && vendedor.phone) {
-        const msg = `✅ TASACIÓN LISTA\nLead: ${lead.name}\n` +
-          `Retoma: ${lead.tradeIn.make} ${lead.tradeIn.model} ${lead.tradeIn.year}\n` +
-          `Oferta taller: ${fmt}\nYa puedes cerrar la venta.`;
         await sendWA(vendedor.phone, msg);
       }
     }
