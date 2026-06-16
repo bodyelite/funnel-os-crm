@@ -776,7 +776,8 @@ function renderAnalytics() {
 
   html += '<div class="tg">';
   data.forEach(g => {
-    html += `<div class="tc" onclick="event.stopPropagation(); this.classList.toggle('op');">
+    const isOpen = window.openAccs && window.openAccs.has(g.mainSrc);
+    html += `<div class="tc ${isOpen ? 'op' : ''}" onclick="event.stopPropagation(); this.classList.toggle('op'); window.openAccs = window.openAccs || new Set(); if(this.classList.contains('op')) window.openAccs.add('${g.mainSrc}'); else window.openAccs.delete('${g.mainSrc}');">
       <div class="th" style="${gc}">
         <div class="cv" style="font-size:10px;color:var(--tm);transition:transform 0.2s">▶</div>
         <div class="tnm" style="font-weight:700;font-size:13px">${esc(g.mainSrc)}</div>
@@ -791,7 +792,7 @@ function renderAnalytics() {
       <div class="tbd" style="display:none;border-top:1px solid var(--bd);padding:10px 16px;background:var(--p2)">
         <div style="display:grid;gap:6px">
           ${g.sub.map(s => `
-            <div style="${gc};padding:8px 0;border-bottom:1px dashed var(--bd);font-size:12px;align-items:center">
+            <div style="display:grid; ${gc}; padding:8px 0; border-bottom:1px dashed var(--bd); font-size:12px; align-items:center;">
               <div></div>
               <div style="color:var(--ts);font-weight:600;white-space:normal">↳ ${esc(s.channel)}</div>
               <div style="font-weight:700">${s.leads}</div>
@@ -1146,7 +1147,20 @@ function renderModal(){const l=findLead(S.mid);if(!l){closeModal();return;}$('mT
           ${isAdmin ? `
           <div style="margin-top:10px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;border-top:1px solid #1e293b;padding-top:10px;">
             <span style="color:#94a3b8;font-size:12px;">Registrar Oferta Taller ($)</span>
-            <input type="number" id="offerInput" placeholder="ej: 4500000" style="background:#1e293b;border:1px solid #334155;color:#e2e8f0;border-radius:6px;padding:5px 10px;font-size:13px;width:160px;">
+            <select id="offerInput" style="flex:1; padding:6px; background:var(--p3); border:1px solid var(--bd); border-radius:4px; font-size:11.5px; color:var(--tx);">
+              <option value="">Seleccionar precio de toma...</option>
+              <option value="5000000">$5.000.000</option>
+              <option value="6000000">$6.000.000</option>
+              <option value="7000000">$7.000.000</option>
+              <option value="8000000">$8.000.000</option>
+              <option value="9000000">$9.000.000</option>
+              <option value="10000000">$10.000.000</option>
+              <option value="11000000">$11.000.000</option>
+              <option value="12000000">$12.000.000</option>
+              <option value="13000000">$13.000.000</option>
+              <option value="14000000">$14.000.000</option>
+              <option value="15000000">$15.000.000</option>
+            </select>
             <button onclick="registrarOferta('${lead.id}')" style="background:#22c55e;color:#fff;border:none;border-radius:6px;padding:6px 14px;font-size:12px;cursor:pointer;">✅ Registrar Oferta ($)</button>
           </div>
           ` : ''}
