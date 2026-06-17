@@ -12,6 +12,7 @@
     "express": "^4.22.2",
     "imap": "^0.8.19",
     "mailparser": "^3.9.8",
+    "multer": "^2.2.0",
     "node-fetch": "^3.3.2",
     "openai": "^6.43.0",
     "puppeteer": "^25.1.0",
