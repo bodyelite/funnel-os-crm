@@ -1221,7 +1221,7 @@ app.post('/webhook',async(req,res)=>{
         let photoBody = caption ? `[FOTO RECIBIDA] ${caption}` : `[FOTO RECIBIDA]`;
 
         ld[tenant][idx].chatHistory = ld[tenant][idx].chatHistory || [];
-        ld[tenant][idx].chatHistory.push({ role: 'user', content: `[FOTO RECIBIDA ${photoCount}/4]${caption ? ' — ' + caption : ''}`, ts: Date.now() });
+        ld[tenant][idx].chatHistory.push({ role: 'user', content: `[FOTO RECIBIDA]${caption ? ' — ' + caption : ''}`, ts: Date.now() });
 
         if (ld[tenant][idx].botActive !== false) {
           const allUsersIMG = await tRead(F.users, tenant);
@@ -1555,6 +1555,7 @@ setInterval(async()=>{
       for(const lead of leads){
         if(FINAL_ST.has(lead.status))continue;
         const na=lead.nextAction;
+                continue; // IA PROACTIVA ELIMINADA DE RAIZ
         if(!na||!na.date||!na.text||na.iaCompleted===true)continue;
         if(new Date(na.date)>new Date())continue;
         try{
