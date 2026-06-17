@@ -170,7 +170,7 @@ async function marcela(tenant, history, msg, notes, assignedName, leadSource) {
     return { reply: 'Dame un segundito, estoy validando la info en el sistema...', intent_signal: 'NONE' };
   }
 }
-const F={users:path.join(DATA,'users.json'),leads:path.join(DATA,'leads.json'),config:path.join(DATA,'config.json'),bot:path.join(__dirname,'bot1.json'),inventory:path.join(DATA,'inventory.json'),rr:path.join(DATA,'rr.json'),spend:path.join(DATA,'spend.json')};
+const F={users:path.join(DATA,'users.json'),leads:path.join(DATA,'leads.json'),config:path.join(DATA,'config.json'),bot:path.join(__dirname,'bot.json'),inventory:path.join(DATA,'inventory.json'),rr:path.join(DATA,'rr.json'),spend:path.join(DATA,'spend.json')};
 const TENANTS=['demo_automotora','demo_clinica'];
 const sessions=new Map();
 const chatSessions=new Map();
@@ -674,10 +674,8 @@ app.post('/api/leads/:id/resumen',auth('admin','vendedor'),async(req,res)=>{
   const notasSnip=(lead.notes||[]).filter(n=>n.author!=='Resumen IA').slice(-5).map(n=>n.author+': '+n.content).join('\n');
   if(!histSnip)return res.status(400).json({error:'Sin historial'});
   try{
-    const botCfg = await tRead(F.bot, req.tenant, {});
-    const promptResumen = botCfg.tareas_internas?.resumenPrompt || 'Redacta un BRIEFING de max 3 lineas.';
     const r=await openai.chat.completions.create({model:'gpt-4o-mini',temperature:0.4,max_tokens:200,
-      messages:[{role:'system',content: promptResumen},
+      messages:[{role:'system',content:'Eres un asistente comercial de automotora. Con el historial de chat y las notas del vendedor, redacta un BRIEFING narrativo de maximo 3 lineas: (1) [Nombre] consulta por [auto especifico]. (2) [Que dijo sobre financiamiento, retoma, fecha o acuerdo]. (3) Sugerencia: [accion concreta para el vendedor ahora]. Espanol directo, sin emojis, sin titulos, solo el parrafo.'},
                 {role:'user',content:'NOMBRE: '+lead.name+'\nHISTORIAL:\n'+histSnip+(notasSnip?'\nNOTAS DEL VENDEDOR:\n'+notasSnip:'')}]});
     const resumen=(r.choices?.[0]?.message?.content||'').trim();
     if(!resumen)return res.status(500).json({error:'Sin respuesta de OpenAI'});
@@ -849,9 +847,7 @@ app.post('/api/chat',async(req,res)=>{
       try{
         const histSnip=leads[idx].chatHistory.slice(-10).map(m=>(m.role==='user'?'Cliente':'Asesor')+': '+m.content).join('\n');
         const notasSnip=(leads[idx].notes||[]).filter(n=>n.author!=='Resumen IA').slice(-3).map(n=>n.author+': '+n.content).join('\n');
-        let botCfg2 = await tRead(F.bot, tenant, {});
-        let pRes = botCfg2.tareas_internas?.resumenPrompt || 'Redacta un BRIEFING de max 3 lineas.';
-        const resComp=await openai.chat.completions.create({model:'gpt-4o-mini',temperature:0.4,max_tokens:200,messages:[{role:'system',content:pRes},{role:'user',content:'NOMBRE: '+leads[idx].name+'\nHISTORIAL:\n'+histSnip+(notasSnip?'\nNOTAS DEL VENDEDOR:\n'+notasSnip:'')}]});
+        const resComp=await openai.chat.completions.create({model:'gpt-4o-mini',temperature:0.4,max_tokens:200,messages:[{role:'system',content:'Eres un asistente comercial de automotora. Con el historial de chat y las notas del vendedor, redacta un BRIEFING narrativo de maximo 3 lineas: (1) [Nombre] consulta por [auto especifico]. (2) [Que dijo sobre financiamiento, retoma, fecha o acuerdo]. (3) Sugerencia: [accion concreta para el vendedor ahora]. Espanol directo, sin emojis, sin titulos, solo el parrafo.'},{role:'user',content:'NOMBRE: '+leads[idx].name+'\nHISTORIAL:\n'+histSnip+(notasSnip?'\nNOTAS DEL VENDEDOR:\n'+notasSnip:'')}]});
         const resumenIA=(resComp.choices?.[0]?.message?.content||'').trim()||'Interés detectado en crédito/retoma.';
         leads[idx].ai_summary=resumenIA;
         if(assignedUserChat?.phone)sendWA(assignedUserChat.phone,'✅ Lead Asignado: '+leads[idx].name+'. Resumen IA: '+resumenIA+' — Entra al CRM para cerrar.').catch(()=>{});
@@ -1222,8 +1218,11 @@ app.post('/webhook',async(req,res)=>{
         const photoCount = ld[tenant][idx].media.filter(m => m.type === 'image').length;
         const faltan = Math.max(0, 4 - photoCount);
 
-        let photoBody = caption ? `[FOTO RECIBIDA] ${caption}` : `[FOTO RECIBIDA]`;
-        /4] Llevas ${photoCount} foto(s), faltan ${faltan}. Agradece brevemente y pide las ${faltan} foto(s) exterior(es) que faltan para evaluar bien el vehículo. NO des el gracias final hasta recibir las 4.`;
+        let photoBody;
+        if (photoCount >= 4) {
+          photoBody = `[FOTO RECIBIDA - Total: ${photoCount}] El cliente ya mandó ${photoCount} fotos del vehículo en parte de pago. Agradécele cálidamente que las recibiste todas y que las usarás para la evaluación. Continúa con el Paso 4 del embudo (financiamiento).`;
+        } else {
+          photoBody = `[FOTO RECIBIDA - Total: ${photoCount}/4] Llevas ${photoCount} foto(s), faltan ${faltan}. Agradece brevemente y pide las ${faltan} foto(s) exterior(es) que faltan para evaluar bien el vehículo. NO des el gracias final hasta recibir las 4.`;
         }
 
         ld[tenant][idx].chatHistory = ld[tenant][idx].chatHistory || [];
@@ -1503,9 +1502,7 @@ app.post('/webhook',async(req,res)=>{
         ld[tenant][idx].notes=Array.isArray(ld[tenant][idx].notes)?ld[tenant][idx].notes:[];
         try{
           const histSnipWH=ld[tenant][idx].chatHistory.slice(-10).map(m=>(m.role==='user'?'Cliente':'Asesor')+': '+m.content).join('\n');
-          let botCfg3 = await tRead(F.bot, tenant, {});
-          let pResWH = botCfg3.tareas_internas?.resumenPrompt || 'Redacta un BRIEFING de max 3 lineas.';
-          const resCompWH=await openai.chat.completions.create({model:'gpt-4o-mini',temperature:0.4,max_tokens:200,messages:[{role:'system',content:pResWH},{role:'user',content:'NOMBRE: '+ld[tenant][idx].name+'\nHISTORIAL:\n'+histSnipWH}]});
+          const resCompWH=await openai.chat.completions.create({model:'gpt-4o-mini',temperature:0.4,max_tokens:200,messages:[{role:'system',content:'Eres un asistente comercial de automotora. Con el historial de chat y las notas del vendedor, redacta un BRIEFING narrativo de maximo 3 lineas: (1) [Nombre] consulta por [auto especifico]. (2) [Que dijo sobre financiamiento, retoma, fecha o acuerdo]. (3) Sugerencia: [accion concreta para el vendedor ahora]. Espanol directo, sin emojis, sin titulos, solo el parrafo.'},{role:'user',content:'NOMBRE: '+ld[tenant][idx].name+'\nHISTORIAL:\n'+histSnipWH}]});
           const resumenIAWH=(resCompWH.choices?.[0]?.message?.content||'').trim()||'Interés en crédito/retoma detectado.';
           ld[tenant][idx].ai_summary=resumenIAWH;
           if(assignedUserWH?.phone)sendWA(assignedUserWH.phone,'✅ Lead Reasignado: '+ld[tenant][idx].name+'. Resumen IA: '+resumenIAWH+' — Entra al CRM.').catch(()=>{});
@@ -1556,7 +1553,33 @@ app.get('/api/inventory/scraper',auth('admin','vendedor'),async(req,res)=>{
   }
   res.json({ts:scrapeCache.ts, raw:scrapeCache.data||'', structured: finalInv});
 });
-// Cron de IA Proactiva eliminado según requerimiento
+setInterval(async()=>{
+  for(const t of TENANTS){
+    try{
+      const leads=await tRead(F.leads,t);let changed=false;
+      for(const lead of leads){
+        if(FINAL_ST.has(lead.status))continue;
+        const na=lead.nextAction;
+        if(!na||!na.date||!na.text||na.iaCompleted===true)continue;
+        if(new Date(na.date)>new Date())continue;
+        try{
+          const histSnip=(lead.chatHistory||[]).slice(-10).map(m=>(m.role==='user'?'Cliente':m.role==='agent'?'Vendedor':'IA')+': '+m.content).join('\n');
+          const comp=await openai.chat.completions.create({model:'gpt-4o-mini',temperature:0.6,max_tokens:160,messages:[{role:'user',content:'Eres Cata, asesora de RMG Autos. Redacta mensaje breve de seguimiento en español chileno (max 2 oraciones). Instrucción: "'+na.text+'". Historial:\n'+histSnip+'\n\nREGLA CRÍTICA: TIENES ESTRICTAMENTE PROHIBIDO INVENTAR PRECIOS, TASAR VEHÍCULOS O NEGOCIAR VALORES DE RETOMA. Jamás des una oferta de dinero por un auto en parte de pago. Limítate al seguimiento sin involucrar montos.'}]});
+          const iaMsg=(comp.choices?.[0]?.message?.content||'').trim();
+          if(!iaMsg)continue;
+          const phone=(lead.phone||'').replace(/\D/g,'');
+          if(phone)await sendWA(phone,iaMsg).catch(()=>{});
+          lead.chatHistory=lead.chatHistory||[];
+          lead.chatHistory.push({role:'ia_proactiva',content:iaMsg,ts:Date.now(),agentName:'IA Proactiva'});
+          na.iaCompleted=true;na.iaCompletedAt=new Date().toISOString();
+          lead.lastInteraction=new Date().toISOString();changed=true;
+          console.log('[IA-Proactiva] Enviado a '+lead.name);
+        }catch(eP){console.error('[IA-Proactiva]',lead.name,eP.message);}
+      }
+      if(changed)await tWrite(F.leads,t,leads);
+    }catch(eT){console.error('[IA-Proactiva-cron]',eT.message);}
+  }
+},60000);
 
 // ════════════════════════════════════════════════════════════════════════════
 // CRON Sprint 3 — Alertas SLA Riesgo (20m) + Retargeting Post-Link (2m)
