@@ -10,6 +10,7 @@
   "dependencies": {
     "dotenv": "^17.4.2",
     "express": "^4.22.2",
+    "form-data": "^4.0.6",
     "imap": "^0.8.19",
     "mailparser": "^3.9.8",
     "multer": "^2.2.0",
