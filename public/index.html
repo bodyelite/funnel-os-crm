@@ -1392,7 +1392,7 @@ function uploadWAMedia() {
   const fd = new FormData();
   fd.append('file', fi.files[0]);
   
-  const token = localStorage.getItem('token');
+  const token = S.token;
   const btn = document.getElementById('waFile').nextElementSibling;
   const oldText = btn.textContent;
   btn.textContent = '⏳';
@@ -1939,7 +1939,7 @@ async function sendContacto4() {
   btn.disabled = true;
   btn.textContent = 'Enviando...';
   try {
-    const token = localStorage.getItem('authToken') || sessionStorage.getItem('authToken');
+    const token = S.token;
     const res = await fetch('/api/leads/' + leadId + '/send-template', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'X-Auth-Token': token },
@@ -2119,7 +2119,7 @@ function enviarPlantillaSaludo3() {
   const lang = prompt('Confirmar Idioma (ej: es_LA, es, es_CL):', 'es_LA');
   if(!lang) return;
   
-  const token = localStorage.getItem('token');
+  const token = S.token;
   fetch('/api/leads/' + S.mid + '/send-template', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'X-Auth-Token': token },
