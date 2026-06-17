@@ -610,7 +610,8 @@ app.post('/api/leads/:id/send-media', auth('admin','vendedor'), uploadWA.single(
 
     // 1. Subir archivo a los servidores de Meta
     const form = new (require('form-data'))();
-    form.append('file', fsSync.createReadStream(req.file.path));
+    form.append('file', fsSync.createReadStream(req.file.path), { contentType: req.file.mimetype });
+    form.append('type', req.file.mimetype);
     form.append('messaging_product', 'whatsapp');
     
     const upRes = await fetch(`https://graph.facebook.com/v19.0/${phoneId}/media`, {
@@ -1909,12 +1910,13 @@ app.post('/api/leads/:id/send-template', auth('admin','vendedor'), async (req, r
     const phone = lead.phone?.replace(/\D/g,'');
     if (!phone) return res.status(400).json({ error: 'Lead sin teléfono' });
     const components = [];
+    const lang = req.body.language || 'es_LA';
     const waRes = await fetch(`https://graph.facebook.com/v19.0/${phoneId}/messages`, {
       method: 'POST',
       headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' },
       body: JSON.stringify({
         messaging_product: 'whatsapp', to: phone, type: 'template',
-        template: { name: templateName, language: { code: 'es' }, components }
+        template: { name: templateName, language: { code: lang }, components }
       })
     });
     const waJson = await waRes.json();

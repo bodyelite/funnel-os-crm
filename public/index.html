@@ -2114,15 +2114,18 @@ function enviarPlantillaSaludo3() {
   const l = S.leads.find(x => x.id == S.mid);
   if(!l || !l.phone || l.phone === 'Pendiente') return alert('El lead no tiene teléfono válido para WhatsApp.');
   
-  if(!confirm('¿Estás seguro que deseas enviar la plantilla oficial (saludo3) a este cliente?')) return;
+  const tName = prompt('Confirmar Nombre de Plantilla:', 'saludo3');
+  if(!tName) return;
+  const lang = prompt('Confirmar Idioma (ej: es_LA, es, es_CL):', 'es_LA');
+  if(!lang) return;
   
   const token = localStorage.getItem('token');
   fetch('/api/leads/' + S.mid + '/send-template', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'X-Auth-Token': token },
-    body: JSON.stringify({ templateName: 'saludo3', params: [] })
+    body: JSON.stringify({ templateName: tName.trim(), language: lang.trim(), params: [] })
   }).then(r => r.json()).then(res => {
-    if(res.error) alert('Error: ' + res.error);
+    if(res.error) alert('Error WA: ' + JSON.stringify(res.error));
     else {
       alert('Plantilla enviada con éxito.');
       window.location.reload();
