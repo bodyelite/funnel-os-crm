@@ -1218,12 +1218,7 @@ app.post('/webhook',async(req,res)=>{
         const photoCount = ld[tenant][idx].media.filter(m => m.type === 'image').length;
         const faltan = Math.max(0, 4 - photoCount);
 
-        let photoBody;
-        if (photoCount >= 4) {
-          photoBody = `[FOTO RECIBIDA - Total: ${photoCount}] El cliente ya mandó ${photoCount} fotos del vehículo en parte de pago. Agradécele cálidamente que las recibiste todas y que las usarás para la evaluación. Continúa con el Paso 4 del embudo (financiamiento).`;
-        } else {
-          photoBody = `[FOTO RECIBIDA - Total: ${photoCount}/4] Llevas ${photoCount} foto(s), faltan ${faltan}. Agradece brevemente y pide las ${faltan} foto(s) exterior(es) que faltan para evaluar bien el vehículo. NO des el gracias final hasta recibir las 4.`;
-        }
+        let photoBody = caption ? `[FOTO RECIBIDA] ${caption}` : `[FOTO RECIBIDA]`;
 
         ld[tenant][idx].chatHistory = ld[tenant][idx].chatHistory || [];
         ld[tenant][idx].chatHistory.push({ role: 'user', content: `[FOTO RECIBIDA ${photoCount}/4]${caption ? ' — ' + caption : ''}`, ts: Date.now() });
