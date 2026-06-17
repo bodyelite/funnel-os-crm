@@ -616,7 +616,7 @@ app.post('/api/leads/:id/send-media', auth('admin','vendedor'), uploadWA.single(
     
     const upRes = await fetch(`https://graph.facebook.com/v19.0/${phoneId}/media`, {
       method: 'POST',
-      headers: { Authorization: 'Bearer ' + token },
+      headers: { ...form.getHeaders(), Authorization: 'Bearer ' + token },
       body: form
     });
     const upJson = await upRes.json();
@@ -1910,7 +1910,13 @@ app.post('/api/leads/:id/send-template', auth('admin','vendedor'), async (req, r
     const phone = lead.phone?.replace(/\D/g,'');
     if (!phone) return res.status(400).json({ error: 'Lead sin teléfono' });
     const components = [];
-    const lang = req.body.language || 'es_LA';
+    if (params && params.length) {
+      components.push({
+        type: 'body',
+        parameters: params.map(p => ({ type: 'text', text: String(p) }))
+      });
+    }
+    const lang = req.body.language || 'es';
     const waRes = await fetch(`https://graph.facebook.com/v19.0/${phoneId}/messages`, {
       method: 'POST',
       headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' },
