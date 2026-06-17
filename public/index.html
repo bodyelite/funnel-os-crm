@@ -386,7 +386,7 @@ document.addEventListener('visibilitychange', () => {
 <div class="cchat">
 <div id="mCtx" class="ctx" style="display:none"></div>
 <div><h4>Historial de chat</h4><div class="cbx" id="mChat"></div></div>
-<div><div class="acl">Responder al cliente (→ WhatsApp)</div><div class="acmp"><textarea id="aMsg" placeholder="Escribe un mensaje..." rows="2"></textarea><button class="snb" id="aSnd">Enviar ➤</button></div></div>
+<div><div class="acl" style="display:flex;justify-content:space-between;align-items:center;"><span>Responder al cliente (→ WhatsApp)</span><button onclick="enviarPlantillaSaludo3()" style="background:#10b981;color:white;border:none;border-radius:4px;padding:4px 8px;font-size:11px;cursor:pointer;">📨 Enviar Plantilla (saludo3)</button></div><div class="acmp"><textarea id="aMsg" placeholder="Escribe un mensaje..." rows="2"></textarea><button class="snb" id="aSnd">Enviar ➤</button></div></div>
 <div class="ai-sum-box" id="aiSumBox"><div class="ai-label">🧠 Resumen IA</div><div class="ai-txt" id="aiSumTxt"></div></div>
 </div>
 <div class="ca2">
@@ -1361,6 +1361,22 @@ window.registrarOferta = async function(leadId) {
 
 
 <script>
+
+function downloadMedia(url) {
+  fetch(url)
+    .then(resp => resp.blob())
+    .then(blob => {
+      const u = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.style.display = 'none';
+      a.href = u;
+      a.download = 'rmg_archivo_' + Date.now();
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(u);
+    })
+    .catch(() => alert('Error al descargar el archivo.'));
+}
 // [SPRINT5-MULTIMEDIA-FRONTEND]
 function renderMediaGallery(lead) {
   const anchor = document.getElementById('tradein-section') || document.querySelector('.cchat');
@@ -1377,8 +1393,11 @@ function renderMediaGallery(lead) {
 
   items.forEach(function(item) {
     const imgUrl = (item.url && item.url.startsWith('http')) ? item.url : '/api/media/' + item.url;
+    html += '<div style="position:relative; width:90px; height:120px; display:flex; flex-direction:column; align-items:center; gap:4px;">';
     html += '<div style="position:relative;width:90px;height:90px;border-radius:6px;border:2px solid #cbd5e1;background:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;overflow:hidden;" onclick="window.open(\''+imgUrl+'\',\'_blank\')">';
     html += '<img src="' + imgUrl + '" title="Clic para ver detalle o error" style="width:100%;height:100%;object-fit:cover;" onerror="this.onerror=null; this.src=\'https://via.placeholder.com/90/fee2e2/ef4444?text=VER+ERROR\';">';
+    html += '</div>';
+    html += '<button onclick="downloadMedia(\''+imgUrl+'\')" style="background:#3b82f6;color:white;border:none;border-radius:4px;padding:2px 8px;font-size:10px;cursor:pointer;width:100%;">📥 Descargar</button>';
     html += '</div>';
   });
 
@@ -2052,6 +2071,27 @@ function renderComprasFull() {
     }
 }
 
+
+function enviarPlantillaSaludo3() {
+  if(!S.mid) return alert('Selecciona un lead primero.');
+  const l = S.leads.find(x => x.id == S.mid);
+  if(!l || !l.phone || l.phone === 'Pendiente') return alert('El lead no tiene teléfono válido para WhatsApp.');
+  
+  if(!confirm('¿Estás seguro que deseas enviar la plantilla oficial (saludo3) a este cliente?')) return;
+  
+  const token = localStorage.getItem('token');
+  fetch('/api/leads/' + S.mid + '/send-template', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'X-Auth-Token': token },
+    body: JSON.stringify({ templateName: 'saludo3', params: [] })
+  }).then(r => r.json()).then(res => {
+    if(res.error) alert('Error: ' + res.error);
+    else {
+      alert('Plantilla enviada con éxito.');
+      window.location.reload();
+    }
+  }).catch(e => alert('Fallo de conexión.'));
+}
 </script>
 </body>
 </html>
