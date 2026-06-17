@@ -339,7 +339,7 @@ async function scrapeRMG() {
       });
 
       autos.push(
-        `- ${fullModel}${anno?' '+anno:''} | ${km?km.toLocaleString('es-CL')+' km':'km n/d'} | Lista: $${precioLista.toLocaleString('es-CL')} | Credito: $${precioCredito.toLocaleString('es-CL')}${fuel?' | '+fuel:''}${trans?' | '+trans:''}`
+        `- ${fullModel}${anno?' '+anno:''} | ${km?km.toLocaleString('es-CL')+' km':'km n/d'} | Lista: $${precioLista.toLocaleString('es-CL')} | Credito: ${precioCredito.toLocaleString('es-CL')}${fuel?' | '+fuel:''}${trans?' | '+trans:''} | Link: ${cardLink}`
       );
 
       autoIdx++;
