@@ -1,29 +1,78 @@
 const fs = require('fs');
 const path = require('path');
+const file = path.join(__dirname, 'server.js');
+let code = fs.readFileSync(file, 'utf8');
 
-const filePath = path.join(__dirname, 'server.js');
-let code = fs.readFileSync(filePath, 'utf8');
-
-let count = 0;
-
-// Fix 1: form.getHeaders() en send-media
-const f1 = `headers: { Authorization: 'Bearer ' + token },\n      body: form`;
-const r1 = `headers: { ...form.getHeaders(), Authorization: 'Bearer ' + token },\n      body: form`;
-if (code.includes(f1)) { code = code.replace(f1, r1); count++; console.log('✅ Fix 1: form.getHeaders()'); }
-else console.log('⚠️  Fix 1 no encontrado');
-
-// Fix 2: language es_LA → es + components con params
-const f2 = `    const components = [];\n    const lang = req.body.language || 'es_LA';`;
-const r2 = `    const components = [];
+const OLD = `app.post('/api/leads/:id/send-template', auth('admin','vendedor'), async (req, res) => {
+  try {
+    const tenant = req.tenant;
+    const { templateName, params } = req.body;
+    if (!templateName) return res.status(400).json({ error: 'templateName requerido' });
+    const leads = await tRead(F.leads, tenant);
+    const lead = leads.find(l => l.id == req.params.id);
+    if (!lead) return res.status(404).json({ error: 'Lead no encontrado' });
+    const token = (process.env.WA_TOKEN || '').trim(), phoneId = (process.env.WA_PHONE_ID || '').trim();
+    if (!token || !phoneId) return res.status(500).json({ error: 'WA no configurado' });
+    const phone = lead.phone?.replace(/\\D/g,'');
+    if (!phone) return res.status(400).json({ error: 'Lead sin teléfono' });
+    const components = [];
     if (params && params.length) {
       components.push({
         type: 'body',
         parameters: params.map(p => ({ type: 'text', text: String(p) }))
       });
     }
-    const lang = req.body.language || 'es';`;
-if (code.includes(f2)) { code = code.replace(f2, r2); count++; console.log('✅ Fix 2: language + components'); }
-else console.log('⚠️  Fix 2 no encontrado');
+    const lang = req.body.language || 'es';
+    const waRes = await fetch(\`https://graph.facebook.com/v19.0/\${phoneId}/messages\`, {
+      method: 'POST',
+      headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        messaging_product: 'whatsapp', to: phone, type: 'template',
+        template: { name: templateName, language: { code: lang }, components }
+      })
+    });
+    const waJson = await waRes.json();
+    if (!waRes.ok) return res.status(502).json({ error: 'WA error', detail: waJson });
+    // Registrar en chatHistory
+    const idx = leads.findIndex(l => l.id == req.params.id);
+    leads[idx].chatHistory = leads[idx].chatHistory || [];
+    leads[idx].chatHistory.push({ role: 'bot', content: \`[PLANTILLA WA ENVIADA: \${templateName}]\`, ts: Date.now() });
+    if (leads[idx].waSequence) {
+      leads[idx].waSequence.step = 4;
+      leads[idx].waSequence.lastSentAt = new Date().toISOString();
+    }
+    await tWrite(F.leads, tenant, leads);
+    res.json({ ok: true });
+  } catch(e) {
+    res.status(500).json({ error: e.message });
+  }
+});`;
 
-fs.writeFileSync(filePath, code, 'utf8');
-console.log(`\nListo — ${count} fix(es) aplicados en ${filePath}`);
+const NEW = `app.post('/api/leads/:id/send-template', auth('admin','vendedor'), async (req, res) => {
+  try {
+    const tenant = req.tenant;
+    const { templateName, params } = req.body;
+    if (!templateName) return res.status(400).json({ error: 'templateName requerido' });
+    const leads = await tRead(F.leads, tenant);
+    const idx = leads.findIndex(l => l.id == req.params.id);
+    if (idx === -1) return res.status(404).json({ error: 'Lead no encontrado' });
+    const phone = (leads[idx].phone || '').replace(/\\D/g,'');
+    if (!phone) return res.status(400).json({ error: 'Lead sin teléfono' });
+    const ok = await sendWATemplate(phone, templateName, params || []);
+    if (!ok) return res.status(502).json({ error: 'Error al enviar plantilla WA' });
+    leads[idx].chatHistory = leads[idx].chatHistory || [];
+    leads[idx].chatHistory.push({ role: 'bot', content: \`[PLANTILLA WA ENVIADA: \${templateName}]\`, ts: Date.now() });
+    await tWrite(F.leads, tenant, leads);
+    res.json({ ok: true });
+  } catch(e) {
+    res.status(500).json({ error: e.message });
+  }
+});`;
+
+if (code.includes(OLD)) {
+  code = code.replace(OLD, NEW);
+  fs.writeFileSync(file, code, 'utf8');
+  console.log('✅ Listo — endpoint send-template ahora usa sendWATemplate');
+} else {
+  console.log('❌ Bloque no encontrado — puede que ya esté aplicado');
+}
