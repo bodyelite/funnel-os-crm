@@ -386,7 +386,12 @@ document.addEventListener('visibilitychange', () => {
 <div class="cchat">
 <div id="mCtx" class="ctx" style="display:none"></div>
 <div><h4>Historial de chat</h4><div class="cbx" id="mChat"></div></div>
-<div><div class="acl" style="display:flex;justify-content:space-between;align-items:center;"><span>Responder al cliente (→ WhatsApp)</span><button onclick="enviarPlantillaSaludo3()" style="background:#10b981;color:white;border:none;border-radius:4px;padding:4px 8px;font-size:11px;cursor:pointer;">📨 Enviar Plantilla (saludo3)</button></div><div class="acmp"><textarea id="aMsg" placeholder="Escribe un mensaje..." rows="2"></textarea><button class="snb" id="aSnd">Enviar ➤</button></div></div>
+<div><div class="acl" style="display:flex;justify-content:space-between;align-items:center;"><span>Responder al cliente (→ WhatsApp)</span><button onclick="enviarPlantillaSaludo3()" style="background:#10b981;color:white;border:none;border-radius:4px;padding:4px 8px;font-size:11px;cursor:pointer;">📨 Enviar Plantilla (saludo3)</button></div><div class="acmp" style="gap:4px;">
+    <input type="file" id="waFile" style="display:none;" onchange="uploadWAMedia()">
+    <button onclick="document.getElementById('waFile').click()" style="background:#64748b;color:white;border:none;border-radius:4px;padding:0 8px;font-size:16px;cursor:pointer;" title="Enviar Archivo (Foto, Video, PDF)">📎</button>
+    <textarea id="aMsg" placeholder="Escribe un mensaje..." rows="2" style="flex:1;"></textarea>
+    <button class="snb" id="aSnd">Enviar ➤</button>
+</div></div>
 <div class="ai-sum-box" id="aiSumBox"><div class="ai-label">🧠 Resumen IA</div><div class="ai-txt" id="aiSumTxt"></div></div>
 </div>
 <div class="ca2">
@@ -1376,6 +1381,38 @@ function downloadMedia(url) {
       window.URL.revokeObjectURL(u);
     })
     .catch(() => alert('Error al descargar el archivo.'));
+}
+
+function uploadWAMedia() {
+  const fi = document.getElementById('waFile');
+  if(!fi.files.length) return;
+  if(!S.mid) { alert('Selecciona un lead primero'); return; }
+  if(!confirm('¿Estás seguro que deseas enviarle este archivo al cliente por WhatsApp?')) { fi.value=''; return; }
+  
+  const fd = new FormData();
+  fd.append('file', fi.files[0]);
+  
+  const token = localStorage.getItem('token');
+  const btn = document.getElementById('waFile').nextElementSibling;
+  const oldText = btn.textContent;
+  btn.textContent = '⏳';
+  btn.disabled = true;
+
+  fetch('/api/leads/' + S.mid + '/send-media', {
+    method: 'POST',
+    headers: { 'X-Auth-Token': token },
+    body: fd
+  }).then(r=>r.json()).then(res=>{
+    btn.textContent = oldText;
+    btn.disabled = false;
+    fi.value='';
+    if(res.error) alert('Error: ' + res.error);
+    else { alert('Archivo enviado con éxito.'); refresh(); }
+  }).catch(e=>{
+    btn.textContent = oldText;
+    btn.disabled = false;
+    alert('Fallo de conexión.');
+  });
 }
 // [SPRINT5-MULTIMEDIA-FRONTEND]
 function renderMediaGallery(lead) {
