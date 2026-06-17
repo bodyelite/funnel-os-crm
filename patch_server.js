@@ -2,70 +2,44 @@ const fs = require('fs');
 const path = require('path');
 const file = path.join(__dirname, 'server.js');
 let code = fs.readFileSync(file, 'utf8');
+let count = 0;
 
-const OLD = `    // Enviar directamente con link público (Meta descarga el archivo)
-    const msgBody = {
-      messaging_product: 'whatsapp',
-      to: phone,
-      type: type,
-      [type]: { link: publicUrl }
-    };
+// Fix 1: ruta /tmp-media con Content-Type correcto
+const F1 = `app.use(express.static(path.join(__dirname,'public')));`;
+const R1 = `app.use(express.static(path.join(__dirname,'public')));
+app.get('/tmp-media/:name', (req, res) => {
+  const fp = require('path').join('/tmp', req.params.name);
+  if (!fsSync.existsSync(fp)) return res.status(404).send('Not found');
+  const ext = fp.split('.').pop().toLowerCase();
+  const mimeMap = { jpg:'image/jpeg', jpeg:'image/jpeg', png:'image/png', gif:'image/gif', webp:'image/webp', mp4:'video/mp4', mov:'video/quicktime', pdf:'application/pdf', doc:'application/msword', docx:'application/vnd.openxmlformats-officedocument.wordprocessingml.document' };
+  const mime = mimeMap[ext] || 'application/octet-stream';
+  res.setHeader('Content-Type', mime);
+  res.sendFile(fp);
+});`;
 
-    const sndRes = await fetch(\`https://graph.facebook.com/v19.0/\${phoneId}/messages\`, {
-      method: 'POST',
-      headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' },
-      body: JSON.stringify(msgBody)
-    });
+if (code.includes(F1) && !code.includes('/tmp-media/:name')) {
+  code = code.replace(F1, R1); count++;
+  console.log('✅ Fix 1: ruta /tmp-media con Content-Type');
+} else console.log('⚠️  Fix 1 ya aplicado');
 
-    // Borrar temporal después de 60s (Meta necesita tiempo para descargarlo)
-    setTimeout(() => { try { fsSync.unlinkSync(req.file.path); } catch(_){} }, 60000);
+// Fix 2: URL con extensión real
+const F2 = `    // Servir el archivo temporalmente como URL pública
+    const tmpName = req.file.filename || path.basename(req.file.path);
+    const publicUrl = (process.env.RENDER_EXTERNAL_URL || 'https://body-elite-giftcards.onrender.com') + '/tmp-media/' + tmpName;`;
 
-    if(sndRes.ok) {
-      leads[idx].chatHistory = leads[idx].chatHistory || [];
-      leads[idx].chatHistory.push({ role: 'agent', content: '[ARCHIVO ENVIADO AL CLIENTE]', ts: Date.now(), agent: req.user.username });
-      await tWrite(F.leads, req.tenant, leads);
-      return res.json({ success: true });
-    } else {
-      const err = await sndRes.json();
-      fsSync.unlinkSync(req.file.path);
-      return res.status(502).json({error: 'Error al enviar por WA', details: err});
-    }`;
+const R2 = `    // Servir el archivo temporalmente como URL pública
+    const tmpName = req.file.filename || path.basename(req.file.path);
+    const mimeToExt = {'image/jpeg':'jpg','image/png':'png','image/gif':'gif','image/webp':'webp','video/mp4':'mp4','video/quicktime':'mov','application/pdf':'pdf','application/msword':'doc','application/vnd.openxmlformats-officedocument.wordprocessingml.document':'docx'};
+    const ext = mimeToExt[req.file.mimetype] || 'bin';
+    const namedPath = req.file.path + '.' + ext;
+    fsSync.renameSync(req.file.path, namedPath);
+    req.file.path = namedPath;
+    const publicUrl = (process.env.RENDER_EXTERNAL_URL || 'https://body-elite-giftcards.onrender.com') + '/tmp-media/' + tmpName + '.' + ext;`;
 
-const NEW = `    // Enviar con link público (Meta descarga el archivo)
-    const mediaObj = { link: publicUrl };
-    if (type === 'document') mediaObj.filename = req.file.originalname || tmpName;
+if (code.includes(F2)) {
+  code = code.replace(F2, R2); count++;
+  console.log('✅ Fix 2: URL con extensión real');
+} else console.log('⚠️  Fix 2 no encontrado');
 
-    const msgBody = {
-      messaging_product: 'whatsapp',
-      to: phone,
-      type: type,
-      [type]: mediaObj
-    };
-
-    const sndRes = await fetch(\`https://graph.facebook.com/v19.0/\${phoneId}/messages\`, {
-      method: 'POST',
-      headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' },
-      body: JSON.stringify(msgBody)
-    });
-    const sndJson = await sndRes.json();
-    console.log('[SEND-MEDIA] to:', phone, '| type:', type, '| url:', publicUrl, '| response:', JSON.stringify(sndJson));
-
-    // Borrar temporal después de 60s
-    setTimeout(() => { try { fsSync.unlinkSync(req.file.path); } catch(_){} }, 60000);
-
-    if(sndRes.ok && sndJson.messages) {
-      leads[idx].chatHistory = leads[idx].chatHistory || [];
-      leads[idx].chatHistory.push({ role: 'agent', content: '[ARCHIVO ENVIADO AL CLIENTE]', ts: Date.now(), agent: req.user.username });
-      await tWrite(F.leads, req.tenant, leads);
-      return res.json({ success: true });
-    } else {
-      return res.status(502).json({error: 'Error al enviar por WA', details: sndJson});
-    }`;
-
-if (code.includes(OLD)) {
-  code = code.replace(OLD, NEW);
-  fs.writeFileSync(file, code, 'utf8');
-  console.log('✅ Listo');
-} else {
-  console.log('❌ Bloque no encontrado');
-}
+fs.writeFileSync(file, code, 'utf8');
+console.log(`\nListo — ${count} fix(es) aplicados`);
