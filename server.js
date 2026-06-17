@@ -64,6 +64,13 @@ app.use((req,res,next)=>{res.header('Access-Control-Allow-Origin','*');res.heade
 
 function applySignal(lead, p) { if (p && p.intent_signal && p.intent_signal !== 'NONE') { lead.intentSignal = p.intent_signal; } }
 function esKeywordCalif(text) { if(!text) return false; const t = text.toLowerCase(); return t.includes('credito') || t.includes('crédito') || t.includes('financiamiento') || t.includes('retoma') || t.includes('pie'); }
+// ── alertStaff: WA + Push en paralelo ──
+async function alertStaff(tenant, userObj, title, body) {
+  if (!userObj) return;
+  if (userObj.phone) sendWA(userObj.phone, body).catch(() => {});
+  if (userObj.username && tenant) sendWebPush(tenant, userObj.username, { title, body, ts: Date.now() }).catch(() => {});
+}
+
 async function sendWA(to, text, retries = 2) {
   const token = (process.env.WA_TOKEN || '').trim();
   const phoneId = (process.env.WA_PHONE_ID || '').trim();
@@ -450,8 +457,8 @@ async function applySlaRules(tenant){
         const admin=allUsers.find(u=>u.role==='admin');
         const assignedUser=allUsers.find(u=>u.username===lead.assignedTo)||RMG_VENDORS.find(v=>v.username===lead.assignedTo);
         const msg='🔴 RESERVA VENCIDA (+72h): '+lead.name+'. La reserva lleva más de 3 días. Acción inmediata requerida.';
-        if(admin?.phone)sendWA(admin.phone,msg).catch(()=>{});
-        if(assignedUser?.phone)sendWA(assignedUser.phone,msg).catch(()=>{});
+        alertStaff(tenant, admin, '🔴 Reserva Vencida', msg);
+        alertStaff(tenant, assignedUser, '🔴 Reserva Vencida', msg);
       }
     }
     if(lead.status==='Nuevo'){
@@ -462,7 +469,7 @@ async function applySlaRules(tenant){
         if(nextObj&&nextObj.username!==lead.assignedTo){
           const aiSumR=lead.ai_summary?' Resumen IA: '+lead.ai_summary:'';
           lead.assignedTo=nextObj.username;lead.reassigned=true;lead.reassignedAt=new Date().toISOString();lead.adminReassignAlertSent=false;changed=true;
-          if(nextObj.phone)sendWA(nextObj.phone,'🚨 REASIGNACIÓN: Se te asignó el lead ['+lead.name+'] porque el anterior no respondió en 30 min.'+aiSumR).catch(()=>{});
+          alertStaff(tenant, nextObj, '🚨 Reasignación', '🚨 REASIGNACIÓN: Se te asignó el lead ['+lead.name+'] porque el anterior no respondió en 30 min.'+aiSumR);
         }else{lead.reassigned=true;lead.reassignedAt=new Date().toISOString();lead.adminReassignAlertSent=false;changed=true;}
       }
       if(lead.reassigned&&lead.reassignedAt&&lead.unread&&lead.adminReassignAlertSent===false){
@@ -471,7 +478,7 @@ async function applySlaRules(tenant){
           lead.adminReassignAlertSent=true;changed=true;
           const adminU=allUsers.find(u=>u.role==='admin');
           const aiSumA=lead.ai_summary?' Resumen IA: '+lead.ai_summary:'';
-          if(adminU?.phone)sendWA(adminU.phone,'📢 ALERTA ADMIN: ['+lead.name+'] lleva 30+ min sin atención tras reasignación.'+aiSumA).catch(()=>{});
+          alertStaff(tenant, adminU, '📢 Alerta Admin', '📢 ALERTA ADMIN: ['+lead.name+'] lleva 30+ min sin atención tras reasignación.'+aiSumA);
         }
       }
     }
@@ -880,7 +887,7 @@ app.post('/api/chat',async(req,res)=>{
     leadId=Date.now();const assignedObj=await rrNext(tenant);const assigned=assignedObj?.username||'vendedor1';const n=new Date().toISOString();
     leads.unshift({id:leadId,name:'Visitante',phone:'Pendiente',source:'Chat Web',status:'Nuevo',lastInteraction:n,lastClientTs:n,interest:message.slice(0,80),sessionId,assignedTo:assigned,botActive:true,alertLevel:'none',intentSignal:'NONE',unread:true,notes:[],chatHistory:[]});
     sess={tenant,leadId,step:0};chatSessions.set(sessionId,sess);captured=true;
-    if(assignedObj?.phone)sendWA(assignedObj.phone,`🔔 NUEVO LEAD: "${message.slice(0,60)}" — atiéndelo en el CRM ahora.`).catch(()=>{});
+    alertStaff(tenant, assignedObj, '🔔 Nuevo Lead', `🔔 NUEVO LEAD: "${message.slice(0,60)}" — atiéndelo en el CRM ahora.`);
   }else{leadId=sess.leadId;sess.step++;}
   const idx=leads.findIndex(l=>l.id===leadId);
   leads[idx].chatHistory=leads[idx].chatHistory||[];leads[idx].chatHistory.push({role:'user',content:message,ts:Date.now()});
@@ -916,11 +923,11 @@ app.post('/api/chat',async(req,res)=>{
         const resComp=await openai.chat.completions.create({model:'gpt-4o-mini',temperature:0.4,max_tokens:200,messages:[{role:'system',content:'Eres un asistente comercial de automotora. Con el historial de chat y las notas del vendedor, redacta un BRIEFING narrativo de maximo 3 lineas: (1) [Nombre] consulta por [auto especifico]. (2) [Que dijo sobre financiamiento, retoma, fecha o acuerdo]. (3) Sugerencia: [accion concreta para el vendedor ahora]. Espanol directo, sin emojis, sin titulos, solo el parrafo.'},{role:'user',content:'NOMBRE: '+leads[idx].name+'\nHISTORIAL:\n'+histSnip+(notasSnip?'\nNOTAS DEL VENDEDOR:\n'+notasSnip:'')}]});
         const resumenIA=(resComp.choices?.[0]?.message?.content||'').trim()||'Interés detectado en crédito/retoma.';
         leads[idx].ai_summary=resumenIA;
-        if(assignedUserChat?.phone)sendWA(assignedUserChat.phone,'✅ Lead Asignado: '+leads[idx].name+'. Resumen IA: '+resumenIA+' — Entra al CRM para cerrar.').catch(()=>{});
+        alertStaff(tenant, assignedUserChat, '✅ Lead Asignado', '✅ Lead Asignado: '+leads[idx].name+'. Resumen IA: '+resumenIA+' — Entra al CRM para cerrar.');
       }catch(eIA){
         console.error('[Resumen-Error /chat]', eIA);
         leads[idx].notes.push({content:'🧠 Cliente mencionó crédito/retoma/seguro. (OpenAI falló: '+eIA.message+')',author:'Resumen IA',ts:Date.now()});
-        if(assignedUserChat?.phone)sendWA(assignedUserChat.phone,'✅ Lead Asignado: '+leads[idx].name+'. Lee el resumen en la bitácora del CRM.').catch(()=>{});
+        alertStaff(tenant, assignedUserChat, '✅ Lead Asignado', '✅ Lead Asignado: '+leads[idx].name+'. Lee el resumen en la bitácora del CRM.');
       }
     }
     if(p.reply&&p.reply.indexOf('rmgautos.cl')!==-1){leads[idx].nextAction={text:'¿Pudiste ver la ficha en el enlace? Fíjate en los detalles del equipamiento 👀 ¿Qué te pareció?',date:new Date(Date.now()+3*60000).toISOString(),createdAt:new Date().toISOString(),delegateToIA:true,iaCompleted:false};}
@@ -973,7 +980,7 @@ app.post('/api/leads/inbound', async (req, res) => {
     };
     leads.unshift(lead);
     await tWrite(F.leads, tenant, leads);
-    if (assignedObj.phone) sendWA(assignedObj.phone, `🔔 NUEVO LEAD CHILEAUTOS asignado a ti. Entra a FunnelOS → Chileautos para verlo.`).catch(()=>{});
+    alertStaff(tenant, assignedObj, '🔔 Nuevo Lead Chileautos', '🔔 NUEVO LEAD CHILEAUTOS asignado a ti. Entra a FunnelOS → Chileautos para verlo.');
     console.log('[INBOUND] Lead creado:', name, phone, status, externalId || '');
     res.json({ ok: true, leadId: lead.id });
   } catch(e) {
@@ -1035,7 +1042,7 @@ app.post('/api/leads/manual', auth('admin','vendedor'), async (req, res) => {
     }
     const team = await tRead(F.users, tenant);
     const vend = (team||[]).find(u => u.username === lead.assignedTo);
-    if (vend?.phone) sendWA(vend.phone, '\u{1F514} NUEVO LEAD MANUAL [' + canal + ']: ' + nombre + ' asignado a ti en FunnelOS.').catch(()=>{});
+    alertStaff(tenant, vend, '🔔 Nuevo Lead Manual', '🔔 NUEVO LEAD MANUAL [' + canal + ']: ' + nombre + ' asignado a ti en FunnelOS.');
     console.log('[LEAD-MANUAL] Creado:', nombre, phone, canal, status);
     res.json({ ok: true, leadId: lead.id });
   } catch(e) {
@@ -1155,7 +1162,7 @@ app.post('/api/chileautos/webhook', async (req, res) => {
     } else if (phone === 'Pendiente') {
       console.log('[CA-WEBHOOK] Sin teléfono — plantilla WA no enviada');
     }
-    if (assignedObj.phone) sendWA(assignedObj.phone, '🔔 NUEVO LEAD CHILEAUTOS: ' + name + ' interesado en ' + vehicleTitle).catch(()=>{});
+    alertStaff(tenant, assignedObj, '🔔 Nuevo Lead Chileautos', '🔔 NUEVO LEAD CHILEAUTOS: ' + name + ' interesado en ' + vehicleTitle);
     console.log('[CA-WEBHOOK] Lead creado:', name, phone, vehicleTitle);
   } catch(e) {
     console.error('[CA-WEBHOOK]', e.message);
@@ -1468,7 +1475,7 @@ app.post('/webhook',async(req,res)=>{
       });
       idx = 0;
       const srcTag = detectedSource !== 'WhatsApp' ? ` [${detectedSource}]` : '';
-      if(assignedObj.phone) sendWA(assignedObj.phone, `🔔 NUEVO LEAD WA${srcTag}: ${contactName} — "${detectedInterest.slice(0,60)}" — atiéndelo ahora.`).catch(()=>{});
+      alertStaff(tenant, assignedObj, '🔔 Nuevo Lead WA', `🔔 NUEVO LEAD WA${srcTag}: ${contactName} — "${detectedInterest.slice(0,60)}" — atiéndelo ahora.`);
     }
     if(ld[tenant][idx].status==='esperando_respuesta_chileautos'||ld[tenant][idx].status==='esperando_respuesta_general'){
       const prevSrc = ld[tenant][idx].status==='esperando_respuesta_chileautos' ? 'Chileautos' : (ld[tenant][idx].source||'Canal');
@@ -1482,7 +1489,7 @@ app.post('/webhook',async(req,res)=>{
       ld[tenant][idx].notes=(ld[tenant][idx].notes||[]).concat({content:'✅ Cliente respondió. Activado en embudo desde sala de espera ('+prevSrc+').',author:'Sistema',ts:Date.now()});
       const _au=await tRead(F.users,tenant);
       const _av=_au.find(u=>u.username===ld[tenant][idx].assignedTo)||RMG_VENDORS.find(v=>v.username===ld[tenant][idx].assignedTo);
-      if(_av?.phone)sendWA(_av.phone,'\u{1F514} '+prevSrc+': '+ld[tenant][idx].name+' respondio! Ya esta en tu embudo.').catch(()=>{});
+      alertStaff(tenant, _av, '🔔 Lead respondió', '🔔 '+prevSrc+': '+ld[tenant][idx].name+' respondió! Ya está en tu embudo.');
     }
     
     const mt_yapo = (body || '').match(/(?:Me interesa el anuncio\s*"([^"]+)"|hola[^.]*(?:yapo|anuncio)[^.]*?([A-Z][A-Z0-9 ]{5,40}))/i);
@@ -1525,7 +1532,7 @@ app.post('/webhook',async(req,res)=>{
         const _au = await tRead(F.users, tenant);
         const _av = _au.find(u => u.username === ld[tenant][idx].assignedTo) || RMG_VENDORS.find(v => v.username === ld[tenant][idx].assignedTo);
         if (_av && _av.phone) {
-            sendWA(_av.phone, `🔔 REINGRESO MULTICANAL: ${ld[tenant][idx].name} volvió a cotizar. Nuevo origen: ${newSource} (${newInterest}). Revisa el CRM.`).catch(()=>{});
+            alertStaff(tenant, _av, '🔔 Reingreso', `🔔 REINGRESO MULTICANAL: ${ld[tenant][idx].name} volvió a cotizar. Nuevo origen: ${newSource} (${newInterest}). Revisa el CRM.`);
         }
     }
     if(adTracing) ld[tenant][idx].adTracing = adTracing;
@@ -1566,11 +1573,11 @@ app.post('/webhook',async(req,res)=>{
           const resCompWH=await openai.chat.completions.create({model:'gpt-4o-mini',temperature:0.4,max_tokens:200,messages:[{role:'system',content:'Eres un asistente comercial de automotora. Con el historial de chat y las notas del vendedor, redacta un BRIEFING narrativo de maximo 3 lineas: (1) [Nombre] consulta por [auto especifico]. (2) [Que dijo sobre financiamiento, retoma, fecha o acuerdo]. (3) Sugerencia: [accion concreta para el vendedor ahora]. Espanol directo, sin emojis, sin titulos, solo el parrafo.'},{role:'user',content:'NOMBRE: '+ld[tenant][idx].name+'\nHISTORIAL:\n'+histSnipWH}]});
           const resumenIAWH=(resCompWH.choices?.[0]?.message?.content||'').trim()||'Interés en crédito/retoma detectado.';
           ld[tenant][idx].ai_summary=resumenIAWH;
-          if(assignedUserWH?.phone)sendWA(assignedUserWH.phone,'✅ Lead Reasignado: '+ld[tenant][idx].name+'. Resumen IA: '+resumenIAWH+' — Entra al CRM.').catch(()=>{});
+          alertStaff(tenant, assignedUserWH, '✅ Lead Reasignado', '✅ Lead Reasignado: '+ld[tenant][idx].name+'. Resumen IA: '+resumenIAWH+' — Entra al CRM.');
         }catch(eIAWH){
           console.error('[Resumen-Error /webhook]', eIAWH);
           ld[tenant][idx].notes.push({content:'🧠 Cliente mencionó crédito/retoma/seguro. (OpenAI falló: '+eIAWH.message+')',author:'Resumen IA',ts:Date.now()});
-          if(assignedUserWH?.phone)sendWA(assignedUserWH.phone,'✅ Lead Asignado: '+ld[tenant][idx].name+'. Revisa la bitácora del CRM.').catch(()=>{});
+          alertStaff(tenant, assignedUserWH, '✅ Lead Asignado', '✅ Lead Asignado: '+ld[tenant][idx].name+'. Revisa la bitácora del CRM.');
         }
       }
       if(!_isEnd) await sendWA(from,p.reply);
@@ -1779,6 +1786,40 @@ app.get('/api/precios/mercado',auth('admin','vendedor'),async(req,res)=>{
 app.get('/api/precios/inventario',auth('admin','vendedor'),async(req,res)=>{
   try{await scrapeRMG();const inv=(scrapeCache.items&&scrapeCache.items.length)?scrapeCache.items:[];res.json({ok:true,count:inv.length,data:inv,ts:scrapeCache.ts});}
   catch(e){res.status(500).json({error:e.message});}
+});
+
+// ── ANÁLISIS IA DE LEADS ────────────────────────────────────────
+app.post('/api/leads/analisis-ia', auth('admin','vendedor'), async (req, res) => {
+  try {
+    const { leadIds, filtros } = req.body || {};
+    const allLeads = await tRead(F.leads, req.tenant);
+    const allUsers = await tRead(F.users, req.tenant);
+    let leads = allLeads;
+    if (leadIds && leadIds.length) {
+      leads = allLeads.filter(l => leadIds.includes(String(l.id)));
+    } else if (filtros) {
+      if (filtros.source) leads = leads.filter(l => l.source === filtros.source);
+      if (filtros.status) leads = leads.filter(l => l.status === filtros.status);
+      if (filtros.assignedTo) leads = leads.filter(l => l.assignedTo === filtros.assignedTo);
+      if (filtros.desde) leads = leads.filter(l => new Date(l.lastInteraction||l.createdAt||0) >= new Date(filtros.desde));
+      if (filtros.hasta) leads = leads.filter(l => new Date(l.lastInteraction||l.createdAt||0) <= new Date(filtros.hasta));
+    }
+    if (!leads.length) return res.status(400).json({ error: 'No hay leads con esos criterios' });
+    if (leads.length > 50) return res.status(400).json({ error: 'Máximo 50 leads por análisis. Aplica más filtros.' });
+    const contexto = leads.map(l => {
+      const vendedor = allUsers.find(u => u.username === l.assignedTo)?.name || l.assignedTo || 'Sin asignar';
+      const diasSinActividad = l.lastClientTs ? Math.floor((Date.now() - new Date(l.lastClientTs).getTime()) / 86400000) : '?';
+      const diasCreado = l.createdAt ? Math.floor((Date.now() - new Date(l.createdAt).getTime()) / 86400000) : '?';
+      const chat = (l.chatHistory || []).slice(-10).map(m => `[${m.role}]: ${m.content?.slice(0,150)}`).join('\n');
+      const notas = (l.notes || []).slice(-5).map(n => `${n.author}: ${n.content?.slice(0,100)}`).join('\n');
+      return `---\nLEAD: ${l.name} | TEL: ${l.phone} | ORIGEN: ${l.source} | ESTADO: ${l.status}\nVENDEDOR: ${vendedor} | DÍAS SIN ACTIVIDAD: ${diasSinActividad} | DÍAS EN CRM: ${diasCreado}\nINTERÉS: ${l.interest||'No especificado'}\nNOTAS: ${notas||'Sin notas'}\nCHAT:\n${chat||'Sin historial'}`;
+    }).join('\n\n');
+    const completion = await openai.chat.completions.create({
+      model: 'gpt-4o-mini', temperature: 0.3, max_tokens: 3000,
+      messages: [{ role: 'user', content: `Eres un analista comercial senior de una automotora. Analiza los siguientes leads del CRM y entrega un reporte estratégico.\n\nPara cada lead indica:\n1. Situación actual y diagnóstico\n2. Tiempo estancado y posible razón\n3. Acción concreta recomendada (específica, no genérica)\n4. Urgencia: 🔴 Alta / 🟡 Media / 🟢 Baja\n\nAl final: resumen por vendedor y top 3 acciones prioritarias.\n\n${contexto}\n\nResponde en español, formato claro con separadores entre leads.` }]
+    });
+    res.json({ ok: true, reporte: completion.choices[0].message.content, totalLeads: leads.length });
+  } catch(e) { console.error('[ANALISIS-IA]', e.message); res.status(500).json({ error: e.message }); }
 });
 
 app.get('*',(req,res)=>res.sendFile(path.join(__dirname,'public','index.html')));
