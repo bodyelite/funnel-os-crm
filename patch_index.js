@@ -1,66 +1,99 @@
-const fs = require('fs');
-const file = require("path").join(__dirname, "public", "index.html");
+const fs = require('fs'), path = require('path');
+const file = path.join(__dirname, 'public', 'index.html');
 let code = fs.readFileSync(file, 'utf8');
-let count = 0;
+let n = 0;
 
-// ── Fix 1: Patente en retoma ─────────────────────────────────────
-if (!code.includes('ti-plate')) {
-  code = code.replace(
-    `<input id="ti-year" placeholder="Año (2019)" value="\${ti.year||''}" style="width:100%; padding:6px; background:var(--p3); border:1px solid var(--bd); border-radius:4px; font-size:11.5px; color:var(--tx);">
-            <input id="ti-color"`,
-    `<input id="ti-year" placeholder="Año (2019)" value="\${ti.year||''}" style="width:100%; padding:6px; background:var(--p3); border:1px solid var(--bd); border-radius:4px; font-size:11.5px; color:var(--tx);">
-            <input id="ti-plate" placeholder="Patente (ej: ABCD12)" value="\${ti.plate||''}" style="width:100%; padding:6px; background:var(--p3); border:1px solid var(--bd); border-radius:4px; font-size:11.5px; color:var(--tx); text-transform:uppercase;">
-            <input id="ti-color"`
-  );
-  count++; console.log('✅ Fix 1: campo Patente');
-} else console.log('⚠️ Fix 1 ya aplicado');
+function rep(f, r, label) {
+  if (code.includes(f)) { code = code.replace(f, r); n++; console.log('✅', label); }
+  else console.log('⚠️ Ya aplicado o no encontrado:', label);
+}
 
-// ── Fix 2: plate en saveTiFields ─────────────────────────────────
-if (!code.includes("const plate = ")) {
-  code = code.replace(
-    `body:JSON.stringify({make,model,year,color,km:document.getElementById('ti-km')?.value||'',version:document.getElementById('ti-version')?.value||''})`,
-    `body:JSON.stringify({make,model,year,color,plate:(document.getElementById('ti-plate')||{}).value?.toUpperCase()||'',km:document.getElementById('ti-km')?.value||'',version:document.getElementById('ti-version')?.value||''})`
-  );
-  count++; console.log('✅ Fix 2: plate en saveTiFields');
-} else console.log('⚠️ Fix 2 ya aplicado');
+// 1. Patente en retoma
+rep(
+  `<input id="ti-year" placeholder="Año (2019)" value="\${ti.year||''}" style="width:100%; padding:6px; background:var(--p3); border:1px solid var(--bd); border-radius:4px; font-size:11.5px; color:var(--tx);">\n            <input id="ti-color"`,
+  `<input id="ti-year" placeholder="Año (2019)" value="\${ti.year||''}" style="width:100%; padding:6px; background:var(--p3); border:1px solid var(--bd); border-radius:4px; font-size:11.5px; color:var(--tx);">\n            <input id="ti-plate" placeholder="Patente (ej: ABCD12)" value="\${ti.plate||''}" style="width:100%; padding:6px; background:var(--p3); border:1px solid var(--bd); border-radius:4px; font-size:11.5px; color:var(--tx); text-transform:uppercase;">\n            <input id="ti-color"`,
+  'Patente en retoma'
+);
 
-// ── Fix 3: Dashboard vendedor en refresh ─────────────────────────
-if (!code.includes('dashboard/vendedor')) {
-  code = code.replace(
-    `isA?api('GET','/api/dashboard/team'+q):Promise.resolve([]),isA?api('GET','/api/analytics/channels'+q):Promise.resolve([])]);S.leads=leads;S.team=team||[];S.channels=channels||[];renderAll();`,
-    `isA?api('GET','/api/dashboard/team'+q):Promise.resolve([]),isA?api('GET','/api/analytics/channels'+q):Promise.resolve([]),!isA?api('GET','/api/dashboard/vendedor'+q):Promise.resolve(null)]);S.leads=leads;S.team=team||[];S.channels=channels||[];S.vendKpi=vendKpi||null;renderAll();`
-  );
-  // también actualizar la declaración del Promise.all
-  code = code.replace(
-    `const[leads,team,channels]=await Promise.all([`,
-    `const[leads,team,channels,vendKpi]=await Promise.all([`
-  );
-  count++; console.log('✅ Fix 3: dashboard vendedor');
-} else console.log('⚠️ Fix 3 ya aplicado');
+// 2. plate en saveTiFields
+rep(
+  `body:JSON.stringify({make,model,year,color,km:document.getElementById('ti-km')?.value||'',version:document.getElementById('ti-version')?.value||''})`,
+  `body:JSON.stringify({make,model,year,color,plate:(document.getElementById('ti-plate')||{}).value?.toUpperCase()||'',km:document.getElementById('ti-km')?.value||'',version:document.getElementById('ti-version')?.value||''})`,
+  'plate en saveTiFields'
+);
 
-// ── Fix 4: renderDashVendedor ─────────────────────────────────────
-if (!code.includes('renderDashVendedor')) {
-  code = code.replace(
-    `function renderAll(){const isA=S.user?.role==='admin';if(isA)renderDash();`,
-    `function renderDashVendedor(){if(!S.vendKpi)return;const k=S.vendKpi;const scF=$('scF'),scR=$('scR'),scC=$('scC'),scRS=$('scRS');if(scF)scF.textContent=k.sla?.fresh??'—';if(scR)scR.textContent=k.sla?.risk??'—';if(scC)scC.textContent=k.sla?.critical??'—';if(scRS)scRS.textContent=k.sla?.reassigned??'—';renderFunnel();}
-function renderAll(){const isA=S.user?.role==='admin';if(isA)renderDash();else renderDashVendedor();`
-  );
-  count++; console.log('✅ Fix 4: renderDashVendedor');
-} else console.log('⚠️ Fix 4 ya aplicado');
+// 3. Dashboard vendedor en refresh
+rep(
+  `const[leads,team,channels]=await Promise.all([api('GET','/api/leads'+q),isA?api('GET','/api/dashboard/team'+q):Promise.resolve([]),isA?api('GET','/api/analytics/channels'+q):Promise.resolve([])]);S.leads=leads;S.team=team||[];S.channels=channels||[];renderAll();`,
+  `const[leads,team,channels,vendKpi]=await Promise.all([api('GET','/api/leads'+q),isA?api('GET','/api/dashboard/team'+q):Promise.resolve([]),isA?api('GET','/api/analytics/channels'+q):Promise.resolve([]),!isA?api('GET','/api/dashboard/vendedor'+q):Promise.resolve(null)]);S.leads=leads;S.team=team||[];S.channels=channels||[];S.vendKpi=vendKpi||null;renderAll();`,
+  'Dashboard vendedor en refresh'
+);
 
-// ── Fix 5: Tab Historial de Gestión ─────────────────────────────
+// 4. renderDashVendedor + renderAll fix
+rep(
+  `function renderAll(){const isA=S.user?.role==='admin';if(isA)renderDash();`,
+  `function renderDashVendedor(){if(!S.vendKpi)return;const k=S.vendKpi;const scF=$('scF'),scR=$('scR'),scC=$('scC'),scRS=$('scRS');if(scF)scF.textContent=k.sla?.fresh??'—';if(scR)scR.textContent=k.sla?.risk??'—';if(scC)scC.textContent=k.sla?.critical??'—';if(scRS)scRS.textContent=k.sla?.reassigned??'—';renderFunnel();}\nfunction renderAll(){const isA=S.user?.role==='admin';if(isA)renderDash();else renderDashVendedor();`,
+  'renderDashVendedor'
+);
+
+// 5. Botón Análisis IA en nav
+rep(
+  `>🧠 BI</button><button data-view="config" id="navC">⚙️ Config</button>`,
+  `>🧠 BI</button><button data-view="analisis" id="navAnalisis" style="background:linear-gradient(135deg,#7c3aed,#4f46e5);color:#fff;border:none;border-radius:8px;padding:7px 13px;font-size:12px;font-weight:700;cursor:pointer;margin-left:4px;font-family:inherit">🔍 Análisis IA</button><button data-view="config" id="navC">⚙️ Config</button>`,
+  'Botón Análisis IA en nav'
+);
+
+// 6. Vista Análisis IA + tercera tab modal — insertar antes de view-bi
+rep(
+  `<section id="view-bi" class="view"`,
+  `<section id="view-analisis" class="view" style="padding:20px;max-width:1100px;margin:0 auto">
+<div class="st">🔍 Análisis Estratégico IA</div>
+<div style="display:grid;grid-template-columns:280px 1fr;gap:20px;align-items:start">
+<div style="background:var(--p2);border:1px solid var(--bd);border-radius:12px;padding:16px;display:flex;flex-direction:column;gap:12px">
+  <div style="font-weight:700;font-size:13px;color:var(--ts)">Filtros de Análisis</div>
+  <div><label style="font-size:11px;color:var(--tm);font-weight:600">ORIGEN</label>
+  <select id="iaFiltroSource" style="width:100%;margin-top:4px;padding:7px;border-radius:7px;border:1px solid var(--bd);background:var(--bg);color:var(--ts);font-size:12px;font-family:inherit">
+    <option value="">Todos</option><option value="MercadoLibre">MercadoLibre</option><option value="Chileautos">Chileautos</option><option value="WhatsApp">WhatsApp</option><option value="Meta Ads">Meta Ads</option><option value="Instagram">Instagram</option><option value="Chat Web">Chat Web</option><option value="Manual">Manual</option>
+  </select></div>
+  <div><label style="font-size:11px;color:var(--tm);font-weight:600">ESTADO</label>
+  <select id="iaFiltroStatus" style="width:100%;margin-top:4px;padding:7px;border-radius:7px;border:1px solid var(--bd);background:var(--bg);color:var(--ts);font-size:12px;font-family:inherit">
+    <option value="">Todos</option><option value="Nuevo">Nuevo</option><option value="Contactados">Contactados</option><option value="En proceso">En proceso</option><option value="Reservado">Reservado</option><option value="Cerrado">Cerrado</option><option value="Perdido">Perdido</option>
+  </select></div>
+  <div><label style="font-size:11px;color:var(--tm);font-weight:600">VENDEDOR</label>
+  <select id="iaFiltroVendedor" style="width:100%;margin-top:4px;padding:7px;border-radius:7px;border:1px solid var(--bd);background:var(--bg);color:var(--ts);font-size:12px;font-family:inherit"><option value="">Todos</option></select></div>
+  <div><label style="font-size:11px;color:var(--tm);font-weight:600">DESDE</label>
+  <input type="date" id="iaFiltroDes" style="width:100%;margin-top:4px;padding:7px;border-radius:7px;border:1px solid var(--bd);background:var(--bg);color:var(--ts);font-size:12px;font-family:inherit;box-sizing:border-box"></div>
+  <div><label style="font-size:11px;color:var(--tm);font-weight:600">HASTA</label>
+  <input type="date" id="iaFiltroHas" style="width:100%;margin-top:4px;padding:7px;border-radius:7px;border:1px solid var(--bd);background:var(--bg);color:var(--ts);font-size:12px;font-family:inherit;box-sizing:border-box"></div>
+  <div id="iaLeadsCount" style="font-size:11px;color:var(--tm);text-align:center;padding:6px;background:var(--bg);border-radius:6px;border:1px solid var(--bd)">— leads en selección</div>
+  <button onclick="ejecutarAnalisisIA()" id="btnAnalisisIA" style="background:linear-gradient(135deg,#7c3aed,#4f46e5);color:#fff;border:none;border-radius:8px;padding:11px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">🔍 Generar Análisis IA</button>
+  <button onclick="limpiarAnalisis()" style="background:var(--bg);color:var(--tm);border:1px solid var(--bd);border-radius:8px;padding:8px;font-size:12px;cursor:pointer;font-family:inherit">🗑 Limpiar</button>
+</div>
+<div id="iaResultado" style="background:var(--p2);border:1px solid var(--bd);border-radius:12px;padding:20px;min-height:400px">
+  <div style="color:var(--tm);font-size:13px;text-align:center;padding:60px 20px"><div style="font-size:32px;margin-bottom:12px">🔍</div><div style="font-weight:600">Selecciona filtros y genera el análisis</div></div>
+</div></div></section>
+
+<section id="view-bi" class="view"`,
+  'Vista Análisis IA'
+);
+
+// 7. Tab nav click handler — agregar analisis
+rep(
+  `if(view==='bi'){loadBI('mapa');}else if(view==='config')`,
+  `if(view==='bi'){loadBI('mapa');}else if(view==='analisis'){initAnalisisIA();}else if(view==='config')`,
+  'Nav click handler analisis'
+);
+
+// 8. Tab Historial de Gestión en modal
 if (!code.includes('mtabGestion2')) {
-  // 5a: botón tab
   code = code.replace(
     `>🕐 Historial</button></div>`,
     `>🕐 Historial</button><button id="mtabGestion2" onclick="switchModalTab('gestion2')" style="background:none;border:none;padding:10px 16px;font-size:13px;font-weight:600;color:var(--tm);cursor:pointer;border-bottom:3px solid transparent;margin-bottom:-2px">📁 Historial de Gestión</button></div>`
   );
-  // 5b: pane HTML
   code = code.replace(
     `<div id="mHistPane" style="display:none;flex:1;overflow-y:auto;padding:16px 20px"></div>`,
     `<div id="mHistPane" style="display:none;flex:1;overflow-y:auto;padding:16px 20px"></div>\n<div id="mGestion2Pane" style="display:none;flex:1;overflow-y:auto;padding:16px 20px"></div>`
   );
-  // 5c: switchModalTab
   code = code.replace(
     `function switchModalTab(tab){\n  var g=document.getElementById('mtabGestion'),h=document.getElementById('mtabHistorial');\n  var mp=document.getElementById('mMainPane'),hp=document.getElementById('mHistPane');\n  if(!g||!mp)return;\n  if(tab==='historial'){\n    g.style.color='var(--tm)';g.style.borderBottomColor='transparent';\n    h.style.color='var(--ac)';h.style.borderBottomColor='var(--ac)';\n    mp.style.display='none';\n    if(hp){hp.style.display='block';var l=findLead(S.mid);if(l)renderModalHistory(l);}\n  }else{\n    if(h){h.style.color='var(--tm)';h.style.borderBottomColor='transparent';}\n    g.style.color='var(--ac)';g.style.borderBottomColor='var(--ac)';\n    if(hp)hp.style.display='none';\n    mp.style.display='grid';\n  }\n}`,
     `function switchModalTab(tab){
@@ -81,7 +114,15 @@ if (!code.includes('mtabGestion2')) {
   }
 }`
   );
-  // 5d: función renderHistorialGestion
+  code = code.replace(
+    `if(mp){mp.style.display='grid';if(hp)hp.style.display='none';if(g){g.style.color='var(--ac)';g.style.borderBottomColor='var(--ac)';}if(h){h.style.color='var(--tm)';h.style.borderBottomColor='transparent';}}`,
+    `if(mp){mp.style.display='grid';if(hp)hp.style.display='none';var _gp=document.getElementById('mGestion2Pane');if(_gp)_gp.style.display='none';if(g){g.style.color='var(--ac)';g.style.borderBottomColor='var(--ac)';}if(h){h.style.color='var(--tm)';h.style.borderBottomColor='transparent';}var _g2=document.getElementById('mtabGestion2');if(_g2){_g2.style.color='var(--tm)';_g2.style.borderBottomColor='transparent';}}`
+  );
+  n++; console.log('✅ Tab Historial de Gestión (modal)');
+} else console.log('⚠️ Tab modal ya aplicada');
+
+// 9. Función renderHistorialGestion + JS Análisis IA (antes del cierre </script>)
+if (!code.includes('renderHistorialGestion')) {
   code = code.replace(
     `function renderModalHistory(l){`,
     `function renderHistorialGestion(l){
@@ -102,13 +143,52 @@ if (!code.includes('mtabGestion2')) {
 
 function renderModalHistory(l){`
   );
-  // 5e: openModal reset
+  n++; console.log('✅ renderHistorialGestion');
+}
+
+if (!code.includes('ejecutarAnalisisIA')) {
   code = code.replace(
-    `if(mp){mp.style.display='grid';if(hp)hp.style.display='none';if(g){g.style.color='var(--ac)';g.style.borderBottomColor='var(--ac)';}if(h){h.style.color='var(--tm)';h.style.borderBottomColor='transparent';}}`,
-    `if(mp){mp.style.display='grid';if(hp)hp.style.display='none';var _gp=document.getElementById('mGestion2Pane');if(_gp)_gp.style.display='none';if(g){g.style.color='var(--ac)';g.style.borderBottomColor='var(--ac)';}if(h){h.style.color='var(--tm)';h.style.borderBottomColor='transparent';}var _g2=document.getElementById('mtabGestion2');if(_g2){_g2.style.color='var(--tm)';_g2.style.borderBottomColor='transparent';}}`
+    `</script>\n</body>\n</html>`,
+    `// ── ANÁLISIS IA ──────────────────────────────────────────────────
+function initAnalisisIA(){
+  const sel=document.getElementById('iaFiltroVendedor');if(!sel)return;
+  sel.innerHTML='<option value="">Todos</option>';
+  (S.users||[]).filter(u=>u.role!=='admin').forEach(u=>{sel.innerHTML+=\`<option value="\${u.username}">\${u.name}</option>\`;});
+  actualizarConteoIA();
+  ['iaFiltroSource','iaFiltroStatus','iaFiltroVendedor','iaFiltroDes','iaFiltroHas'].forEach(id=>{const el=document.getElementById(id);if(el)el.addEventListener('change',actualizarConteoIA);});
+}
+function getFiltrosIA(){return{source:document.getElementById('iaFiltroSource')?.value||'',status:document.getElementById('iaFiltroStatus')?.value||'',assignedTo:document.getElementById('iaFiltroVendedor')?.value||'',desde:document.getElementById('iaFiltroDes')?.value||'',hasta:document.getElementById('iaFiltroHas')?.value||''};}
+function actualizarConteoIA(){
+  const f=getFiltrosIA();let leads=S.leads||[];
+  if(f.source)leads=leads.filter(l=>l.source===f.source);
+  if(f.status)leads=leads.filter(l=>l.status===f.status);
+  if(f.assignedTo)leads=leads.filter(l=>l.assignedTo===f.assignedTo);
+  if(f.desde)leads=leads.filter(l=>new Date(l.lastInteraction||l.createdAt||0)>=new Date(f.desde));
+  if(f.hasta)leads=leads.filter(l=>new Date(l.lastInteraction||l.createdAt||0)<=new Date(f.hasta+'T23:59:59'));
+  const el=document.getElementById('iaLeadsCount');if(el){const ov=leads.length>50;el.textContent=leads.length+' lead'+(leads.length!==1?'s':'')+' en selección'+(ov?' ⚠️ máx 50':'');el.style.color=ov?'#ef4444':'var(--tm)';}
+}
+async function ejecutarAnalisisIA(){
+  const btn=document.getElementById('btnAnalisisIA'),res=document.getElementById('iaResultado'),f=getFiltrosIA();
+  btn.disabled=true;btn.textContent='⏳ Analizando...';
+  res.innerHTML='<div style="text-align:center;padding:60px;color:var(--tm)"><div style="font-size:28px;margin-bottom:12px">🤖</div><div style="font-weight:600;margin-bottom:6px">Analizando leads con IA...</div></div>';
+  try{
+    const filtros={};
+    if(f.source)filtros.source=f.source;if(f.status)filtros.status=f.status;if(f.assignedTo)filtros.assignedTo=f.assignedTo;
+    if(f.desde)filtros.desde=f.desde;if(f.hasta)filtros.hasta=f.hasta+'T23:59:59';
+    const data=await api('POST','/api/leads/analisis-ia',{filtros});
+    const html=data.reporte.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>').replace(/🔴/g,'<span style="color:#ef4444">🔴</span>').replace(/🟡/g,'<span style="color:#f59e0b">🟡</span>').replace(/🟢/g,'<span style="color:#10b981">🟢</span>').replace(/^---$/gm,'<hr style="border:none;border-top:1px solid var(--bd);margin:16px 0">').replace(/\n/g,'<br>');
+    res.innerHTML='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px"><div style="font-weight:700;font-size:14px;color:var(--ts)">📋 Reporte — '+data.totalLeads+' leads analizados</div><button onclick="copiarReporte()" style="background:var(--bg);border:1px solid var(--bd);color:var(--ts);border-radius:7px;padding:6px 12px;font-size:12px;cursor:pointer;font-family:inherit">📋 Copiar</button></div><div id="iaReporteTexto" style="font-size:13px;line-height:1.7;color:var(--ts);font-family:inherit">'+html+'</div>';
+  }catch(e){res.innerHTML='<div style="color:#ef4444;padding:20px;text-align:center">❌ Error: '+e.message+'</div>';}
+  finally{btn.disabled=false;btn.textContent='🔍 Generar Análisis IA';}
+}
+function copiarReporte(){const el=document.getElementById('iaReporteTexto');if(el)navigator.clipboard.writeText(el.innerText).then(()=>toast('Reporte copiado ✓'));}
+function limpiarAnalisis(){['iaFiltroSource','iaFiltroStatus','iaFiltroVendedor','iaFiltroDes','iaFiltroHas'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});actualizarConteoIA();const res=document.getElementById('iaResultado');if(res)res.innerHTML='<div style="color:var(--tm);font-size:13px;text-align:center;padding:60px 20px"><div style="font-size:32px;margin-bottom:12px">🔍</div><div style="font-weight:600">Selecciona filtros y genera el análisis</div></div>';}
+</script>
+</body>
+</html>`
   );
-  count++; console.log('✅ Fix 5: tab Historial de Gestión completo');
-} else console.log('⚠️ Fix 5 ya aplicado');
+  n++; console.log('✅ JS Análisis IA');
+}
 
 fs.writeFileSync(file, code, 'utf8');
-console.log(`\n✅ ${count} fix(es) aplicados`);
+console.log(`\n✅ Total: ${n} fix(es) aplicados`);
