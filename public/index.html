@@ -380,27 +380,17 @@ document.addEventListener('visibilitychange', () => {
 <div style="display:grid;grid-template-columns:280px 1fr;gap:20px;align-items:start">
 <div style="background:var(--p2);border:1px solid var(--bd);border-radius:12px;padding:16px;display:flex;flex-direction:column;gap:12px">
   <div style="font-weight:700;font-size:13px;color:var(--ts)">Filtros de Análisis</div>
-  <div><label style="font-size:11px;color:var(--tm);font-weight:600">ORIGEN</label>
-  <select id="iaFiltroSource" style="width:100%;margin-top:4px;padding:7px;border-radius:7px;border:1px solid var(--bd);background:var(--bg);color:var(--ts);font-size:12px;font-family:inherit">
-    <option value="">Todos</option><option value="MercadoLibre">MercadoLibre</option><option value="Chileautos">Chileautos</option><option value="WhatsApp">WhatsApp</option><option value="Meta Ads">Meta Ads</option><option value="Instagram">Instagram</option><option value="Chat Web">Chat Web</option><option value="Manual">Manual</option>
-  </select></div>
-  <div><label style="font-size:11px;color:var(--tm);font-weight:600">ESTADO</label>
-  <select id="iaFiltroStatus" style="width:100%;margin-top:4px;padding:7px;border-radius:7px;border:1px solid var(--bd);background:var(--bg);color:var(--ts);font-size:12px;font-family:inherit">
-    <option value="">Todos</option><option value="Nuevo">Nuevo</option><option value="Contactados">Contactados</option><option value="En proceso">En proceso</option><option value="Reservado">Reservado</option><option value="Cerrado">Cerrado</option><option value="Perdido">Perdido</option>
-  </select></div>
-  <div><label style="font-size:11px;color:var(--tm);font-weight:600">VENDEDOR</label>
-  <select id="iaFiltroVendedor" style="width:100%;margin-top:4px;padding:7px;border-radius:7px;border:1px solid var(--bd);background:var(--bg);color:var(--ts);font-size:12px;font-family:inherit"><option value="">Todos</option></select></div>
-  <div><label style="font-size:11px;color:var(--tm);font-weight:600">DESDE</label>
-  <input type="date" id="iaFiltroDes" style="width:100%;margin-top:4px;padding:7px;border-radius:7px;border:1px solid var(--bd);background:var(--bg);color:var(--ts);font-size:12px;font-family:inherit;box-sizing:border-box"></div>
-  <div><label style="font-size:11px;color:var(--tm);font-weight:600">HASTA</label>
-  <input type="date" id="iaFiltroHas" style="width:100%;margin-top:4px;padding:7px;border-radius:7px;border:1px solid var(--bd);background:var(--bg);color:var(--ts);font-size:12px;font-family:inherit;box-sizing:border-box"></div>
+  <div><label style="font-size:11px;color:var(--tm);font-weight:600">ORIGEN</label><select id="iaFiltroSource" style="width:100%;margin-top:4px;padding:7px;border-radius:7px;border:1px solid var(--bd);background:var(--bg);color:var(--ts);font-size:12px;font-family:inherit"><option value="">Todos</option><option value="MercadoLibre">MercadoLibre</option><option value="Chileautos">Chileautos</option><option value="WhatsApp">WhatsApp</option><option value="Meta Ads">Meta Ads</option><option value="Instagram">Instagram</option><option value="Chat Web">Chat Web</option><option value="Manual">Manual</option></select></div>
+  <div><label style="font-size:11px;color:var(--tm);font-weight:600">ESTADO</label><select id="iaFiltroStatus" style="width:100%;margin-top:4px;padding:7px;border-radius:7px;border:1px solid var(--bd);background:var(--bg);color:var(--ts);font-size:12px;font-family:inherit"><option value="">Todos</option><option value="Nuevo">Nuevo</option><option value="En proceso">En proceso</option><option value="Reservado">Reservado</option><option value="Cerrado">Cerrado</option><option value="Perdido">Perdido</option></select></div>
+  <div><label style="font-size:11px;color:var(--tm);font-weight:600">VENDEDOR</label><select id="iaFiltroVendedor" style="width:100%;margin-top:4px;padding:7px;border-radius:7px;border:1px solid var(--bd);background:var(--bg);color:var(--ts);font-size:12px;font-family:inherit"><option value="">Todos</option></select></div>
+  <div><label style="font-size:11px;color:var(--tm);font-weight:600">DESDE</label><input type="date" id="iaFiltroDes" style="width:100%;margin-top:4px;padding:7px;border-radius:7px;border:1px solid var(--bd);background:var(--bg);color:var(--ts);font-size:12px;font-family:inherit;box-sizing:border-box"></div>
+  <div><label style="font-size:11px;color:var(--tm);font-weight:600">HASTA</label><input type="date" id="iaFiltroHas" style="width:100%;margin-top:4px;padding:7px;border-radius:7px;border:1px solid var(--bd);background:var(--bg);color:var(--ts);font-size:12px;font-family:inherit;box-sizing:border-box"></div>
   <div id="iaLeadsCount" style="font-size:11px;color:var(--tm);text-align:center;padding:6px;background:var(--bg);border-radius:6px;border:1px solid var(--bd)">— leads en selección</div>
   <button onclick="ejecutarAnalisisIA()" id="btnAnalisisIA" style="background:linear-gradient(135deg,#7c3aed,#4f46e5);color:#fff;border:none;border-radius:8px;padding:11px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">🔍 Generar Análisis IA</button>
   <button onclick="limpiarAnalisis()" style="background:var(--bg);color:var(--tm);border:1px solid var(--bd);border-radius:8px;padding:8px;font-size:12px;cursor:pointer;font-family:inherit">🗑 Limpiar</button>
 </div>
-<div id="iaResultado" style="background:var(--p2);border:1px solid var(--bd);border-radius:12px;padding:20px;min-height:400px">
-  <div style="color:var(--tm);font-size:13px;text-align:center;padding:60px 20px"><div style="font-size:32px;margin-bottom:12px">🔍</div><div style="font-weight:600">Selecciona filtros y genera el análisis</div></div>
-</div></div></section>
+<div id="iaResultado" style="background:var(--p2);border:1px solid var(--bd);border-radius:12px;padding:20px;min-height:400px"><div style="color:var(--tm);font-size:13px;text-align:center;padding:60px 20px"><div style="font-size:32px;margin-bottom:12px">🔍</div><div style="font-weight:600">Selecciona filtros y genera el análisis</div></div></div>
+</div></section>
 
 <section id="view-bi" class="view" style="padding:0;height:calc(100vh - 110px);overflow:hidden"><div style="display:flex;border-bottom:1px solid #e2e8f0;background:#fff;padding:0 20px"><button onclick="loadBI('mapa')" id="biT1" style="font-size:11px;font-weight:700;padding:12px 16px;border:none;background:none;color:#6d28d9;border-bottom:2px solid #6d28d9;cursor:pointer;font-family:inherit">🗺️ Mapa Zonas</button><button onclick="loadBI('precios')" id="biT2" style="font-size:11px;font-weight:700;padding:12px 16px;border:none;background:none;color:#888;border-bottom:2px solid transparent;cursor:pointer;font-family:inherit">💰 Agente Precios</button></div><iframe id="biFr" src="/mapa_zonas_v4.html" style="width:100%;height:calc(100% - 44px);border:none"></iframe></section>
 </main>
@@ -686,7 +676,7 @@ async function requestNotifPermission(){
 // ═══════════════════════════════════════════════════
 
 function renderDashVendedor(){if(!S.vendKpi)return;const k=S.vendKpi;const scF=$('scF'),scR=$('scR'),scC=$('scC'),scRS=$('scRS');if(scF)scF.textContent=k.sla?.fresh??'—';if(scR)scR.textContent=k.sla?.risk??'—';if(scC)scC.textContent=k.sla?.critical??'—';if(scRS)scRS.textContent=k.sla?.reassigned??'—';renderFunnel();}
-function renderAll(){const isA=S.user?.role==='admin';if(isA)renderDash();else renderDashVendedor();else renderDashVendedor();renderLeads();renderChileautos();renderEsperaGeneral();renderKanban(); if(typeof renderComprasFull === "function") renderComprasFull();renderCalendar();if(isA){renderAnalytics();renderTeam();}if(S.mid&&$('mbg').classList.contains('show'))refreshModalSilent();if(S.slaOpen)renderSlaPanel(S.slaOpen);if(S.funOpen)renderFunPanel(S.funOpen);try{checkNotifications();}catch(e){}}
+function renderAll(){const isA=S.user?.role==='admin';if(isA)renderDash();else renderDashVendedor();renderLeads();renderChileautos();renderEsperaGeneral();renderKanban(); if(typeof renderComprasFull === "function") renderComprasFull();renderCalendar();if(isA){renderAnalytics();renderTeam();}if(S.mid&&$('mbg').classList.contains('show'))refreshModalSilent();if(S.slaOpen)renderSlaPanel(S.slaOpen);if(S.funOpen)renderFunPanel(S.funOpen);try{checkNotifications();}catch(e){}}
 
 function renderSlaCards(){
   const nv=S.leads.filter(l=>l.status==='Nuevo');
@@ -706,19 +696,6 @@ function toggleFunPanel(type){if(S.slaOpen){S.slaOpen=null;$('slaX').classList.r
 function renderFunPanel(type){const cfg=FM[type];if(!cfg)return;const all=S.leads.filter(l=>cfg.sts.includes(l.status));const items=[...all.filter(l=>l.unread).sort((a,b)=>new Date(b.lastClientTs||0)-new Date(a.lastClientTs||0)),...all.filter(l=>!l.unread).sort((a,b)=>new Date(b.lastClientTs||0)-new Date(a.lastClientTs||0))];$('funXT').textContent=cfg.label+' ('+items.length+') — sin responder primero';$('funXB').innerHTML=renderXRows(items,l=>fDT(l.lastClientTs||l.lastInteraction));bindXRows($('funXB'));}
 function renderPerfTable(){}
 function renderDash(){renderSlaCards();renderFunnel();renderPerfTable();}
-
-function renderDashVendedor(){
-  if(!S.vendKpi) return;
-  const k = S.vendKpi;
-  // Actualizar tarjetas SLA con datos propios del vendedor
-  const scF=$('scF'),scR=$('scR'),scC=$('scC'),scRS=$('scRS');
-  if(scF) scF.textContent = k.sla?.fresh ?? '—';
-  if(scR) scR.textContent = k.sla?.risk ?? '—';
-  if(scC) scC.textContent = k.sla?.critical ?? '—';
-  if(scRS) scRS.textContent = k.sla?.reassigned ?? '—';
-  // Actualizar embudo con datos propios
-  renderFunnel();
-}
 function renderXRows(items,timeFn){if(!items.length)return'<div class="xe2">Sin leads.</div>';const gc='grid-template-columns:10px 1fr 1fr 1fr 1fr auto';const hd=`<div class="xlr" style="${gc};cursor:default;background:var(--p2)"><div></div><div style="font-size:10px;font-weight:700;color:var(--tm);text-transform:uppercase">Nombre</div><div style="font-size:10px;font-weight:700;color:var(--tm);text-transform:uppercase">Canal</div><div style="font-size:10px;font-weight:700;color:var(--tm);text-transform:uppercase">Vendedor</div><div style="font-size:10px;font-weight:700;color:var(--tm);text-transform:uppercase">Estado</div><div style="font-size:10px;font-weight:700;color:var(--tm);text-transform:uppercase">Última</div></div>`;return hd+items.map(l=>`<div class="xlr" data-id="${l.id}" style="${gc}">${adot(l.alertLevel)}<div><div class="lrn">${esc(l.name)}</div><div class="lrs">${l.unread?'● Sin resp · ':''}${esc(l.phone||'')}</div></div><div>${cSrc(l.source)}</div><div>${cUsr(l.assignedTo)}</div><div>${stpl(l.status)}</div><div class="lrt" style="color:var(--tm)">${timeFn(l)}</div></div>`).join('');}
 function bindXRows(c){c.querySelectorAll('.xlr[data-id]').forEach(el=>el.addEventListener('click',()=>openModal(+el.dataset.id)));}
 function renderLeads(){
@@ -1135,23 +1112,7 @@ function openModal(id){S.mid=id;renderModal();$('mbg').classList.add('show');(fu
     }).catch(()=>{});
   }
 }
-function switchModalTab(tab){
-  var g=document.getElementById('mtabGestion'),h=document.getElementById('mtabHistorial'),g2=document.getElementById('mtabGestion2');
-  var mp=document.getElementById('mMainPane'),hp=document.getElementById('mHistPane'),gp=document.getElementById('mGestion2Pane');
-  if(!g||!mp)return;
-  [g,h,g2].forEach(function(t){if(t){t.style.color='var(--tm)';t.style.borderBottomColor='transparent';}});
-  [mp,hp,gp].forEach(function(p){if(p)p.style.display='none';});
-  if(tab==='historial'){
-    if(h){h.style.color='var(--ac)';h.style.borderBottomColor='var(--ac)';}
-    if(hp){hp.style.display='block';var l=findLead(S.mid);if(l)renderModalHistory(l);}
-  } else if(tab==='gestion2'){
-    if(g2){g2.style.color='var(--ac)';g2.style.borderBottomColor='var(--ac)';}
-    if(gp){gp.style.display='block';var l=findLead(S.mid);if(l)renderHistorialGestion(l);}
-  } else {
-    g.style.color='var(--ac)';g.style.borderBottomColor='var(--ac)';
-    mp.style.display='grid';
-  }
-}
+function switchModalTab(tab){var g=document.getElementById('mtabGestion'),h=document.getElementById('mtabHistorial'),g2=document.getElementById('mtabGestion2');var mp=document.getElementById('mMainPane'),hp=document.getElementById('mHistPane'),gp=document.getElementById('mGestion2Pane');if(!g||!mp)return;[g,h,g2].forEach(function(t){if(t){t.style.color='var(--tm)';t.style.borderBottomColor='transparent';}});[mp,hp,gp].forEach(function(p){if(p)p.style.display='none';});if(tab==='historial'){if(h){h.style.color='var(--ac)';h.style.borderBottomColor='var(--ac)';}if(hp){hp.style.display='block';var l=findLead(S.mid);if(l)renderModalHistory(l);}}else if(tab==='gestion2'){if(g2){g2.style.color='var(--ac)';g2.style.borderBottomColor='var(--ac)';}if(gp){gp.style.display='block';var l=findLead(S.mid);if(l)renderHistorialGestion(l);}}else{g.style.color='var(--ac)';g.style.borderBottomColor='var(--ac)';mp.style.display='grid';}}
 
 function renderModalHistory(l){
   var p=document.getElementById('mHistPane');if(!p)return;
@@ -1393,8 +1354,7 @@ window.saveTiFields = async function(leadId) {
   const model = (document.getElementById('ti-model')||{}).value||'';
   const year = (document.getElementById('ti-year')||{}).value||'';
   const color = (document.getElementById('ti-color')||{}).value||'';
-  const plate = (document.getElementById('ti-plate')||{}).value?.toUpperCase()||'';
-  await fetch('/api/leads/'+leadId+'/tradein', { method:'PATCH', headers:{'Content-Type':'application/json'}, body:JSON.stringify({make,model,year,color,plate,km:document.getElementById('ti-km')?.value||'',version:document.getElementById('ti-version')?.value||''}) });
+  await fetch('/api/leads/'+leadId+'/tradein', { method:'PATCH', headers:{'Content-Type':'application/json'}, body:JSON.stringify({make,model,year,color,plate:(document.getElementById('ti-plate')||{}).value?.toUpperCase()||'',km:document.getElementById('ti-km')?.value||'',version:document.getElementById('ti-version')?.value||''}) });
   toast('Datos de retoma guardados ✓');
 };
 window.solicitarTasacion = async function(leadId) {
