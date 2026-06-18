@@ -183,6 +183,7 @@ const sessions=new Map();
 const chatSessions=new Map();
 // ── DEBOUNCE: acumula mensajes del mismo número por 5s antes de responder ──
 const botDebounce = new Map();
+const processedMsgIds = new Set();
 const SLA_GREEN=20;
 const SLA_YELLOW=50;
 const SLA_REASSIGN=30;
@@ -1545,6 +1546,8 @@ app.post('/webhook',async(req,res)=>{
       if(body.trim().toLowerCase()==='/reset'){ld[tenant].splice(idx,1);await tWrite(F.leads,tenant,ld[tenant]);console.log('[RESET] Lead eliminado para',from,'— listo para nuevo ingreso');return;}
 
       // ── DEBOUNCE 5s ──
+      if(msg?.id && processedMsgIds.has(msg.id)){console.log('[WH-DUP] Duplicado ignorado:',msg.id);return;}
+      if(msg?.id){processedMsgIds.add(msg.id);setTimeout(()=>processedMsgIds.delete(msg.id),60000);}
       if(botDebounce.has(from)) clearTimeout(botDebounce.get(from).timer);
       const acc = botDebounce.get(from) || { messages: [] };
       acc.timer = setTimeout(async () => {
