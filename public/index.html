@@ -116,7 +116,44 @@
 
 .gerente-only{display:none!important;}
 </style>
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js">
+function initAnalisisIA(){
+  const sel=document.getElementById('iaFiltroVendedor');if(!sel)return;
+  sel.innerHTML='<option value="">Todos</option>';
+  (S.users||[]).filter(u=>u.role!=='admin').forEach(u=>{sel.innerHTML+='<option value="'+u.username+'">'+u.name+'</option>';});
+  actualizarConteoIA();
+  ['iaFiltroSource','iaFiltroStatus','iaFiltroVendedor','iaFiltroDes','iaFiltroHas'].forEach(id=>{const el=document.getElementById(id);if(el)el.addEventListener('change',actualizarConteoIA);});
+}
+function getFiltrosIA(){return{source:document.getElementById('iaFiltroSource')?.value||'',status:document.getElementById('iaFiltroStatus')?.value||'',assignedTo:document.getElementById('iaFiltroVendedor')?.value||'',desde:document.getElementById('iaFiltroDes')?.value||'',hasta:document.getElementById('iaFiltroHas')?.value||''};}
+function actualizarConteoIA(){
+  const f=getFiltrosIA();let leads=S.leads||[];
+  if(f.source)leads=leads.filter(l=>l.source===f.source);
+  if(f.status)leads=leads.filter(l=>l.status===f.status);
+  if(f.assignedTo)leads=leads.filter(l=>l.assignedTo===f.assignedTo);
+  if(f.desde)leads=leads.filter(l=>new Date(l.lastInteraction||l.createdAt||0)>=new Date(f.desde));
+  if(f.hasta)leads=leads.filter(l=>new Date(l.lastInteraction||l.createdAt||0)<=new Date(f.hasta+'T23:59:59'));
+  const el=document.getElementById('iaLeadsCount');if(el){const ov=leads.length>50;el.textContent=leads.length+' lead'+(leads.length!==1?'s':'')+' en selección'+(ov?' ⚠️ máx 50':'');el.style.color=ov?'#ef4444':'var(--tm)';}
+}
+async function ejecutarAnalisisIA(){
+  const btn=document.getElementById('btnAnalisisIA'),res=document.getElementById('iaResultado'),f=getFiltrosIA();
+  if(!btn||!res)return;
+  btn.disabled=true;btn.textContent='⏳ Analizando...';
+  res.innerHTML='<div style="text-align:center;padding:60px;color:var(--tm)"><div style="font-size:28px;margin-bottom:12px">🤖</div><div style="font-weight:600;margin-bottom:6px">Analizando leads con IA...</div><div style="font-size:12px">Esto puede tomar 15-30 segundos</div></div>';
+  try{
+    const filtros={};
+    if(f.source)filtros.source=f.source;if(f.status)filtros.status=f.status;if(f.assignedTo)filtros.assignedTo=f.assignedTo;
+    if(f.desde)filtros.desde=f.desde;if(f.hasta)filtros.hasta=f.hasta+'T23:59:59';
+    const data=await api('POST','/api/leads/analisis-ia',{filtros});
+    const html=data.reporte.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/**(.*?)**/g,'<strong>$1</strong>').replace(/🔴/g,'<span style="color:#ef4444">🔴</span>').replace(/🟡/g,'<span style="color:#f59e0b">🟡</span>').replace(/🟢/g,'<span style="color:#10b981">🟢</span>').replace(/
+/g,'<br>');
+    res.innerHTML='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px"><div style="font-weight:700;font-size:14px;color:var(--ts)">📋 Reporte — '+data.totalLeads+' leads analizados</div><button onclick="copiarReporte()" style="background:var(--bg);border:1px solid var(--bd);color:var(--ts);border-radius:7px;padding:6px 12px;font-size:12px;cursor:pointer;font-family:inherit">📋 Copiar</button></div><div id="iaReporteTexto" style="font-size:13px;line-height:1.7;color:var(--ts)">'+html+'</div>';
+  }catch(e){res.innerHTML='<div style="color:#ef4444;padding:20px;text-align:center">❌ Error: '+e.message+'</div>';}
+  finally{btn.disabled=false;btn.textContent='🔍 Generar Análisis IA';}
+}
+function copiarReporte(){const el=document.getElementById('iaReporteTexto');if(el)navigator.clipboard.writeText(el.innerText).then(()=>toast('Reporte copiado ✓'));}
+function limpiarAnalisis(){['iaFiltroSource','iaFiltroStatus','iaFiltroVendedor','iaFiltroDes','iaFiltroHas'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});actualizarConteoIA();const res=document.getElementById('iaResultado');if(res)res.innerHTML='<div style="color:var(--tm);font-size:13px;text-align:center;padding:60px 20px"><div style="font-size:32px;margin-bottom:12px">🔍</div><div style="font-weight:600">Selecciona filtros y genera el análisis</div></div>';}
+
+</script>
 
 
 
@@ -1211,7 +1248,10 @@ function renderModal(){const l=findLead(S.mid);if(!l){closeModal();return;}$('mT
     // ── SPRINT 4: UI de Tasación (Inyectada de forma segura) ─────────────────
     (function renderTradeIn() {
       const modalContenedor = document.querySelector('.cchat'); // Esta es la columna derecha real de tu modal
-      if (!modalContenedor || document.getElementById('tradein-section')) return;
+      // Siempre eliminar el anterior para refrescar con datos del lead correcto
+      const existingTi = document.getElementById('tradein-section');
+      if (existingTi) existingTi.remove();
+      if (!modalContenedor) return;
       
       const lead = S.leads.find(x => x.id === S.mid);
       if (!lead) return;
@@ -1352,40 +1392,21 @@ if(S.token&&S.user)enterApp();else{$('av').style.display='none';$('lv').style.di
 
 <script>
 window.saveTiFields = async function(leadId) {
-  const make    = (document.getElementById('ti-make')   ||{}).value||'';
-  const model   = (document.getElementById('ti-model')  ||{}).value||'';
-  const year    = (document.getElementById('ti-year')   ||{}).value||'';
-  const color   = (document.getElementById('ti-color')  ||{}).value||'';
-  const plate   = (document.getElementById('ti-plate')  ||{}).value?.toUpperCase()||'';
-  const km      = (document.getElementById('ti-km')     ||{}).value||'';
-  const version = (document.getElementById('ti-version')||{}).value||'';
-  const r = await fetch('/api/leads/'+leadId+'/tradein', {
-    method:'PATCH',
-    headers:{'Content-Type':'application/json','X-Auth-Token':S.token},
-    body:JSON.stringify({make,model,year,color,plate,km,version})
-  });
-  if(r.ok){
-    toast('Datos de retoma guardados ✓');
-    // Actualizar lead en memoria local
-    const idx = S.leads.findIndex(l=>String(l.id)===String(leadId));
-    if(idx!==-1){ const d=await r.json(); if(d.tradeIn) S.leads[idx].tradeIn=d.tradeIn; }
-  } else { toast('Error al guardar', true); }
+  const make = (document.getElementById('ti-make')||{}).value||'';
+  const model = (document.getElementById('ti-model')||{}).value||'';
+  const year = (document.getElementById('ti-year')||{}).value||'';
+  const color = (document.getElementById('ti-color')||{}).value||'';
+  await fetch('/api/leads/'+leadId+'/tradein', { method:'PATCH', headers:{'Content-Type':'application/json'}, body:JSON.stringify({make,model,year,color,plate:(document.getElementById('ti-plate')||{}).value?.toUpperCase()||'',km:document.getElementById('ti-km')?.value||'',version:document.getElementById('ti-version')?.value||''}) });
+  toast('Datos de retoma guardados ✓');
 };
 window.solicitarTasacion = async function(leadId) {
-  // Guardar datos actuales primero antes de solicitar
-  await window.saveTiFields(leadId);
-  const r = await fetch('/api/tasacion/request', {
-    method:'POST',
-    headers:{'Content-Type':'application/json','X-Auth-Token':S.token},
-    body:JSON.stringify({leadId})
-  });
-  if(r.ok){ toast('Tasación solicitada a taller 🔧 — datos enviados al admin'); refresh(); }
-  else { toast('Error al solicitar tasación', true); }
+  const r = await fetch('/api/tasacion/request', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({leadId}) });
+  toast(r.ok ? 'Tasación solicitada a taller 🔧' : 'Error al solicitar');
 };
 window.registrarOferta = async function(leadId) {
   const offerAmount = parseFloat((document.getElementById('offerInput')||{}).value||'0');
   if (!offerAmount) return toast('Ingresa un monto válido', true);
-  const r = await fetch('/api/tasacion/offer', { method:'POST', headers:{'Content-Type':'application/json','X-Auth-Token':S.token}, body:JSON.stringify({leadId, offerAmount}) });
+  const r = await fetch('/api/tasacion/offer', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({leadId, offerAmount}) });
   if (r.ok) { toast('Oferta registrada ✓ Vendedor notificado'); closeModal(); refresh(); }
 };
 </script>
