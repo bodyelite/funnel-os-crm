@@ -1829,15 +1829,16 @@ app.get('*',(req,res)=>res.sendFile(path.join(__dirname,'public','index.html')))
 setInterval(async()=>{for(const t of TENANTS){try{await applySlaRules(t);}catch(e){console.error('SLA',t,e.message);}}},60000);
 
 // ── SPRINT 4: Tasación Request ──────────────────────────────────────────────
-app.post('/api/tasacion/request', async (req, res) => {
+app.post('/api/tasacion/request', auth('admin','vendedor'), async (req, res) => {
   try {
-    const { leadId, tenant = 'demo_automotora' } = req.body;
+    const tenant = req.tenant;
+    const { leadId } = req.body;
     const leads = await tRead(F.leads, tenant, []);
     const lead = leads.find(l => l.id == leadId);
     if (!lead) return res.status(404).json({ error: 'Lead no encontrado' });
 
     const ti = lead.tradeIn || {};
-    const texto = `📋 SOLICITUD DE TASACIÓN:\nLead: ${lead.name}\nVehículo en retoma: ${ti.make || '?'} ${ti.model || '?'} ${ti.year || '?'}\nColor/Patente: ${ti.color || '?'}\nPor favor evaluar y registrar oferta en el CRM.`;
+    const texto = `📋 SOLICITUD DE TASACIÓN\n👤 Cliente: ${lead.name}\n📱 Tel: ${lead.phone||'?'}\n\n🚗 Vehículo en retoma:\n• Marca/Modelo: ${ti.make||'?'} ${ti.model||'?'}\n• Año: ${ti.year||'?'}\n• Patente: ${ti.plate||'?'}\n• Color: ${ti.color||'?'}\n• Km: ${ti.km||'?'}\n• Versión: ${ti.version||'?'}\n\nPor favor evaluar y registrar la oferta en el CRM.`;
 
     const users = await tRead(F.users, tenant, []);
     const admins = users.filter(u => u.role === 'admin' && u.status === 'Activo');
@@ -1857,11 +1858,12 @@ app.post('/api/tasacion/request', async (req, res) => {
 
 
 // ── SPRINT 4: Tasación Offer ─────────────────────────────────────────────────
-app.post('/api/tasacion/offer', async (req, res) => {
+app.post('/api/tasacion/offer', auth('admin'), async (req, res) => {
   try {
-    const { leadId, offerAmount, tenant = 'demo_automotora' } = req.body;
+    const tenant = req.tenant;
+    const { leadId, offerAmount } = req.body;
     const leads = await tRead(F.leads, tenant, []);
-    const lead = leads.find(l => l.id == leadId);
+    const lead = leads.find(l => String(l.id) == String(leadId));
     if (!lead) return res.status(404).json({ error: 'Lead no encontrado' });
 
     if (!lead.tradeIn) lead.tradeIn = { make:'', model:'', year:'', color:'', status:'Pendiente', offer:0 };
@@ -1888,20 +1890,24 @@ app.post('/api/tasacion/offer', async (req, res) => {
 
 
 // ── SPRINT 4: PATCH tradeIn fields ──────────────────────────────────────────
-app.patch('/api/leads/:id/tradein', async (req, res) => {
+app.patch('/api/leads/:id/tradein', auth('admin','vendedor'), async (req, res) => {
   try {
-    const { tenant = 'default' } = req.query;
+    const tenant = req.tenant;
     const leads = await tRead(F.leads, tenant, []);
-    const lead = leads.find(l => l.id === req.params.id);
+    const lead = leads.find(l => String(l.id) === String(req.params.id));
     if (!lead) return res.status(404).json({ error: 'Lead no encontrado' });
 
     if (!lead.tradeIn) lead.tradeIn = { make:'', model:'', year:'', color:'', status:'Pendiente', offer:0 };
-    const { make, model, year, color } = req.body;
-    if (make  !== undefined) lead.tradeIn.make  = make;
-    if (model !== undefined) lead.tradeIn.model = model;
-    if (year  !== undefined) lead.tradeIn.year  = year;
-    if (color !== undefined) lead.tradeIn.color = color;
-
+    const { make, model, year, color, plate, km, version } = req.body;
+    if (make    !== undefined) lead.tradeIn.make    = make;
+    if (model   !== undefined) lead.tradeIn.model   = model;
+    if (year    !== undefined) lead.tradeIn.year    = year;
+    if (color   !== undefined) lead.tradeIn.color   = color;
+    if (plate   !== undefined) lead.tradeIn.plate   = plate;
+    if (km      !== undefined) lead.tradeIn.km      = km;
+    if (version !== undefined) lead.tradeIn.version = version;
+    lead.notes = Array.isArray(lead.notes) ? lead.notes : [];
+    lead.notes.push({ content: `🚗 Datos retoma: ${make||'?'} ${model||'?'} ${year||'?'} | Patente: ${plate||'?'} | Km: ${km||'?'} | Versión: ${version||'?'} | Color: ${color||'?'}`, author: req.user?.name||'Sistema', ts: Date.now() });
     await tWrite(F.leads, tenant, leads);
     res.json({ ok: true, tradeIn: lead.tradeIn });
   } catch (err) {
