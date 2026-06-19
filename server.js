@@ -18,6 +18,41 @@ const PORT=process.env.PORT||3000;
 const DATA=process.env.RENDER?'/var/data':path.join(__dirname,'data');
 if(!fsSync.existsSync(DATA))fsSync.mkdirSync(DATA,{recursive:true});
 
+// ── MOTOR DE AUTO-RESPALDO FANTASMA (CADA 1 HORA) ──────────────────────
+setInterval(async () => {
+  try {
+    const fsP = require('fs').promises;
+    const backupDir = path.join(DATA, 'backups_automaticos');
+    if (!fsSync.existsSync(backupDir)) fsSync.mkdirSync(backupDir, { recursive: true });
+    
+    // Solo respaldamos la base de datos de demo_automotora para no saturar
+    const srcLeads = path.join(DATA, 'leads_default.json');
+    if (fsSync.existsSync(srcLeads)) {
+      const now = new Date();
+      // Formato: leads_2026-06-19_15-00.json
+      const fileName = `leads_${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}_${String(now.getHours()).padStart(2,'0')}-${String(now.getMinutes()).padStart(2,'0')}.json`;
+      
+      const dest = path.join(backupDir, fileName);
+      await fsP.copyFile(srcLeads, dest);
+      console.log(`[🛡️ BACKUP] Respaldo de seguridad creado: ${fileName}`);
+      
+      // Limpieza automática: Borrar backups con más de 72 horas para no llenar el disco
+      const files = await fsP.readdir(backupDir);
+      for (const file of files) {
+          const filePath = path.join(backupDir, file);
+          const stat = await fsP.stat(filePath);
+          if (Date.now() - stat.mtimeMs > 72 * 60 * 60 * 1000) {
+              await fsP.unlink(filePath);
+          }
+      }
+    }
+  } catch(e) {
+    console.error('[🛡️ BACKUP ERROR]', e.message);
+  }
+}, 3600000); // 3600000 ms = 1 Hora
+// ────────────────────────────────────────────────────────────────────────
+
+
 // ── WEB PUSH ─────────────────────────────────────────────────────
 (function setupVapid(){
   const pub=process.env.VAPID_PUBLIC_KEY, priv=process.env.VAPID_PRIVATE_KEY;
