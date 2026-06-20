@@ -2163,4 +2163,69 @@ app.get('/api/rescate', async (req, res) => {
 });
 // ─────────────────────────────────────────────────────────────────────────
 
+
+// ─── AUTO-CONVERTIDOR UNIVERSAL DE FORMATO DE BÓVEDA ─────────────────────
+app.get('/api/curar-bd', async (req, res) => {
+    const fsP = require('fs').promises;
+    const path = require('path');
+    const archivoFisico = path.join(DATA, 'leads.json');
+
+    try {
+        if (!fsSync.existsSync(archivoFisico)) {
+            return res.status(404).json({ error: 'No se encontró el archivo leads.json en ' + DATA });
+        }
+
+        const crudo = await fsP.readFile(archivoFisico, 'utf8');
+        let data = JSON.parse(crudo);
+        let leadsRecuperados = [];
+
+        // Escenario A: El JSON es un Array plano directo [ {...}, {...} ]
+        if (Array.isArray(data)) {
+            leadsRecuperados = data;
+        } 
+        // Escenario B: El JSON es un Object { "llave": [...] }
+        else if (data && typeof data === 'object') {
+            // Buscamos en todas las llaves internas acumulando cualquier lead vivo
+            for (const key of Object.keys(data)) {
+                if (Array.isArray(data[key])) {
+                    leadsRecuperados = leadsRecuperados.concat(data[key]);
+                }
+            }
+        }
+
+        if (leadsRecuperados.length === 0) {
+            return res.json({ error: 'El archivo existe y pesa, pero no se detectaron objetos de leads en su interior.' });
+        }
+
+        // Limpiamos duplicados por ID
+        let unicos = [];
+        let mapa = new Set();
+        for (const l of leadsRecuperados) {
+            if (l && l.id && !mapa.has(l.id)) {
+                mapa.add(l.id);
+                unicos.push(l);
+            }
+        }
+
+        // CURA DEFINITIVA: Empaquetamos todo bajo la llave maestra 'demo_automotora'
+        const bóvedaCurada = {
+            "demo_automotora": unicos
+        };
+
+        const strLimpio = JSON.stringify(bóvedaCurada, null, 2);
+        await fsP.writeFile(archivoFisico, strLimpio, 'utf8');
+        await fsP.writeFile(path.join(DATA, 'leads_default.json'), strLimpio, 'utf8');
+
+        return res.json({
+            exito: true,
+            mensaje: '🏆 ¡BASE DE DATOS CURADA Y RE-EMPAQUETADA CON ÉXITO!',
+            leads_totales_restaurados: unicos.length,
+            formato_implantado: 'demo_automotora'
+        });
+    } catch(e) {
+        return res.status(500).json({ error: 'Error curando la base de datos: ' + e.message });
+    }
+});
+// ─────────────────────────────────────────────────────────────────────────
+
 app.listen(PORT,()=>{console.log(`🚀 FunnelOS :${PORT} | SLA_GREEN=${SLA_GREEN} SLA_REASSIGN=${SLA_REASSIGN} SLA_YELLOW=${SLA_YELLOW}`);seed().catch(console.error);});
