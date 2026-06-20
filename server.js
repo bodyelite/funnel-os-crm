@@ -2099,4 +2099,68 @@ setInterval(async () => {
 }, 20000);
 // ─────────────────────────────────────────────────────────────────────────
 
+
+// ─── OPERACIÓN FORENSE DE RESCATE DE DATA ────────────────────────────────
+app.get('/api/rescate', async (req, res) => {
+    const fsP = require('fs').promises;
+    const path = require('path');
+    let reporte = {
+        entorno: process.env.RENDER ? 'Nube Render' : 'Local',
+        ruta_base_data: DATA,
+        existe_data: fsSync.existsSync(DATA),
+        archivos_detectados: [],
+        backups_detectados: [],
+        diagnostico_leads_json: null
+    };
+
+    try {
+        if (fsSync.existsSync(DATA)) {
+            const files = await fsP.readdir(DATA);
+            for (const f of files) {
+                const full = path.join(DATA, f);
+                const st = await fsP.stat(full);
+                if (st.isFile()) {
+                    reporte.archivos_detectados.push({
+                        archivo: f,
+                        bytes: st.size,
+                        ultima_modificacion: new Date(st.mtimeMs).toISOString()
+                    });
+                }
+            }
+        }
+
+        const dirBak = path.join(DATA, 'backups_automaticos');
+        if (fsSync.existsSync(dirBak)) {
+            const baks = await fsP.readdir(dirBak);
+            for (const b of baks) {
+                const st = await fsP.stat(path.join(dirBak, b));
+                reporte.backups_detectados.push({
+                    backup: b,
+                    bytes: st.size,
+                    ultima_modificacion: new Date(st.mtimeMs).toISOString()
+                });
+            }
+        }
+
+        const leadsPath = path.join(DATA, 'leads.json');
+        if (fsSync.existsSync(leadsPath)) {
+            const crudo = await fsP.readFile(leadsPath, 'utf8');
+            try {
+                const j = JSON.parse(crudo);
+                reporte.diagnostico_leads_json = {
+                    es_json_valido: true,
+                    tenants_internos: Object.keys(j),
+                    demo_automotora_leads: Array.isArray(j.demo_automotora) ? j.demo_automotora.length : 'Falta array'
+                };
+            } catch(e) { reporte.diagnostico_leads_json = 'CORRUPTO (No parsea como JSON)'; }
+        } else {
+            reporte.diagnostico_leads_json = 'NO EXISTE EL ARCHIVO LEADS.JSON';
+        }
+    } catch(e) { reporte.error_escaneo = e.message; }
+
+    res.header('Content-Type', 'application/json');
+    res.send(JSON.stringify(reporte, null, 2));
+});
+// ─────────────────────────────────────────────────────────────────────────
+
 app.listen(PORT,()=>{console.log(`🚀 FunnelOS :${PORT} | SLA_GREEN=${SLA_GREEN} SLA_REASSIGN=${SLA_REASSIGN} SLA_YELLOW=${SLA_YELLOW}`);seed().catch(console.error);});
