@@ -153,7 +153,52 @@ async function ejecutarAnalisisIA(){
     const data=await api('POST','/api/leads/analisis-ia',{filtros});
     const html=data.reporte.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/**(.*?)**/g,'<strong>$1</strong>').replace(/🔴/g,'<span style="color:#ef4444">🔴</span>').replace(/🟡/g,'<span style="color:#f59e0b">🟡</span>').replace(/🟢/g,'<span style="color:#10b981">🟢</span>').replace(/
 /g,'<br>');
-    res.innerHTML='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px"><div style="font-weight:700;font-size:14px;color:var(--ts)">📋 Reporte — '+data.totalLeads+' leads analizados</div><button onclick="copiarReporte()" style="background:var(--bg);border:1px solid var(--bd);color:var(--ts);border-radius:7px;padding:6px 12px;font-size:12px;cursor:pointer;font-family:inherit">📋 Copiar</button></div><div id="iaReporteTexto" style="font-size:13px;line-height:1.7;color:var(--ts)">'+html+'</div>';
+    res.innerHTML='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px"><div style="font-weight:700;font-size:14px;color:var(--ts)">📋 Reporte — '+data.totalLeads+' leads analizados</div><button onclick="copiarReporte()" style="background:var(--bg);border:1px solid var(--bd);color:var(--ts);border-radius:7px;padding:6px 12px;font-size:12px;cursor:pointer;font-family:inherit">📋 Copiar</button>
+<button id="btn-export-json" onclick="exportarRespaldoJSON()" style="background-color:#10b981; color:white; padding:6px 12px; border-radius:6px; font-size:12px; font-weight:bold; border:1px solid #047857; cursor:pointer; display:none; align-items:center; gap:4px; margin-left:8px;">
+    📦 Exportar JSON
+</button>
+<script>
+function exportarRespaldoJSON() {
+    const role = localStorage.getItem("role") || sessionStorage.getItem("role") || "";
+    const user = localStorage.getItem("user") || sessionStorage.getItem("user") || "";
+    if (!role.includes("admin") && !role.includes("gerente") && !user.includes("admin") && !user.includes("gerente")) {
+        alert("⛔ ACCESO DENEGADO: Solo el perfil de Gerencia tiene autorización para exportar la base de datos.");
+        return;
+    }
+    let data = window.S?.leads || window.leads || [];
+    if (!data || data.length === 0) {
+        fetch("/api/leads", { headers: { "X-Auth-Token": localStorage.getItem("token") || "" } })
+        .then(r => r.json())
+        .then(leads => descargarBlobJSON(leads))
+        .catch(() => alert("No se encontraron datos cargados para exportar."));
+        return;
+    }
+    descargarBlobJSON(data);
+}
+
+function descargarBlobJSON(data) {
+    const blob = new Blob([JSON.stringify({ "demo_automotora": data }, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "RESPALDO_ABSOLUTO_SISTEMA.json";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+}
+
+setInterval(() => {
+    try {
+        const r = localStorage.getItem("role") || sessionStorage.getItem("role") || "";
+        const u = localStorage.getItem("user") || sessionStorage.getItem("user") || "";
+        const isGerente = r.includes("admin") || r.includes("gerente") || u.includes("admin") || u.includes("gerente");
+        const b = document.getElementById("btn-export-json");
+        if (b) b.style.display = (localStorage.getItem("token") && isGerente) ? "inline-flex" : "none";
+    } catch(e) {}
+}, 500);
+</script>
+</div><div id="iaReporteTexto" style="font-size:13px;line-height:1.7;color:var(--ts)">'+html+'</div>';
   }catch(e){res.innerHTML='<div style="color:#ef4444;padding:20px;text-align:center">❌ '+e.message+'</div>';}
   finally{btn.disabled=false;btn.textContent='🔍 Generar Análisis IA';}
 }
@@ -2199,11 +2244,7 @@ function enviarPlantillaSaludo3() {
 
 
 
-<div id="caja-fuerte-jc-container" style="position:fixed; bottom:20px; right:20px; z-index:9999999; display:none;">
-    <button onclick="dispararDescargaJC()" style="background-color:#10b981; color:white; padding:10px 16px; border-radius:8px; font-family:system-ui, sans-serif; font-size:13px; font-weight:bold; border:1px solid #047857; box-shadow:0 4px 6px -1px rgba(0,0,0,0.2); display:flex; align-items:center; gap:6px; cursor:pointer;">
-        <span style="font-size:16px;">📦</span> DESCARGAR RESPALDO TOTAL
-    </button>
-</div>
+
 <script>
 function dispararDescargaJC() {
     const token = localStorage.getItem("token") || sessionStorage.getItem("token") || "";
