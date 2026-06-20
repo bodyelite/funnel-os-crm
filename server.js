@@ -2100,37 +2100,3 @@ setInterval(async () => {
 // ─────────────────────────────────────────────────────────────────────────
 
 app.listen(PORT,()=>{console.log(`🚀 FunnelOS :${PORT} | SLA_GREEN=${SLA_GREEN} SLA_REASSIGN=${SLA_REASSIGN} SLA_YELLOW=${SLA_YELLOW}`);seed().catch(console.error);});
-
-
-
-
-// ── WA SEQUENCE: Endpoint manual contacto_4 ──────────────────────────────────
-/* [EXTIRPADO: Endpoint manual /send-template] */
-
-    const leads = await tRead(F.leads, tenant);
-    const idx = leads.findIndex(l => l.id == req.params.id);
-    if (idx === -1) return res.status(404).json({ error: 'Lead no encontrado' });
-    const phone = (leads[idx].phone || '').replace(/\D/g,'');
-    if (!phone) return res.status(400).json({ error: 'Lead sin teléfono' });
-    const ok = await sendWATemplate(phone, templateName, params || []);
-    if (!ok) return res.status(502).json({ error: 'Error al enviar plantilla WA' });
-    leads[idx].chatHistory = leads[idx].chatHistory || [];
-    leads[idx].chatHistory.push({ role: 'bot', content: `[PLANTILLA WA ENVIADA: ${templateName}]`, ts: Date.now() });
-    await tWrite(F.leads, tenant, leads);
-    res.json({ ok: true });
-  } catch(e) {
-    res.status(500).json({ error: e.message });
-  }
-});
-
-
-// ── WA SEQUENCE: Auto contacto_2 (30min) y contacto_3 (3h) ──────────────────
-/* [EXTIRPADO: sendWATemplate_OLD] */
-
-
-/* [NODO FANTASMA DESTRUIDO: Cron Viejo (Plantilla contacto_2)] */
-
-
-// Parche de migracion zombi anulado por gerencia.
-// FORZAR DEPLOY 1781022985011
-// FIX 1781023379423
