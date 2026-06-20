@@ -183,7 +183,7 @@ async function marcela(tenant, history, msg, notes, assignedName, leadSource) {
     return { reply: 'Dame un segundito, estoy validando la info en el sistema...', intent_signal: 'NONE' };
   }
 }
-const F={users:path.join(DATA,'users.json'),leads:path.join(DATA,'leads_default.json'),config:path.join(DATA,'config.json'),bot:path.join(__dirname,'bot.json'),inventory:path.join(DATA,'inventory.json'),rr:path.join(DATA,'rr.json'),spend:path.join(DATA,'spend.json')};
+const F={users:path.join(DATA,'users.json'),leads:path.join(DATA,'leads.json'),config:path.join(DATA,'config.json'),bot:path.join(__dirname,'bot.json'),inventory:path.join(DATA,'inventory.json'),rr:path.join(DATA,'rr.json'),spend:path.join(DATA,'spend.json')};
 const TENANTS=['demo_automotora','demo_clinica'];
 const sessions=new Map();
 const chatSessions=new Map();
