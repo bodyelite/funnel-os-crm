@@ -153,148 +153,7 @@ async function ejecutarAnalisisIA(){
     const data=await api('POST','/api/leads/analisis-ia',{filtros});
     const html=data.reporte.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/**(.*?)**/g,'<strong>$1</strong>').replace(/🔴/g,'<span style="color:#ef4444">🔴</span>').replace(/🟡/g,'<span style="color:#f59e0b">🟡</span>').replace(/🟢/g,'<span style="color:#10b981">🟢</span>').replace(/
 /g,'<br>');
-    res.innerHTML='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px"><div style="font-weight:700;font-size:14px;color:var(--ts)">📋 Reporte — '+data.totalLeads+' leads analizados</div><button onclick="copiarReporte()" style="background:var(--bg);border:1px solid var(--bd);color:var(--ts);border-radius:7px;padding:6px 12px;font-size:12px;cursor:pointer;font-family:inherit">📋 Copiar</button>
-<button id="btn-export-json" onclick="exportarRespaldoJSON()" style="background-color:#10b981; color:white; padding:6px 12px; border-radius:6px; font-size:12px; font-weight:bold; border:1px solid #047857; cursor:pointer; display:none; align-items:center; gap:4px; margin-left:8px;">
-    📦 Exportar JSON
-</button>
-<script>
-function exportarRespaldoJSON() {
-    const role = localStorage.getItem("role") || sessionStorage.getItem("role") || "";
-    const user = localStorage.getItem("user") || sessionStorage.getItem("user") || "";
-    if (!role.includes("admin") && !role.includes("gerente") && !user.includes("admin") && !user.includes("gerente")) {
-        alert("⛔ ACCESO DENEGADO: Solo el perfil de Gerencia tiene autorización para exportar la base de datos.");
-        return;
-    }
-    let data = window.S?.leads || window.leads || [];
-    if (!data || data.length === 0) {
-        fetch("/api/leads", { headers: { "X-Auth-Token": localStorage.getItem("token") || "" } })
-        .then(r => r.json())
-        .then(leads => descargarBlobJSON(leads))
-        .catch(() => alert("No se encontraron datos cargados para exportar."));
-        return;
-    }
-    descargarBlobJSON(data);
-}
-
-function descargarBlobJSON(data) {
-    const blob = new Blob([JSON.stringify({ "demo_automotora": data }, null, 2)], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "RESPALDO_ABSOLUTO_SISTEMA.json";
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-}
-
-setInterval(() => {
-    try {
-        const r = localStorage.getItem("role") || sessionStorage.getItem("role") || "";
-        const u = localStorage.getItem("user") || sessionStorage.getItem("user") || "";
-        const isGerente = r.includes("admin") || r.includes("gerente") || u.includes("admin") || u.includes("gerente");
-        const b = document.getElementById("btn-export-json");
-        if (b) b.style.display = (localStorage.getItem("token") && isGerente) ? "inline-flex" : "none";
-    } catch(e) {}
-}, 500);
-</script>
-</div><div id="iaReporteTexto" style="font-size:13px;line-height:1.7;color:var(--ts)">'+html+'</div>';
-  }catch(e){res.innerHTML='<div style="color:#ef4444;padding:20px;text-align:center">❌ '+e.message+'</div>';}
-  finally{btn.disabled=false;btn.textContent='🔍 Generar Análisis IA';}
-}
-function copiarReporte(){const el=document.getElementById('iaReporteTexto');if(el)navigator.clipboard.writeText(el.innerText).then(()=>toast('Reporte copiado ✓'));}
-function limpiarAnalisis(){['iaFiltroSource','iaFiltroStatus','iaFiltroVendedor','iaFiltroDes','iaFiltroHas'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});actualizarConteoIA();const res=document.getElementById('iaResultado');if(res)res.innerHTML='<div style="color:var(--tm);font-size:13px;text-align:center;padding:60px 20px"><div style="font-size:32px;margin-bottom:12px">🔍</div><div style="font-weight:600">Selecciona filtros y genera el análisis</div></div>';}
-
-</script>
-
-
-
-<link rel="manifest" href="/manifest.json">
-<meta name="theme-color" content="#0f172a">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="RMG CRM">
-<link rel="apple-touch-icon" href="/icon-192.svg">
-<link rel="icon" type="image/svg+xml" href="/icon-192.svg">
-
-<style id="mobile-menu-fix">
-  @media (max-width: 768px) {
-    .sb {
-      position: fixed !important;
-      top: 0 !important;
-      left: 0 !important;
-      width: 100% !important;
-      /* Ajuste quirúrgico para el notch/isla dinámica de iPhone */
-      padding-top: max(env(safe-area-inset-top), 45px) !important;
-      padding-bottom: 12px !important;
-      z-index: 9999 !important;
-      box-shadow: 0 4px 10px rgba(0,0,0,0.2) !important;
-      display: flex !important;
-      align-items: center !important;
-      overflow-x: auto !important;
-      white-space: nowrap !important;
-      background: #0f172a !important; /* Mantiene el color corporativo */
-    }
-    .shell {
-      /* Empuja toda la aplicación hacia abajo para respetar el nuevo alto del menú */
-      padding-top: max(env(safe-area-inset-top) + 70px, 95px) !important;
-    }
-    .sb > * {
-      font-size: 13px !important; 
-      padding: 8px 14px !important;
-    }
-    .sb h1 {
-      margin-top: 0 !important;
-      margin-bottom: 0 !important;
-      margin-right: 10px !important;
-    }
-  }
-</style>
-<script>
-// Parche anti-cache agresivo para sincronizacion Safari/iOS
-const _oldFetch = window.fetch;
-window.fetch = function() {
-  let args = Array.prototype.slice.call(arguments);
-  if (typeof args[0] === 'string' && args[0].includes('/api/') && (!args[1] || !args[1].method || args[1].method.toUpperCase() === 'GET')) {
-    args[0] += (args[0].includes('?') ? '&' : '?') + '_t=' + Date.now();
-  }
-  return _oldFetch.apply(this, args);
-};
-</script>
-<script>
-// Matar cualquier Service Worker que ya esté instalado en los celulares de los vendedores
-if('serviceWorker' in navigator) {
-  navigator.serviceWorker.getRegistrations().then(regs => {
-    for(let reg of regs) { reg.unregister(); console.log('SW aniquilado'); }
-  });
-}
-
-// Modificar fetch para prohibir absolutamente el caché a nivel de servidor
-const _superFetch = window.fetch;
-window.fetch = function() {
-  let args = Array.prototype.slice.call(arguments);
-  if (typeof args[0] === 'string' && args[0].includes('/api/') && (!args[1] || !args[1].method || args[1].method.toUpperCase() === 'GET')) {
-    args[1] = args[1] || {};
-    args[1].cache = 'no-store'; // Orden directa a Safari: NO CACHEAR NADA
-    args[1].headers = args[1].headers || {};
-    args[1].headers['Cache-Control'] = 'no-cache, no-store, must-revalidate';
-    args[1].headers['Pragma'] = 'no-cache';
-    args[1].headers['Expires'] = '0';
-  }
-  return _superFetch.apply(this, args);
-};
-
-// Refresco automático al desbloquear el celular
-document.addEventListener('visibilitychange', () => {
-  if(document.visibilityState === 'visible' && typeof refresh === 'function') {
-    setTimeout(refresh, 600); // 0.6 seg de respiro para que iOS vuelva a conectar el 4G/WiFi
-  }
-});
-</script>
-</head>
-
-<body>
-<div id="lv" class="lw"><div class="lw-bg"></div><div class="lw-grid"></div><div class="lc"><h1>FunnelOS CRM</h1><div class="sub">Torre de Control · Cata IA</div><label>Empresa</label><select id="liT"><option value="demo_automotora">RMG Autos</option></select><label>Usuario</label><input id="liU" value="gerente" placeholder="gerente|vendedor1|vendedor2"><label>Contraseña</label><input id="liP" type="password" value="demo"><button id="liB">Entrar</button><div class="err" id="liE"></div><div class="hint">Demo: <strong>gerente / demo</strong> &nbsp;·&nbsp; daniela / demo &nbsp;·&nbsp; carlos / demo</div></div></div>
+    res.innerHTML='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px"><div style="font-weight:700;font-size:14px;color:var(--ts)">📋 Reporte — '+data.totalLeads+' leads analizados</div><div class="err" id="liE"></div><div class="hint">Demo: <strong>gerente / demo</strong> &nbsp;·&nbsp; daniela / demo &nbsp;·&nbsp; carlos / demo</div></div></div>
 <div id="av" class="app" style="display:none">
 <aside class="sb"><h1 id="bizName">FunnelOS</h1><div class="who" id="uBadge">—</div><nav><button class="active" data-view="dashboard">📊 Operación</button><button data-view="leads">📋 Leads</button><button data-view="chileautos" id="navCA" style="background:#e8f5e9;color:#2e7d32;font-weight:700">🏷 Chileautos</button><button data-view="espera-general" id="navEG" style="background:#ede9fe;color:#6d28d9;font-weight:700;display:none">⏳ En Espera</button><button data-view="compras" id="navCompras" style="background:#fff7ed;color:#d97706;font-weight:700">🛍 Compras RMG</button>
 <button data-view="pipeline">🗂 Pipeline</button><button data-view="analytics" id="navA">📈 Analítica</button><button data-view="team" id="navT">👥 Equipo</button><button data-view="inventario" id="navInv">🚗 Inventario</button><button id="btnSyncInv" style="background:linear-gradient(135deg,#16a34a,#15803d);color:#fff;border:none;border-radius:8px;padding:7px 13px;font-size:12px;font-weight:700;cursor:pointer;margin-left:4px" onclick="syncInventario()">🔄 Sync RMG</button><button data-view="bi" id="navBI" style="background:linear-gradient(135deg,#1a1a2e,#16213e);color:#a78bfa;border:none;border-radius:8px;padding:7px 13px;font-size:12px;font-weight:700;cursor:pointer;margin-left:4px;font-family:inherit">🧠 BI</button><button data-view="analisis" id="navAnalisis" style="background:linear-gradient(135deg,#7c3aed,#4f46e5);color:#fff;border:none;border-radius:8px;padding:7px 13px;font-size:12px;font-weight:700;cursor:pointer;margin-left:4px;font-family:inherit">🔍 Análisis IA</button><button data-view="config" id="navC">⚙️ Config</button></nav><button id="btnInstallApp" onclick="installApp()" style="display:none;margin-top:8px;background:linear-gradient(135deg,#D4A843,#F2C955);color:#0f172a;border:none;border-radius:8px;padding:8px 12px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;align-items:center;gap:6px;letter-spacing:.04em">📲 Instalar App</button>
@@ -2268,6 +2127,63 @@ setInterval(() => {
         }
     } catch(e) {}
 }, 500);
+</script>
+
+
+<script>
+function exportarRespaldoMasterJSON() {
+    let data = window.S?.leads || window.leads || [];
+    if (!data || data.length === 0) {
+        const token = localStorage.getItem("token") || sessionStorage.getItem("token") || "";
+        if (!token) { alert("⛔ No autenticado en el sistema."); return; }
+        fetch("/api/leads", { headers: { "X-Auth-Token": token } })
+        .then(r => r.json())
+        .then(leads => descargarFicheroJSON(leads))
+        .catch(() => alert("❌ No se encontraron datos en el servidor."));
+        return;
+    }
+    descargarFicheroJSON(data);
+}
+
+function descargarFicheroJSON(leads) {
+    const boveda = { "demo_automotora": leads };
+    const blob = new Blob([JSON.stringify(boveda, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "RESPALDO_ABSOLUTO_SISTEMA.json";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+    // 1. Clonar botón CSV dinámicamente
+    let elCsv = Array.from(document.querySelectorAll("button, a, span")).find(el => el.textContent.toLowerCase().includes("csv"));
+    if (elCsv && elCsv.parentNode) {
+        let btn = document.createElement("button");
+        btn.id = "btn-export-json-master";
+        btn.innerHTML = "📦 Exportar JSON";
+        btn.className = elCsv.className || "";
+        btn.style.cssText = (elCsv.style.cssText || "") + "; background-color:#10b981; color:white; font-weight:bold; border:1px solid #047857; cursor:pointer; display:none; margin-left:8px;";
+        btn.onclick = exportarRespaldoMasterJSON;
+        elCsv.parentNode.insertBefore(btn, elCsv.nextSibling);
+    }
+
+    // 2. Verificación autorizada con el Backend (/api/me)
+    const token = localStorage.getItem("token") || sessionStorage.getItem("token") || "";
+    if (token) {
+        fetch("/api/me", { headers: { "X-Auth-Token": token } })
+        .then(r => r.json())
+        .then(data => {
+            if (data?.user?.role === "admin" || data?.user?.role === "gerente") {
+                let b = document.getElementById("btn-export-json-master");
+                if (b) b.style.display = "inline-flex";
+            }
+        }).catch(()=>{});
+    }
+});
 </script>
 
 </body>
