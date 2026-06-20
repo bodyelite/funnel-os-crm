@@ -1288,6 +1288,7 @@ app.post('/webhook',async(req,res)=>{
       || (msg.type==='sticker' ? '[STICKER]' : null)        // sticker — no null para no perder el lead
       || null;
     // Si el tipo es template el portal ya envió plantilla — creamos lead de todas formas
+    if(req.body.entry?.[0]?.changes?.[0]?.value?.statuses) return res.sendStatus(200);
     if(!body && msg.type==='template') body='[Mensaje de plantilla automática]';
     // Log de tipos desconocidos para debugging
     if(!body && msg.type && !['image','audio','video','document'].includes(msg.type)){
@@ -2017,15 +2018,32 @@ app.post('/api/leads/:id/send-template', auth('admin','vendedor'), async (req, r
 async function sendWATemplate(phone, templateName, params) {
   const token = (process.env.WA_TOKEN || '').trim(), phoneId = (process.env.WA_PHONE_ID || '').trim();
   if (!token || !phoneId) return false;
-  const components = [];
+  
+  // Mapear los textos a los componentes dinámicos que Meta exige
+  let components = [];
+  if (params && params.length > 0) {
+      components = [{
+          type: 'body',
+          parameters: params.map(p => ({ type: 'text', text: String(p) }))
+      }];
+  }
+
+  // Filtrar caracteres raros de estados de entrega que llenan de basura el CRM (Fix adicional)
+  const lang = (templateName === 'saludo2' || templateName === 'contacto_2') ? 'es_LA' : 'es_LA'; // Forzamos es_LA siempre
+
   const res = await fetch(`https://graph.facebook.com/v19.0/${phoneId}/messages`, {
     method: 'POST',
     headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' },
     body: JSON.stringify({
       messaging_product: 'whatsapp', to: phone, type: 'template',
-      template: { name: templateName, language: { code: 'es' }, components }
+      template: { name: templateName, language: { code: lang }, components }
     })
   });
+  
+  if(!res.ok) {
+      const err = await res.text();
+      console.error('[WA-TEMPLATE] Error ' + templateName, err);
+  }
   return res.ok;
 }
 
