@@ -2184,6 +2184,7 @@ setInterval(async () => {
 // ─── IMPLEMENTACIÓN OFICIAL MAPA MAESTRO JC (V2) ─────────────────────────
 
 async function sendWATemplate(phone, templateName, params) {
+  if (templateName === 'contacto_2' || templateName === 'contacto_3') return false;
   const token = (process.env.WA_TOKEN || '').trim(), phoneId = (process.env.WA_PHONE_ID || '').trim();
   if (!token || !phoneId || !phone) return false;
   
