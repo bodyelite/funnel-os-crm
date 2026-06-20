@@ -2228,4 +2228,13 @@ app.get('/api/curar-bd', async (req, res) => {
 });
 // ─────────────────────────────────────────────────────────────────────────
 
+
+// ─── DESCARGA DE BÓVEDA (SOLO GERENCIA / ADMIN) ──────────────────────────
+app.get("/api/descarga-absoluta-jc", auth("admin"), (req, res) => {
+    res.setHeader("Access-Control-Allow-Origin", "*");
+    res.setHeader("Cache-Control", "no-store");
+    res.download(F.leads, "RESPALDO_ABSOLUTO_RMG.json");
+});
+// ─────────────────────────────────────────────────────────────────────────
+
 app.listen(PORT,()=>{console.log(`🚀 FunnelOS :${PORT} | SLA_GREEN=${SLA_GREEN} SLA_REASSIGN=${SLA_REASSIGN} SLA_YELLOW=${SLA_YELLOW}`);seed().catch(console.error);});
