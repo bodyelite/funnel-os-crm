@@ -19,37 +19,8 @@ const DATA=process.env.RENDER?'/var/data':path.join(__dirname,'data');
 if(!fsSync.existsSync(DATA))fsSync.mkdirSync(DATA,{recursive:true});
 
 // ── MOTOR DE AUTO-RESPALDO FANTASMA (CADA 1 HORA) ──────────────────────
-setInterval(async () => {
-  try {
-    const fsP = require('fs').promises;
-    const backupDir = path.join(DATA, 'backups_automaticos');
-    if (!fsSync.existsSync(backupDir)) fsSync.mkdirSync(backupDir, { recursive: true });
-    
-    // Solo respaldamos la base de datos de demo_automotora para no saturar
-    const srcLeads = path.join(DATA, 'leads_default.json');
-    if (fsSync.existsSync(srcLeads)) {
-      const now = new Date();
-      // Formato: leads_2026-06-19_15-00.json
-      const fileName = `leads_${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}_${String(now.getHours()).padStart(2,'0')}-${String(now.getMinutes()).padStart(2,'0')}.json`;
-      
-      const dest = path.join(backupDir, fileName);
-      await fsP.copyFile(srcLeads, dest);
-      console.log(`[🛡️ BACKUP] Respaldo de seguridad creado: ${fileName}`);
-      
-      // Limpieza automática: Borrar backups con más de 72 horas para no llenar el disco
-      const files = await fsP.readdir(backupDir);
-      for (const file of files) {
-          const filePath = path.join(backupDir, file);
-          const stat = await fsP.stat(filePath);
-          if (Date.now() - stat.mtimeMs > 72 * 60 * 60 * 1000) {
-              await fsP.unlink(filePath);
-          }
-      }
-    }
-  } catch(e) {
-    console.error('[🛡️ BACKUP ERROR]', e.message);
-  }
-}, 3600000); // 3600000 ms = 1 Hora
+/* [EXTIRPADO: Cron Anciano (contacto_2)] */
+
 // ────────────────────────────────────────────────────────────────────────
 
 
@@ -1986,13 +1957,36 @@ app.post('/markAsRead', express.json(), (req, res) => {
     res.json({ success: true });
 });
 
-app.listen(PORT,()=>{console.log(`🚀 FunnelOS :${PORT} | SLA_GREEN=${SLA_GREEN} SLA_REASSIGN=${SLA_REASSIGN} SLA_YELLOW=${SLA_YELLOW}`);seed().catch(console.error);});
 
+// ─── ARQUITECTURA OFICIAL DE REGLAS DE NEGOCIO (MAPA JC) ─────────────────
 
+// [PUNTOS 7, 8, 9]: Motor de envío Meta con soporte de variables dinámicas
+async function sendWATemplate(phone, templateName, params) {
+  const token = (process.env.WA_TOKEN || '').trim(), phoneId = (process.env.WA_PHONE_ID || '').trim();
+  if (!token || !phoneId || !phone) return false;
+  
+  let components = [];
+  if (params && params.length > 0) {
+      components = [{
+          type: 'body',
+          parameters: params.map(p => ({ type: 'text', text: String(p || '') }))
+      }];
+  }
+  const pClean = String(phone).replace(/\D/g, '');
+  const res = await fetch(`https://graph.facebook.com/v19.0/${phoneId}/messages`, {
+    method: 'POST',
+    headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      messaging_product: 'whatsapp', to: pClean, type: 'template',
+      template: { name: templateName, language: { code: 'es_LA' }, components }
+    })
+  });
+  if(!res.ok) console.error(`[META ERR ${templateName}]:`, await res.text());
+  return res.ok;
+}
 
-
-// ── WA SEQUENCE: Endpoint manual contacto_4 ──────────────────────────────────
-app.post('/api/leads/:id/send-template_OLD', auth('admin','vendedor'), async (req, res) => {
+// [PUNTO 9]: Disparo manual por botón verde desde el CRM
+app.post('/api/leads/:id/send-template', auth('admin','vendedor'), async (req, res) => {
   try {
     const { templateName, params } = req.body;
     if (!templateName) return res.status(400).json({ error: 'Falta templateName' });
@@ -2000,17 +1994,118 @@ app.post('/api/leads/:id/send-template_OLD', auth('admin','vendedor'), async (re
     const idx = leads.findIndex(x => x.id == req.params.id);
     if (idx === -1) return res.status(404).json({ error: 'Lead no encontrado' });
     
-    const pClean = (leads[idx].phone || '').replace(/\D/g, '');
+    const pClean = String(leads[idx].phone || '').replace(/\D/g, '');
     const ok = await sendWATemplate(pClean, templateName, params || [leads[idx].name || 'Estimado']);
     if (ok) {
         leads[idx].chatHistory.push({ role: 'agent', content: `[META] Plantilla ${templateName} enviada manualmente`, ts: Date.now() });
         await tWrite(F.leads, req.tenant, leads);
         return res.json({ success: true });
     } else {
-        return res.status(500).json({ error: 'Fallo de Meta al disparar plantilla' });
+        return res.status(500).json({ error: 'Rechazo de Meta al disparar plantilla' });
     }
   } catch(e) { return res.status(500).json({ error: e.message }); }
 });
+
+// [PUNTOS 1 al 8]: Super-Cron Maestro de Lógica Comercial
+setInterval(async () => {
+  try {
+    for (const t of TENANTS) {
+      const leads = await tRead(F.leads, t);
+      const users = await tRead(F.users, t);
+      let changed = false;
+
+      const admins = users.filter(u => u.role === 'admin' && u.phone);
+      const avisar = async (fono, txt) => { if(fono) await sendWA(fono, txt).catch(()=>{}); };
+      const avisarAdmins = async (txt) => { for(const a of admins) await avisar(a.phone, txt); };
+
+      for (const l of leads) {
+        if (!l || FINAL_ST.has(l.status)) continue;
+        const fCliente = l.phone ? String(l.phone).replace(/\D/g, '') : null;
+        const vend = users.find(u => u.username === l.assignedTo);
+        const ref = l.created_at || l.lastClientTs || l.lastInteraction || Date.now();
+        const minsSinAtencion = (Date.now() - new Date(ref).getTime()) / 60000;
+
+        // [PUNTO 6]: Alerta Nuevo Lead (Staff + Admin)
+        if (!l.alertaNuevoSent && l.status === 'Nuevo') {
+            l.alertaNuevoSent = true; changed = true;
+            const txt = `📢 NUEVO LEAD: [${l.name || 'S/N'}] ingresó al embudo.`;
+            if (vend) await avisar(vend.phone, txt);
+            await avisarAdmins(txt);
+        }
+
+        // [PUNTO 1]: Alerta Tasación (Solo Admins)
+        if (!l.alertaTasSent && (l.source === 'Compramos tu auto' || (l.interest && l.interest.toLowerCase().includes('tasar')))) {
+            l.alertaTasSent = true; changed = true;
+            await avisarAdmins(`🔔 ALERTA TASACIÓN: El usuario [${l.name || 'S/N'}] solicitó tazar su vehículo.`);
+        }
+
+        // [PUNTO 2]: Alerta Reserva Vencida (3 días -> Staff + Admin)
+        if ((l.status === 'Reserva' || l.status === 'Reservado') && !l.alertaReserva3d) {
+            const dias = (Date.now() - new Date(l.reservadoAt || l.lastInteraction).getTime()) / (1000*60*60*24);
+            if (dias >= 3) {
+                l.alertaReserva3d = true; changed = true;
+                const txt = `⚠️ RESERVA VENCIDA: El lead [${l.name || 'S/N'}] lleva 3 días en Reserva sin gestión.`;
+                if (vend) await avisar(vend.phone, txt);
+                await avisarAdmins(txt);
+            }
+        }
+
+        // [PUNTO 4]: Alerta SLA Riesgo (20 min sin atención -> Solo Vendedor)
+        if (l.status === 'Nuevo' && !l.alertaSla20 && minsSinAtencion >= 20 && minsSinAtencion < 30) {
+            l.alertaSla20 = true; changed = true;
+            if (vend) await avisar(vend.phone, `🚨 ALERTA SLA RIESGO: El lead [${l.name || 'S/N'}] lleva 20 min sin atención.`);
+        }
+
+        // [PUNTO 5]: Alerta Reasignación (30 min -> Al NUEVO vendedor)
+        if (l.status === 'Nuevo' && !l.reasignado30 && minsSinAtencion >= 30) {
+            l.reasignado30 = true; changed = true;
+            const nextObj = await rrNext(t, l.assignedTo);
+            if (nextObj && nextObj.username !== l.assignedTo) {
+                l.assignedTo = nextObj.username;
+                await avisar(nextObj.phone, `🔄 ALERTA REASIGNACIÓN: Se te reasignó el lead [${l.name || 'S/N'}] por abandono.`);
+            }
+        }
+
+        // [PUNTO 3]: Alerta Admin Sin (30 min sin atenderse -> Solo Admins)
+        if (l.status === 'Nuevo' && !l.alertaAdminSin30 && minsSinAtencion >= 30) {
+            l.alertaAdminSin30 = true; changed = true;
+            await avisarAdmins(`📢 ALERTA ADMIN SIN: El lead [${l.name || 'S/N'}] cumplió 30 min sin ser atendido.`);
+        }
+
+        // [PUNTOS 7 y 8]: Automatización Sala de Espera (Plantillas Meta a Clientes)
+        if (fCliente && l.sala_espera === true && !l.replied) {
+            // Punto 7: saludo1 al entrar a sala de espera
+            if (!l.saludo1_ts) {
+                const ok = await sendWATemplate(fCliente, 'saludo1', [l.name || 'Estimado']);
+                if (ok) {
+                    l.saludo1_ts = Date.now(); changed = true;
+                    l.chatHistory.push({ role: 'bot', content: '[META] saludo1 automático enviado', ts: Date.now() });
+                }
+            }
+            // Punto 8: saludo2 a los 20 min de saludo1
+            else if (l.saludo1_ts && !l.saludo2_ts && ((Date.now() - l.saludo1_ts)/60000) >= 20) {
+                const ok = await sendWATemplate(fCliente, 'saludo2', [l.name || 'Estimado']);
+                if (ok) {
+                    l.saludo2_ts = Date.now(); changed = true;
+                    l.chatHistory.push({ role: 'bot', content: '[META] saludo2 automático enviado', ts: Date.now() });
+                }
+            }
+        }
+      }
+      if (changed) await tWrite(F.leads, t, leads);
+    }
+  } catch(e) { console.error('[CRON-MAESTRO-ERR]', e.message); }
+}, 20000);
+// ─────────────────────────────────────────────────────────────────────────
+
+app.listen(PORT,()=>{console.log(`🚀 FunnelOS :${PORT} | SLA_GREEN=${SLA_GREEN} SLA_REASSIGN=${SLA_REASSIGN} SLA_YELLOW=${SLA_YELLOW}`);seed().catch(console.error);});
+
+
+
+
+// ── WA SEQUENCE: Endpoint manual contacto_4 ──────────────────────────────────
+/* [EXTIRPADO: Endpoint manual /send-template] */
+
     const leads = await tRead(F.leads, tenant);
     const idx = leads.findIndex(l => l.id == req.params.id);
     if (idx === -1) return res.status(404).json({ error: 'Lead no encontrado' });
@@ -2029,29 +2124,8 @@ app.post('/api/leads/:id/send-template_OLD', auth('admin','vendedor'), async (re
 
 
 // ── WA SEQUENCE: Auto contacto_2 (30min) y contacto_3 (3h) ──────────────────
-async function sendWATemplate_OLD(phone, templateName, params) {
-  const token = (process.env.WA_TOKEN || '').trim(), phoneId = (process.env.WA_PHONE_ID || '').trim();
-  if (!token || !phoneId || !phone) return false;
-  
-  let components = [];
-  if (params && params.length > 0) {
-      components = [{
-          type: 'body',
-          parameters: params.map(p => ({ type: 'text', text: String(p || '') }))
-      }];
-  }
-  
-  const res = await fetch(`https://graph.facebook.com/v19.0/${phoneId}/messages`, {
-    method: 'POST',
-    headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      messaging_product: 'whatsapp', to: phone.replace(/\D/g, ''), type: 'template',
-      template: { name: templateName, language: { code: 'es_LA' }, components }
-    })
-  });
-  if(!res.ok) console.error('[META ERROR ' + templateName + ']:', await res.text());
-  return res.ok;
-}
+/* [EXTIRPADO: sendWATemplate_OLD] */
+
 
 setInterval(async () => {
   try {
@@ -2103,201 +2177,3 @@ setInterval(async () => {
 // Parche de migracion zombi anulado por gerencia.
 // FORZAR DEPLOY 1781022985011
 // FIX 1781023379423
-
-
-// ─── GESTOR MAESTRO DE REGLAS DE NEGOCIO (MAPA JC) ────────────────────────
-setInterval(async () => {
-  try {
-    for (const t of TENANTS) {
-      const leads = await tRead(F.leads, t);
-      const users = await tRead(F.users, t);
-      let changed = false;
-
-      const admins = users.filter(u => u.role === 'admin' && u.phone);
-      const avisarAdmins = async (txt) => {
-          for (const a of admins) await sendWA(a.phone, txt).catch(()=>{});
-      };
-
-      for (const l of leads) {
-        if (!l || FINAL_ST.has(l.status)) continue;
-        const pNum = l.phone ? l.phone.replace(/\D/g, '') : null;
-        const vend = users.find(u => u.username === l.assignedTo);
-
-        // [PUNTO 2]: Alerta Reserva Vencida (3 días)
-        if ((l.status === 'Reserva' || l.status === 'Reservado') && !l.alertaReserva3d) {
-          const days = (Date.now() - new Date(l.reservadoAt || l.lastInteraction).getTime()) / (1000*60*60*24);
-          if (days >= 3) {
-            l.alertaReserva3d = true; changed = true;
-            const msg = `⚠️ ALERTA RESERVA VENCIDA: El lead [${l.name || 'S/N'}] cumple 3 días en Reserva sin gestión.`;
-            if (vend && vend.phone) await sendWA(vend.phone, msg).catch(()=>{});
-            await avisarAdmins(msg);
-          }
-        }
-
-        // [PUNTO 3]: Alerta Admin Sin (30 min sin atenderse)
-        if (l.status === 'Nuevo' && !l.alertaAdminSin30) {
-          const mins = (Date.now() - new Date(l.created_at || l.lastClientTs || l.lastInteraction).getTime()) / 60000;
-          if (mins >= 30) {
-            l.alertaAdminSin30 = true; changed = true;
-            await avisarAdmins(`📢 ALERTA ADMIN SIN: El lead [${l.name || 'S/N'}] cumplió 30 min sin atención.`);
-          }
-        }
-
-        // [PUNTO 4]: Alerta SLA Riesgo (20 min sin atención)
-        if (l.status === 'Nuevo' && !l.alertaSla20) {
-          const mins = (Date.now() - new Date(l.created_at || l.lastClientTs || l.lastInteraction).getTime()) / 60000;
-          if (mins >= 20 && mins < 30) {
-            l.alertaSla20 = true; changed = true;
-            if (vend && vend.phone) {
-              await sendWA(vend.phone, `🚨 ALERTA SLA RIESGO: El lead [${l.name || 'S/N'}] lleva 20 min sin atención.`).catch(()=>{});
-            }
-          }
-        }
-
-        // [PUNTOS 7 y 8]: Automatización Sala de Espera (Leads ingresados manualmente)
-        if (pNum && l.sala_espera === true && !l.replied) {
-            // Punto 7: saludo1 automático al entrar a sala de espera
-            if (!l.saludo1_ts) {
-                const ok = await sendWATemplate(pNum, 'saludo1', [l.name || 'Estimado']);
-                if (ok) {
-                    l.saludo1_ts = Date.now(); changed = true;
-                    l.chatHistory.push({ role: 'bot', content: '[META] saludo1 automático enviado', ts: Date.now() });
-                }
-            }
-            // Punto 8: saludo2 automático a los 20 min de saludo1 si no hay respuesta
-            else if (l.saludo1_ts && !l.saludo2_ts && ((Date.now() - l.saludo1_ts)/60000) >= 20) {
-                const ok = await sendWATemplate(pNum, 'saludo2', [l.name || 'Estimado']);
-                if (ok) {
-                    l.saludo2_ts = Date.now(); changed = true;
-                    l.chatHistory.push({ role: 'bot', content: '[META] saludo2 automático enviado', ts: Date.now() });
-                }
-            }
-        }
-      }
-      if (changed) await tWrite(F.leads, t, leads);
-    }
-  } catch(e) { console.error('[GESTOR-MAPA-ERR]', e.message); }
-}, 20000);
-// ──────────────────────────────────────────────────────────────────────────
-
-
-// ─── IMPLEMENTACIÓN OFICIAL MAPA MAESTRO JC (V2) ─────────────────────────
-
-async function sendWATemplate(phone, templateName, params) {
-  if (templateName === 'contacto_2' || templateName === 'contacto_3') return false;
-  const token = (process.env.WA_TOKEN || '').trim(), phoneId = (process.env.WA_PHONE_ID || '').trim();
-  if (!token || !phoneId || !phone) return false;
-  
-  let components = [];
-  if (params && params.length > 0) {
-      components = [{
-          type: 'body',
-          parameters: params.map(p => ({ type: 'text', text: String(p || '') }))
-      }];
-  }
-  const pClean = String(phone).replace(/\D/g, '');
-  const res = await fetch(`https://graph.facebook.com/v19.0/${phoneId}/messages`, {
-    method: 'POST',
-    headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      messaging_product: 'whatsapp', to: pClean, type: 'template',
-      template: { name: templateName, language: { code: 'es_LA' }, components }
-    })
-  });
-  if(!res.ok) console.error(`[META ERR ${templateName}]:`, await res.text());
-  return res.ok;
-}
-
-app.post('/api/leads/:id/send-template', auth('admin','vendedor'), async (req, res) => {
-  try {
-    const { templateName, params } = req.body;
-    if (!templateName) return res.status(400).json({ error: 'Falta templateName' });
-    const leads = await tRead(F.leads, req.tenant);
-    const idx = leads.findIndex(x => x.id == req.params.id);
-    if (idx === -1) return res.status(404).json({ error: 'Lead no encontrado' });
-    
-    const pClean = String(leads[idx].phone || '').replace(/\D/g, '');
-    const ok = await sendWATemplate(pClean, templateName, params || [leads[idx].name || 'Estimado']);
-    if (ok) {
-        leads[idx].chatHistory.push({ role: 'agent', content: `[META] Plantilla ${templateName} enviada manualmente`, ts: Date.now() });
-        await tWrite(F.leads, req.tenant, leads);
-        return res.json({ success: true });
-    } else {
-        return res.status(500).json({ error: 'Fallo de Meta al disparar plantilla' });
-    }
-  } catch(e) { return res.status(500).json({ error: e.message }); }
-});
-
-setInterval(async () => {
-  try {
-    for (const t of TENANTS) {
-      const leads = await tRead(F.leads, t);
-      const users = await tRead(F.users, t);
-      let changed = false;
-
-      const admins = users.filter(u => u.role === 'admin' && u.phone);
-      const avisarAdmins = async (txt) => {
-          for (const a of admins) await sendWA(a.phone, txt).catch(()=>{});
-      };
-
-      for (const l of leads) {
-        if (!l || FINAL_ST.has(l.status)) continue;
-        const pNum = l.phone ? String(l.phone).replace(/\D/g, '') : null;
-        const vend = users.find(u => u.username === l.assignedTo);
-
-        // 2. Alerta Reserva Vencida (3 días)
-        if ((l.status === 'Reserva' || l.status === 'Reservado') && !l.alertaReserva3d) {
-          const ref = l.reservadoAt || l.lastInteraction;
-          const days = ref ? (Date.now() - new Date(ref).getTime()) / (1000*60*60*24) : 0;
-          if (days >= 3) {
-            l.alertaReserva3d = true; changed = true;
-            const msg = `⚠️ ALERTA RESERVA VENCIDA: El lead [${l.name || 'S/N'}] cumple 3 días en Reserva.`;
-            if (vend && vend.phone) await sendWA(vend.phone, msg).catch(()=>{});
-            await avisarAdmins(msg);
-          }
-        }
-
-        // 3. Alerta Admin Sin (30 min sin atenderse)
-        if (l.status === 'Nuevo' && !l.alertaAdminSin30) {
-          const ref = l.created_at || l.lastClientTs || l.lastInteraction;
-          const mins = ref ? (Date.now() - new Date(ref).getTime()) / 60000 : 0;
-          if (mins >= 30) {
-            l.alertaAdminSin30 = true; changed = true;
-            await avisarAdmins(`📢 ALERTA ADMIN SIN: El lead [${l.name || 'S/N'}] cumplió 30 min sin atención.`);
-          }
-        }
-
-        // 4. Alerta SLA Riesgo (20 min sin atención)
-        if (l.status === 'Nuevo' && !l.alertaSla20) {
-          const ref = l.created_at || l.lastClientTs || l.lastInteraction;
-          const mins = ref ? (Date.now() - new Date(ref).getTime()) / 60000 : 0;
-          if (mins >= 20 && mins < 30) {
-            l.alertaSla20 = true; changed = true;
-            if (vend && vend.phone) {
-              await sendWA(vend.phone, `🚨 ALERTA SLA RIESGO: El lead [${l.name || 'S/N'}] lleva 20 min sin atención.`).catch(()=>{});
-            }
-          }
-        }
-
-        // 7 y 8. Automatización Sala de Espera
-        if (pNum && l.sala_espera === true && !l.replied) {
-            if (!l.saludo1_ts) {
-                const ok = await sendWATemplate(pNum, 'saludo1', [l.name || 'Estimado']);
-                if (ok) {
-                    l.saludo1_ts = Date.now(); changed = true;
-                    l.chatHistory.push({ role: 'bot', content: '[META] saludo1 automático enviado', ts: Date.now() });
-                }
-            } else if (l.saludo1_ts && !l.saludo2_ts && ((Date.now() - l.saludo1_ts)/60000) >= 20) {
-                const ok = await sendWATemplate(pNum, 'saludo2', [l.name || 'Estimado']);
-                if (ok) {
-                    l.saludo2_ts = Date.now(); changed = true;
-                    l.chatHistory.push({ role: 'bot', content: '[META] saludo2 automático enviado', ts: Date.now() });
-                }
-            }
-        }
-      }
-      if (changed) await tWrite(F.leads, t, leads);
-    }
-  } catch(e) { console.error('[CRON-JC-ERR]', e.message); }
-}, 20000);
-// ─────────────────────────────────────────────────────────────────────
