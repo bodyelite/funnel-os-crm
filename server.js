@@ -373,7 +373,8 @@ async function scrapeRMG() {
   }
 }
 
-setInterval(async()=>{try{await scrapeRMG();}catch(e){}}, 30*60*1000);
+/* [NODO FANTASMA DESTRUIDO: Cron Viejo (Variable tenant)] */
+
 scrapeRMG().catch(()=>{});
 
 function invStr(inv){if(!Array.isArray(inv)||!inv.length)return'(sin inventario)';return inv.map(i=>`- [${i.id}] ${i.brand||''} ${i.model}${i.year?' '+i.year:''} | Stock:${i.stock} | $${(i.price||0).toLocaleString('es-CL')}${i.fuel?'|'+i.fuel:''}${i.highlights?'|'+i.highlights:''}`).join('\n');}
@@ -2127,52 +2128,8 @@ app.listen(PORT,()=>{console.log(`🚀 FunnelOS :${PORT} | SLA_GREEN=${SLA_GREEN
 /* [EXTIRPADO: sendWATemplate_OLD] */
 
 
-setInterval(async () => {
-  try {
-    for (const tenant of TENANTS) {
-      const leads = await tRead(F.leads, tenant);
-      let changed = false;
-      for (const lead of leads) {
-        // Solo leads nuevos, con teléfono, con waSequence activa y sin respuesta
-        if (!lead.waSequence || lead.waSequence.replied) continue;
-        if (!lead.phone || lead.phone === 'Pendiente') continue;
-        if (!['Nuevo', 'Contactado'].includes(lead.status)) continue;
-        const phone = lead.phone.replace(/\D/g,'');
-        const minsSinceLastSent = (Date.now() - new Date(lead.waSequence.lastSentAt).getTime()) / 60000;
-        const step = lead.waSequence.step;
-        // contacto_2 → 30 min después de contacto_1
-        if (step === 1 && minsSinceLastSent >= 30) {
-          const ok = await sendWATemplate(phone, 'contacto_2', [
-            lead.name, 'RMG Autos', lead.interest || 'el vehículo consultado'
-          ]);
-          if (ok) {
-            lead.waSequence.step = 2;
-            lead.waSequence.lastSentAt = new Date().toISOString();
-            lead.chatHistory = lead.chatHistory || [];
-            lead.chatHistory.push({ role: 'bot', content: '[PLANTILLA WA ENVIADA: contacto_2]', ts: Date.now() });
-            changed = true;
-            console.log(`[WA-SEQ] contacto_2 enviado a ${lead.name}`);
-          }
-        }
-        // contacto_3 → 3 horas después de contacto_2
-        else if (step === 2 && minsSinceLastSent >= 180) {
-          const ok = await sendWATemplate(phone, 'contacto_3', [
-            lead.name, 'RMG Autos', lead.interest || 'el vehículo consultado'
-          ]);
-          if (ok) {
-            lead.waSequence.step = 3;
-            lead.waSequence.lastSentAt = new Date().toISOString();
-            lead.chatHistory = lead.chatHistory || [];
-            lead.chatHistory.push({ role: 'bot', content: '[PLANTILLA WA ENVIADA: contacto_3]', ts: Date.now() });
-            changed = true;
-            console.log(`[WA-SEQ] contacto_3 enviado a ${lead.name}`);
-          }
-        }
-      }
-      if (changed) await tWrite(F.leads, tenant, leads);
-    }
-  } catch(e) { console.error('[WA-SEQ]', e.message); }
-}, 60000); // cada 1 minuto
+/* [NODO FANTASMA DESTRUIDO: Cron Viejo (Plantilla contacto_2)] */
+
 
 // Parche de migracion zombi anulado por gerencia.
 // FORZAR DEPLOY 1781022985011
