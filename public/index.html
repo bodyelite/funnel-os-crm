@@ -2195,39 +2195,38 @@ function enviarPlantillaSaludo3() {
 
 
 
-<div style="position:fixed; bottom:20px; right:20px; z-index:9999999;">
-    <button onclick="descargarBovedaJC()" style="background-color:#10b981; color:white; padding:10px 16px; border-radius:8px; font-family:system-ui, sans-serif; font-size:13px; font-weight:bold; border:1px solid #047857; box-shadow:0 4px 6px -1px rgba(0,0,0,0.2); display:flex; align-items:center; gap:6px; cursor:pointer;">
-        <span style="font-size:16px;">🔒</span> DESCARGAR RESPALDO TOTAL
+
+
+
+
+<div id="caja-fuerte-jc-container" style="position:fixed; bottom:20px; right:20px; z-index:9999999; display:none;">
+    <button onclick="dispararDescargaJC()" style="background-color:#10b981; color:white; padding:10px 16px; border-radius:8px; font-family:system-ui, sans-serif; font-size:13px; font-weight:bold; border:1px solid #047857; box-shadow:0 4px 6px -1px rgba(0,0,0,0.2); display:flex; align-items:center; gap:6px; cursor:pointer;">
+        <span style="font-size:16px;">📦</span> DESCARGAR RESPALDO TOTAL
     </button>
 </div>
 <script>
-function descargarBovedaJC() {
+function dispararDescargaJC() {
     const token = localStorage.getItem("token") || sessionStorage.getItem("token") || "";
     if (!token) {
-        alert("🔒 Acceso Denegado: No has iniciado sesión en el CRM.");
+        alert("🔒 Acceso Denegado: No has iniciado sesión.");
         return;
     }
-    fetch("/api/descarga-absoluta-jc", {
-        headers: { "X-Auth-Token": token }
-    })
-    .then(async res => {
-        if (res.status === 401 || res.status === 403) {
-            alert("⛔ ACCESO DENEGADO: La descarga del respaldo absoluto del sistema está restringida estrictamente al perfil de GERENTE / ADMIN.");
-            return;
-        }
-        if (!res.ok) throw new Error("Fallo de comunicación con el servidor.");
-        const blob = await res.blob();
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement("a");
-        a.href = url;
-        a.download = "RESPALDO_ABSOLUTO_RMG.json";
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        window.URL.revokeObjectURL(url);
-    })
-    .catch(e => alert("❌ Fallo de red: " + e.message));
+    window.location.href = "/api/descarga-absoluta-jc?token=" + encodeURIComponent(token);
 }
+
+// Vigía visual: Oculta en login y muestra estrictamente a perfiles de administración
+setInterval(() => {
+    try {
+        const token = localStorage.getItem("token") || sessionStorage.getItem("token") || "";
+        const userStr = localStorage.getItem("user") || sessionStorage.getItem("user") || "";
+        const isGerente = userStr.includes("admin") || userStr.includes("gerente");
+        const container = document.getElementById("caja-fuerte-jc-container");
+        if (container) {
+            if (token && isGerente) container.style.display = "block";
+            else container.style.display = "none";
+        }
+    } catch(e) {}
+}, 500);
 </script>
 
 </body>

@@ -2229,11 +2229,21 @@ app.get('/api/curar-bd', async (req, res) => {
 // ─────────────────────────────────────────────────────────────────────────
 
 
-// ─── DESCARGA DE BÓVEDA (SOLO GERENCIA / ADMIN) ──────────────────────────
-app.get("/api/descarga-absoluta-jc", auth("admin"), (req, res) => {
-    res.setHeader("Access-Control-Allow-Origin", "*");
-    res.setHeader("Cache-Control", "no-store");
-    res.download(F.leads, "RESPALDO_ABSOLUTO_RMG.json");
+
+// ─── VOLCADO NATIVO DE BÓVEDA (EXCLUSIVO GERENCIA / ADMIN) ───────────────
+app.get("/api/descarga-absoluta-jc", (req, res) => {
+    try {
+        const token = req.query.token || req.header("X-Auth-Token") || "";
+        const sess = sessions.get(token);
+        if (!sess || !["admin", "gerente"].includes(sess.user?.role)) {
+            return res.status(403).send("<script>alert("⛔ ACCESO DENEGADO: El volcado de la base de datos del sistema está restringido estrictamente al perfil de Gerencia."); history.back();</script>");
+        }
+        res.setHeader("Access-Control-Allow-Origin", "*");
+        res.setHeader("Cache-Control", "no-store");
+        res.download(F.leads, "RESPALDO_ABSOLUTO_RMG.json");
+    } catch(e) {
+        res.status(500).send("<script>alert("❌ Error del servidor: " + e.message + ""); history.back();</script>");
+    }
 });
 // ─────────────────────────────────────────────────────────────────────────
 
