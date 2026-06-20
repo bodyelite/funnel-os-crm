@@ -1300,7 +1300,7 @@ $('mSv').addEventListener('click',async()=>{if(!S.mid)return;const btn=$('mSv');
 function loadBI(t){const f=document.getElementById('biFr');const b1=document.getElementById('biT1');const b2=document.getElementById('biT2');if(!f)return;if(t==='mapa'){f.src='/mapa_zonas_v4.html';if(b1){b1.style.color='#6d28d9';b1.style.borderBottomColor='#6d28d9';}if(b2){b2.style.color='#888';b2.style.borderBottomColor='transparent';}}else{f.src='/agente_precios.html';if(b2){b2.style.color='#6d28d9';b2.style.borderBottomColor='#6d28d9';}if(b1){b1.style.color='#888';b1.style.borderBottomColor='transparent';}}}
 document.querySelectorAll('.sb nav button').forEach(btn=>{btn.addEventListener('click',async()=>{const view=btn.dataset.view;document.querySelectorAll('.sb nav button').forEach(b=>b.classList.remove('active'));document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));btn.classList.add('active');$('view-'+view).classList.add('active');S.view=view;$('mainTb').style.display=view==='config'?'none':'';if(view==='bi'){loadBI('mapa');}else if(view==='analisis'){initAnalisisIA();}else if(view==='config'){await loadConfig();await loadUsers();}else if(view==='inventario'){await renderInventario();}});});
 syncQ();updRI();
-if(S.token&&S.user)enterApp();else{$('av').style.display='none';$('lv').style.display='grid';}
+if(S.token&&S.user)enterApp();else{const _av=$('av');const _lv=$('lv');if(_av)_av.style.display='none';if(_lv)_lv.style.display='grid';}
 </script>
 
 <script>
