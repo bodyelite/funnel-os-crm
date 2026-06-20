@@ -506,7 +506,7 @@ function inRange(lead,s,e){if(s===null&&e===null)return true;const ts=new Date(l
 async function seed(){
 
   try {
-    const db = JSON.parse(fs.readFileSync(F.leads, 'utf8'));
+    const db = JSON.parse(fsSync.readFileSync(F.leads, 'utf8'));
     let modified = false;
     for (const t in db) {
       for (const l of db[t]) {
@@ -517,23 +517,7 @@ async function seed(){
         });
       }
     }
-    if (modified) fs.writeFileSync(F.leads, JSON.stringify(db, null, 2));
-  } catch(e) {}
-
-
-  try {
-    const db = JSON.parse(fs.readFileSync(F.leads, 'utf8'));
-    let modified = false;
-    for (const t in db) {
-      for (const l of db[t]) {
-        ['lastInteraction','lastClientTs','createdAt','reservadoAt'].forEach(k => {
-          if (l[k] && typeof l[k] === 'string' && (l[k].includes('12-31') || l[k].includes('31-12'))) {
-            l[k] = new Date().toISOString(); modified = true;
-          }
-        });
-      }
-    }
-    if (modified) fs.writeFileSync(F.leads, JSON.stringify(db, null, 2));
+    if (modified) fsSync.writeFileSync(F.leads, JSON.stringify(db, null, 2));
   } catch(e) {}
 
   // GUARD: nunca sobreescribir leads si ya existen en disco
@@ -1947,14 +1931,14 @@ app.post('/api/push/unsubscribe',auth(),async(req,res)=>{
 
 app.post('/markAsRead', express.json(), (req, res) => {
     const { id } = req.body;
-    const leads = JSON.parse(fs.readFileSync('/var/data/leads.json', 'utf8'));
+    const leads = JSON.parse(fsSync.readFileSync(F.leads, 'utf8'));
     let found = false;
     for (let tenant in leads) {
         leads[tenant].forEach(l => {
             if (l.id == id) { l.unread = false; found = true; }
         });
     }
-    if (found) fs.writeFileSync('/var/data/leads.json', JSON.stringify(leads, null, 2));
+    if (found) fsSync.writeFileSync(F.leads, JSON.stringify(leads, null, 2));
     res.json({ success: true });
 });
 
