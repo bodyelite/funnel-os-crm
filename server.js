@@ -1810,7 +1810,6 @@ app.post('/api/leads/analisis-ia', auth('admin','vendedor'), async (req, res) =>
     }).join('\n');
     const completion = await openai.chat.completions.create({
       model: 'gpt-4o-mini', temperature: 0.3, max_tokens: 1500,
-      timeout: 55000,
       messages: [{ role: 'user', content: `Eres un analista comercial senior de una automotora. Analiza los siguientes leads del CRM y entrega un reporte estratégico.\n\nPara cada lead indica:\n1. Situación actual y diagnóstico\n2. Tiempo estancado y posible razón\n3. Acción concreta recomendada (específica, no genérica)\n4. Urgencia: 🔴 Alta / 🟡 Media / 🟢 Baja\n\nAl final: resumen por vendedor y top 3 acciones prioritarias.\n\n${contexto}\n\nResponde en español, formato claro con separadores entre leads.` }]
     });
     res.json({ ok: true, reporte: completion.choices[0].message.content, totalLeads: leads.length });
