@@ -1897,7 +1897,15 @@ app.post('/api/tasacion/request', auth('admin','vendedor'), async (req, res) => 
     let notifiedCount = 0;
     for (const admin of admins) {
       if (admin.phone) {
-        await sendWA(admin.phone, texto);
+        const ti7 = lead.tradeIn || {};
+        await sendWATemplate(admin.phone, 'alerta_tasacion', [
+          lead.name || 'S/N',
+          String(lead.phone || '').replace(/\D/g, ''),
+          ti7.make || '?',
+          ti7.model || '?',
+          ti7.color || '?',
+          ti7.plate || '?'
+        ]).catch(()=>{});
         notifiedCount++;
       }
     }
@@ -2023,7 +2031,7 @@ async function sendWATemplate(phone, templateName, params) {
     headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' },
     body: JSON.stringify({
       messaging_product: 'whatsapp', to: pClean, type: 'template',
-      template: { name: templateName, language: { code: 'es_LA' }, components }
+      template: { name: templateName, language: { code: 'es' }, components }
     })
   });
   if(!res.ok) console.error(`[META ERR ${templateName}]:`, await res.text());
@@ -2070,12 +2078,12 @@ setInterval(async () => {
         const ref = l.created_at || l.lastClientTs || l.lastInteraction || Date.now();
         const minsSinAtencion = (Date.now() - new Date(ref).getTime()) / 60000;
 
-        // [PUNTO 6]: Alerta Nuevo Lead (Staff + Admin)
+        // [PUNTO 6]: Alerta Nuevo Lead — plantilla alerta_nuevo_lead
         if (!l.alertaNuevoSent && l.status === 'Nuevo') {
             l.alertaNuevoSent = true; changed = true;
-            const txt = `📢 NUEVO LEAD: [${l.name || 'S/N'}] ingresó al embudo.`;
-            if (vend) await avisar(vend.phone, txt);
-            await avisarAdmins(txt);
+            const p6 = [l.name || 'S/N', l.source || 'Directo', l.interest || 'No especificado'];
+            if (vend && vend.phone) await sendWATemplate(vend.phone, 'alerta_nuevo_lead', p6).catch(()=>{});
+            for (const a of admins) { if (a.phone) await sendWATemplate(a.phone, 'alerta_nuevo_lead', p6).catch(()=>{}); }
         }
 
         // [PUNTO 1]: Alerta Tasación (Solo Admins)
@@ -2089,16 +2097,16 @@ setInterval(async () => {
             const dias = (Date.now() - new Date(l.reservadoAt || l.lastInteraction).getTime()) / (1000*60*60*24);
             if (dias >= 3) {
                 l.alertaReserva3d = true; changed = true;
-                const txt = `⚠️ RESERVA VENCIDA: El lead [${l.name || 'S/N'}] lleva 3 días en Reserva sin gestión.`;
-                if (vend) await avisar(vend.phone, txt);
-                await avisarAdmins(txt);
+                const pRV = [l.name || 'S/N'];
+                if (vend && vend.phone) await sendWATemplate(vend.phone, 'alerta_reserva_vencida', pRV).catch(()=>{});
+                for (const a of admins) { if (a.phone) await sendWATemplate(a.phone, 'alerta_reserva_vencida', pRV).catch(()=>{}); }
             }
         }
 
         // [PUNTO 4]: Alerta SLA Riesgo (20 min sin atención -> Solo Vendedor)
         if (l.status === 'Nuevo' && !l.alertaSla20 && minsSinAtencion >= 20 && minsSinAtencion < 30) {
             l.alertaSla20 = true; changed = true;
-            if (vend) await avisar(vend.phone, `🚨 ALERTA SLA RIESGO: El lead [${l.name || 'S/N'}] lleva 20 min sin atención.`);
+            if (vend && vend.phone) await sendWATemplate(vend.phone, 'alerta_sla_riesgo', [l.name || 'S/N']).catch(()=>{});
         }
 
         // [PUNTO 5]: Alerta Reasignación (30 min -> Al NUEVO vendedor)
@@ -2107,14 +2115,14 @@ setInterval(async () => {
             const nextObj = await rrNext(t, l.assignedTo);
             if (nextObj && nextObj.username !== l.assignedTo) {
                 l.assignedTo = nextObj.username;
-                await avisar(nextObj.phone, `🔄 ALERTA REASIGNACIÓN: Se te reasignó el lead [${l.name || 'S/N'}] por abandono.`);
+                if (nextObj.phone) await sendWATemplate(nextObj.phone, 'alerta_reasignacion', [l.name || 'S/N', l.interest || 'No especificado']).catch(()=>{});
             }
         }
 
         // [PUNTO 3]: Alerta Admin Sin (30 min sin atenderse -> Solo Admins)
         if (l.status === 'Nuevo' && !l.alertaAdminSin30 && minsSinAtencion >= 30) {
             l.alertaAdminSin30 = true; changed = true;
-            await avisarAdmins(`📢 ALERTA ADMIN SIN: El lead [${l.name || 'S/N'}] cumplió 30 min sin ser atendido.`);
+            for (const a of admins) { if (a.phone) await sendWATemplate(a.phone, 'alerta_admin_sin_atencion', [l.name || 'S/N']).catch(()=>{}); }
         }
 
         // [PUNTOS 7 y 8]: Automatización Sala de Espera (Plantillas Meta a Clientes)
