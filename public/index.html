@@ -2293,6 +2293,44 @@ function toggleTasPanel(tipo){
   }
 }
 
+
+async function loadBackups(){
+  var list = $('backupList');
+  var status = $('backupStatus');
+  if(!list || !status) return;
+  status.textContent = 'Cargando...';
+  list.innerHTML = '';
+  try {
+    var r = await api('GET', '/api/backups/list');
+    var backs = r.backups || [];
+    status.textContent = backs.length + ' respaldo(s) disponibles';
+    if(!backs.length){
+      list.innerHTML = '<div style="color:var(--tm);font-size:12px;padding:12px">No hay respaldos aún. El primer respaldo se genera 5 minutos después del arranque del servidor.</div>';
+      return;
+    }
+    backs.forEach(function(b){
+      var kb = Math.round(b.size/1024);
+      var dt = new Date(b.mtime);
+      var dtStr = dt.toLocaleDateString('es-CL',{day:'2-digit',month:'2-digit',year:'numeric'})+' '+dt.toLocaleTimeString('es-CL',{hour:'2-digit',minute:'2-digit'});
+      var row = document.createElement('div');
+      row.style.cssText = 'display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:var(--p2);border:1px solid var(--bd);border-radius:8px;gap:10px;margin-bottom:6px';
+      row.innerHTML =
+        '<div style="display:flex;flex-direction:column;gap:2px;flex:1;min-width:0">'+
+          '<span style="font-size:12px;font-weight:600;color:var(--ts);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+b.name+'</span>'+
+          '<span style="font-size:11px;color:var(--tm)">'+dtStr+' &nbsp;·&nbsp; '+kb+' KB</span>'+
+        '</div>'+
+        '<a href="/api/backups/download/'+encodeURIComponent(b.name)+'?token='+S.token+'" '+
+           'download="'+b.name+'" '+
+           'style="background:var(--ac);color:#fff;border:none;border-radius:7px;padding:7px 14px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;text-decoration:none;white-space:nowrap">'+
+          '⬇ Descargar'+
+        '</a>';
+      list.appendChild(row);
+    });
+  } catch(e) {
+    status.textContent = 'Error: ' + e.message;
+  }
+}
+
 </script>
 
 </body>
