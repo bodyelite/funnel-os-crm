@@ -1817,6 +1817,33 @@ app.post('/api/leads/analisis-ia', auth('admin','vendedor'), async (req, res) =>
   } catch(e) { console.error('[ANALISIS-IA]', e.message); res.status(500).json({ error: e.message }); }
 });
 
+
+// ─── BACKUP DISCO COMPLETO /var/data ─────────────────────────────────────────
+app.get('/api/disk-backup', async (req, res) => {
+  const BACKUP_KEY = process.env.DISK_BACKUP_KEY || null;
+  if (!BACKUP_KEY) return res.status(503).json({error:'DISK_BACKUP_KEY no configurada'});
+  if (req.query.key !== BACKUP_KEY) return res.status(401).json({error:'Clave invalida'});
+  try {
+    const { execFile } = require('child_process');
+    const ts = new Date().toISOString().replace(/[:.]/g,'-').slice(0,19);
+    const filename = 'disco-render-' + ts + '.tar.gz';
+    res.setHeader('Content-Type','application/gzip');
+    res.setHeader('Content-Disposition','attachment; filename="' + filename + '"');
+    res.setHeader('Cache-Control','no-store');
+    const tar = require('child_process').spawn('tar', ['-czf', '-', '-C', DATA, '.']);
+    tar.stdout.pipe(res);
+    tar.stderr.on('data', d => console.error('[BACKUP]', d.toString()));
+    tar.on('close', code => {
+      if (code !== 0) console.error('[BACKUP] tar exit code:', code);
+      else console.log('[BACKUP] OK:', filename);
+    });
+  } catch(e) {
+    console.error('[BACKUP] Error:', e.message);
+    if (!res.headersSent) res.status(500).json({error: e.message});
+  }
+});
+// ─────────────────────────────────────────────────────────────────────────────
+
 app.get('*',(req,res)=>res.sendFile(path.join(__dirname,'public','index.html')));
 setInterval(async()=>{for(const t of TENANTS){try{await applySlaRules(t);}catch(e){console.error('SLA',t,e.message);}}},60000);
 
