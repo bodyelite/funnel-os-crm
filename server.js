@@ -2254,4 +2254,52 @@ app.get('/api/descarga-absoluta-jc', auth('admin'), (req, res) => {
 });
 // ─────────────────────────────────────────────────────────────────────────
 
+
+// ─── AUTO-BACKUP HORARIO /var/data → /var/data/backups/ ──────────────────────
+// Corre cada 1 hora. Guarda los últimos 24 archivos (= 24 horas de historia).
+// No toca ningún archivo del disco principal, solo lee y comprime.
+const BACKUP_DIR = require('path').join(DATA, 'backups');
+if (!fsSync.existsSync(BACKUP_DIR)) fsSync.mkdirSync(BACKUP_DIR, { recursive: true });
+
+async function runHourlyBackup() {
+  try {
+    const ts = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+    const outFile = require('path').join(BACKUP_DIR, 'backup-' + ts + '.tar.gz');
+
+    await new Promise((resolve, reject) => {
+      const { spawn } = require('child_process');
+      // Excluir la carpeta backups/ del propio backup para no crear recursión
+      const tar = spawn('tar', ['--exclude=./backups', '-czf', outFile, '-C', DATA, '.']);
+      tar.stderr.on('data', d => console.error('[BACKUP-AUTO]', d.toString().trim()));
+      tar.on('close', code => code === 0 ? resolve() : reject(new Error('tar exit ' + code)));
+    });
+
+    const stat = fsSync.statSync(outFile);
+    console.log('[BACKUP-AUTO] OK:', require('path').basename(outFile), '-', Math.round(stat.size / 1024) + 'KB');
+
+    // Rotar: eliminar backups más viejos de 24
+    const MAX_BACKUPS = 24;
+    const files = fsSync.readdirSync(BACKUP_DIR)
+      .filter(f => f.startsWith('backup-') && f.endsWith('.tar.gz'))
+      .map(f => ({ name: f, mtime: fsSync.statSync(require('path').join(BACKUP_DIR, f)).mtimeMs }))
+      .sort((a, b) => b.mtime - a.mtime);
+
+    if (files.length > MAX_BACKUPS) {
+      const toDelete = files.slice(MAX_BACKUPS);
+      toDelete.forEach(f => {
+        fsSync.unlinkSync(require('path').join(BACKUP_DIR, f.name));
+        console.log('[BACKUP-AUTO] Rotado (eliminado):', f.name);
+      });
+    }
+  } catch(e) {
+    console.error('[BACKUP-AUTO] Error:', e.message);
+  }
+}
+
+// Primer backup al arrancar (5 min después para no solapar con seed)
+setTimeout(runHourlyBackup, 5 * 60 * 1000);
+// Luego cada 1 hora
+setInterval(runHourlyBackup, 60 * 60 * 1000);
+// ─────────────────────────────────────────────────────────────────────────────
+
 app.listen(PORT,()=>{console.log(`🚀 FunnelOS :${PORT} | SLA_GREEN=${SLA_GREEN} SLA_REASSIGN=${SLA_REASSIGN} SLA_YELLOW=${SLA_YELLOW}`);seed().catch(console.error);});
