@@ -1805,12 +1805,13 @@ app.post('/api/leads/analisis-ia', auth('admin','vendedor'), async (req, res) =>
       const vendedor = allUsers.find(u => u.username === l.assignedTo)?.name || l.assignedTo || 'Sin asignar';
       const diasSinActividad = l.lastClientTs ? Math.floor((Date.now() - new Date(l.lastClientTs).getTime()) / 86400000) : '?';
       const diasCreado = l.createdAt ? Math.floor((Date.now() - new Date(l.createdAt).getTime()) / 86400000) : '?';
-      const chat = (l.chatHistory || []).slice(-10).map(m => `[${m.role}]: ${m.content?.slice(0,150)}`).join('\n');
-      const notas = (l.notes || []).slice(-5).map(n => `${n.author}: ${n.content?.slice(0,100)}`).join('\n');
-      return `---\nLEAD: ${l.name} | TEL: ${l.phone} | ORIGEN: ${l.source} | ESTADO: ${l.status}\nVENDEDOR: ${vendedor} | DÍAS SIN ACTIVIDAD: ${diasSinActividad} | DÍAS EN CRM: ${diasCreado}\nINTERÉS: ${l.interest||'No especificado'}\nNOTAS: ${notas||'Sin notas'}\nCHAT:\n${chat||'Sin historial'}`;
-    }).join('\n\n');
+      const chat = (l.chatHistory || []).slice(-3).map(m => `[${m.role}]: ${m.content?.slice(0,80)}`).join('\n');
+      const notas = (l.notes || []).slice(-2).map(n => `${n.content?.slice(0,60)}`).join(' | ');
+      return `---\n${l.name} | ${l.source} | ${l.status} | Vendedor: ${vendedor} | Sin actividad: ${diasSinActividad}d\nInterés: ${l.interest?.slice(0,60)||'?'} | Notas: ${notas||'-'}\nChat: ${chat||'-'}`;
+    }).join('\n');
     const completion = await openai.chat.completions.create({
-      model: 'gpt-4o-mini', temperature: 0.3, max_tokens: 3000,
+      model: 'gpt-4o-mini', temperature: 0.3, max_tokens: 2000,
+      timeout: 55000,
       messages: [{ role: 'user', content: `Eres un analista comercial senior de una automotora. Analiza los siguientes leads del CRM y entrega un reporte estratégico.\n\nPara cada lead indica:\n1. Situación actual y diagnóstico\n2. Tiempo estancado y posible razón\n3. Acción concreta recomendada (específica, no genérica)\n4. Urgencia: 🔴 Alta / 🟡 Media / 🟢 Baja\n\nAl final: resumen por vendedor y top 3 acciones prioritarias.\n\n${contexto}\n\nResponde en español, formato claro con separadores entre leads.` }]
     });
     res.json({ ok: true, reporte: completion.choices[0].message.content, totalLeads: leads.length });
