@@ -1800,81 +1800,37 @@ app.post('/api/leads/analisis-ia', auth('admin','vendedor'), async (req, res) =>
       if (filtros.hasta) leads = leads.filter(l => new Date(l.lastInteraction||l.createdAt||0) <= new Date(filtros.hasta));
     }
     if (!leads.length) return res.status(400).json({ error: 'No hay leads con esos criterios' });
-    if (leads.length > 50) return res.status(400).json({ error: 'Máximo 50 leads por análisis. Aplica más filtros.' });
     const contexto = leads.map(l => {
       const vendedor = allUsers.find(u => u.username === l.assignedTo)?.name || l.assignedTo || 'Sin asignar';
-      const diasSinActividad = l.lastClientTs ? Math.floor((Date.now() - new Date(l.lastClientTs).getTime()) / 86400000) : '?';
-      const diasCreado = l.createdAt ? Math.floor((Date.now() - new Date(l.createdAt).getTime()) / 86400000) : '?';
-      const ultima = (l.chatHistory || []).slice(-1).map(m => m.content?.slice(0,60)).join('');
-      return `${l.name}|${l.source}|${l.status}|${vendedor}|${diasSinActividad}d|${l.interest?.slice(0,40)||'?'}|${ultima||'-'}`;
-    }).join('\n');
-    const completion = await openai.chat.completions.create({
-      model: 'gpt-4o-mini', temperature: 0.3, max_tokens: 1500,
-      messages: [{ role: 'user', content: `Eres un analista comercial senior de una automotora. Analiza los siguientes leads del CRM y entrega un reporte estratégico.\n\nPara cada lead indica:\n1. Situación actual y diagnóstico\n2. Tiempo estancado y posible razón\n3. Acción concreta recomendada (específica, no genérica)\n4. Urgencia: 🔴 Alta / 🟡 Media / 🟢 Baja\n\nAl final: resumen por vendedor y top 3 acciones prioritarias.\n\n${contexto}\n\nResponde en español, formato claro con separadores entre leads.` }]
+      const diasSinResp = l.lastClientTs ? Math.floor((Date.now() - new Date(l.lastClientTs).getTime()) / 86400000) : '?';
+      const diasEnCRM = l.createdAt ? Math.floor((Date.now() - new Date(l.createdAt).getTime()) / 86400000) : '?';
+      const chat = (l.chatHistory || []).slice(-5).map(m => `[${m.role==='user'?'Cliente':'Asesor'}]: ${(m.content||'').slice(0,120)}`).join('\n');
+      const notas = (l.notes || []).slice(-3).map(n => `${n.author||'?'}: ${(n.content||'').slice(0,100)}`).join(' | ');
+      const agenda = l.nextAction?.text ? `Agenda: ${l.nextAction.text} (${l.nextAction.date||'sin fecha'})` : '';
+      const creado = l.createdAt ? new Date(l.createdAt).toLocaleDateString('es-CL') : '?';
+      const ultimaAct = l.lastClientTs ? new Date(l.lastClientTs).toLocaleDateString('es-CL') : '?';
+      return `---\nLEAD: ${l.name} | TEL: ${l.phone} | ORIGEN: ${l.source} | ESTADO: ${l.status}\nVENDEDOR: ${vendedor} | CREADO: ${creado} | ULTIMA ACT: ${ultimaAct} | DIAS SIN RESP: ${diasSinResp}d | DIAS EN CRM: ${diasEnCRM}d\nINTERES: ${(l.interest||'No especificado').slice(0,100)}${agenda?'\n'+agenda:''}\nNOTAS: ${notas||'Sin notas'}\nCHAT:\n${chat||'Sin historial'}`;
+    }).join('\n\n');
+    res.setHeader('Content-Type', 'text/event-stream');
+    res.setHeader('Cache-Control', 'no-cache');
+    res.setHeader('Connection', 'keep-alive');
+    res.flushHeaders();
+    res.write('data: ' + JSON.stringify({type:'start', total: leads.length}) + '\n\n');
+    const stream = await openai.chat.completions.create({
+      model: 'gpt-4o-mini', temperature: 0.3, max_tokens: 8000, stream: true,
+      messages: [{ role: 'user', content: 'Eres un analista comercial senior de una automotora chilena. Analiza estos ' + leads.length + ' leads del CRM.\n\nPara cada lead entrega:\n**Nombre** | Estado | Origen | Vendedor | Dias sin respuesta\n- Diagnostico: que esta pasando con este lead especificamente\n- Estancamiento: por que no avanza (basate en el chat y notas reales)\n- Accion HOY: que hacer hoy, especifico con nombre del cliente y auto\n- Urgencia: Alta / Media / Baja\n\nFinal del reporte: resumen por vendedor con sus leads y top 5 prioridades del dia.\n\n' + contexto + '\n\nEspanol. Se especifico con los nombres reales, autos mencionados y conversaciones. No uses frases genericas.' }]
     });
-    res.json({ ok: true, reporte: completion.choices[0].message.content, totalLeads: leads.length });
-  } catch(e) { console.error('[ANALISIS-IA]', e.message); res.status(500).json({ error: e.message }); }
-});
-
-
-// ─── BACKUP DISCO COMPLETO /var/data ─────────────────────────────────────────
-app.get('/api/disk-backup', async (req, res) => {
-  const BACKUP_KEY = process.env.DISK_BACKUP_KEY || null;
-  if (!BACKUP_KEY) return res.status(503).json({error:'DISK_BACKUP_KEY no configurada'});
-  if (req.query.key !== BACKUP_KEY) return res.status(401).json({error:'Clave invalida'});
-  try {
-    const { execFile } = require('child_process');
-    const ts = new Date().toISOString().replace(/[:.]/g,'-').slice(0,19);
-    const filename = 'disco-render-' + ts + '.tar.gz';
-    res.setHeader('Content-Type','application/gzip');
-    res.setHeader('Content-Disposition','attachment; filename="' + filename + '"');
-    res.setHeader('Cache-Control','no-store');
-    const tar = require('child_process').spawn('tar', ['-czf', '-', '-C', DATA, '.']);
-    tar.stdout.pipe(res);
-    tar.stderr.on('data', d => console.error('[BACKUP]', d.toString()));
-    tar.on('close', code => {
-      if (code !== 0) console.error('[BACKUP] tar exit code:', code);
-      else console.log('[BACKUP] OK:', filename);
-    });
+    for await (const chunk of stream) {
+      const delta = chunk.choices[0]?.delta?.content || '';
+      if (delta) res.write('data: ' + JSON.stringify({type:'delta', text: delta}) + '\n\n');
+    }
+    res.write('data: ' + JSON.stringify({type:'done', total: leads.length}) + '\n\n');
+    res.end();
   } catch(e) {
-    console.error('[BACKUP] Error:', e.message);
-    if (!res.headersSent) res.status(500).json({error: e.message});
+    console.error('[ANALISIS-IA]', e.message);
+    try { res.write('data: ' + JSON.stringify({type:'error', error: e.message}) + '\n\n'); res.end(); } catch(_) {}
   }
 });
-// ─────────────────────────────────────────────────────────────────────────────
-
-
-// ─── LISTAR BACKUPS DISPONIBLES ──────────────────────────────────────────────
-app.get('/api/backups/list', auth('admin'), (req, res) => {
-  try {
-    const BACKUP_DIR = require('path').join(DATA, 'backups');
-    if (!fsSync.existsSync(BACKUP_DIR)) return res.json({ backups: [] });
-    const files = fsSync.readdirSync(BACKUP_DIR)
-      .filter(f => f.startsWith('backup-') && f.endsWith('.tar.gz'))
-      .map(f => {
-        const fp = require('path').join(BACKUP_DIR, f);
-        const stat = fsSync.statSync(fp);
-        return { name: f, size: stat.size, mtime: stat.mtimeMs };
-      })
-      .sort((a, b) => b.mtime - a.mtime);
-    res.json({ backups: files });
-  } catch(e) { res.status(500).json({ error: e.message }); }
-});
-// ─────────────────────────────────────────────────────────────────────────────
-
-// ─── DESCARGAR BACKUP ESPECÍFICO ─────────────────────────────────────────────
-app.get('/api/backups/download/:filename', auth('admin'), (req, res) => {
-  try {
-    const BACKUP_DIR = require('path').join(DATA, 'backups');
-    const filename = req.params.filename.replace(/[^a-zA-Z0-9._-]/g, '');
-    if (!filename.startsWith('backup-') || !filename.endsWith('.tar.gz'))
-      return res.status(400).json({ error: 'Archivo no válido' });
-    const fp = require('path').join(BACKUP_DIR, filename);
-    if (!fsSync.existsSync(fp)) return res.status(404).json({ error: 'No encontrado' });
-    res.download(fp, filename);
-  } catch(e) { res.status(500).json({ error: e.message }); }
-});
-// ─────────────────────────────────────────────────────────────────────────────
 
 app.get('*',(req,res)=>res.sendFile(path.join(__dirname,'public','index.html')));
 setInterval(async()=>{for(const t of TENANTS){try{await applySlaRules(t);}catch(e){console.error('SLA',t,e.message);}}},60000);
