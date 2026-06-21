@@ -19,6 +19,7 @@
     "puppeteer": "^25.1.0",
     "puppeteer-extra": "^3.3.6",
     "puppeteer-extra-plugin-stealth": "^2.11.2",
-    "web-push": "^3.6.7"
+    "web-push": "^3.6.7",
+    "archiver": "^7.0.1"
   }
 }
