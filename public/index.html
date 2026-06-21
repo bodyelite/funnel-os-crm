@@ -2229,6 +2229,70 @@ document.addEventListener("DOMContentLoaded", () => {
         }).catch(()=>{});
     }
 });
+
+function renderTasaciones(){
+  var leads = S.leads || [];
+  var pendientes = leads.filter(function(l){ return l.tradeIn && l.tradeIn.status === 'Pendiente'; });
+  var realizadas  = leads.filter(function(l){ return l.tradeIn && l.tradeIn.status === 'Evaluado'; });
+  var elP = $('tasPendCount'); if(elP) elP.textContent = pendientes.length;
+  var elR = $('tasRealCount'); if(elR) elR.textContent = realizadas.length;
+}
+
+var _tasOpen = null;
+function toggleTasPanel(tipo){
+  if(_tasOpen === tipo){
+    _tasOpen = null;
+    var px = $('tasX'); if(px){ px.style.display='none'; }
+    return;
+  }
+  _tasOpen = tipo;
+  var px = $('tasX'); if(px) px.style.display='';
+  var titulo = tipo === 'pendientes' ? '🔧 Tasaciones Solicitadas — esperando taller' : '✅ Tasaciones Realizadas — con oferta registrada';
+  var xt = $('tasXT'); if(xt) xt.textContent = titulo;
+  var leads = S.leads || [];
+  var items = leads.filter(function(l){
+    if(!l.tradeIn) return false;
+    return tipo === 'pendientes' ? l.tradeIn.status === 'Pendiente' : l.tradeIn.status === 'Evaluado';
+  });
+  items.sort(function(a,b){ return new Date(b.lastInteraction||0) - new Date(a.lastInteraction||0); });
+  var gc = 'grid-template-columns:14px 1.2fr 1.2fr 1fr 1fr 1fr auto';
+  var fmt = function(n){ return n ? new Intl.NumberFormat('es-CL',{style:'currency',currency:'CLP',maximumFractionDigits:0}).format(n) : '—'; };
+  var hd = '<div class="xlr" style="'+gc+';cursor:default;background:var(--p2)">'+
+    '<div></div>'+
+    '<div style="font-size:10px;font-weight:700;color:var(--tm);text-transform:uppercase">Cliente</div>'+
+    '<div style="font-size:10px;font-weight:700;color:var(--tm);text-transform:uppercase">Vehículo</div>'+
+    '<div style="font-size:10px;font-weight:700;color:var(--tm);text-transform:uppercase">Año</div>'+
+    '<div style="font-size:10px;font-weight:700;color:var(--tm);text-transform:uppercase">Km</div>'+
+    (tipo === 'realizadas' ? '<div style="font-size:10px;font-weight:700;color:var(--tm);text-transform:uppercase">Oferta</div>' :
+    '<div style="font-size:10px;font-weight:700;color:var(--tm);text-transform:uppercase">Solicitado</div>')+
+    '<div style="font-size:10px;font-weight:700;color:var(--tm);text-transform:uppercase">Vendedor</div>'+
+    '</div>';
+  var rows = items.length ? items.map(function(l){
+    var ti = l.tradeIn || {};
+    var vehiculo = [ti.make, ti.model].filter(Boolean).join(' ') || '—';
+    var extra = tipo === 'realizadas'
+      ? '<div style="font-size:12px;color:var(--ok);font-weight:700">'+fmt(ti.offer)+'</div>'
+      : '<div style="font-size:11px;color:var(--tm)">'+fDT(l.lastInteraction)+'</div>';
+    var placa = ti.plate ? '<div style="font-size:10px;color:var(--tm)">'+esc(ti.plate)+'</div>' : '';
+    return '<div class="xlr" data-id="'+l.id+'" style="'+gc+';cursor:pointer">'+
+      adot(l.alertLevel)+
+      '<div><div class="lrn">'+esc(l.name)+'</div><div class="lrs">'+esc(l.phone||'')+'</div></div>'+
+      '<div><div style="font-size:12px;color:var(--ts)">'+esc(vehiculo)+'</div>'+placa+'</div>'+
+      '<div style="font-size:12px;color:var(--tm)">'+esc(String(ti.year||'—'))+'</div>'+
+      '<div style="font-size:12px;color:var(--tm)">'+esc(ti.km ? ti.km+' km' : '—')+'</div>'+
+      extra+
+      '<div>'+cUsr(l.assignedTo)+'</div>'+
+      '</div>';
+  }).join('') : '<div class="ke" style="padding:14px">Sin tasaciones '+tipo+' aún.</div>';
+  var xb = $('tasXB');
+  if(xb){
+    xb.innerHTML = hd+rows;
+    xb.querySelectorAll('.xlr[data-id]').forEach(function(el){
+      el.addEventListener('click', function(){ openModal(+el.dataset.id); });
+    });
+  }
+}
+
 </script>
 
 </body>
