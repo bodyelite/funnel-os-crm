@@ -1800,7 +1800,7 @@ app.post('/api/leads/analisis-ia', auth('admin','vendedor'), async (req, res) =>
       if (filtros.hasta) leads = leads.filter(l => new Date(l.lastInteraction||l.createdAt||0) <= new Date(filtros.hasta));
     }
     if (!leads.length) return res.status(400).json({ error: 'No hay leads con esos criterios' });
-    if (leads.length > 20) return res.status(400).json({ error: 'Máximo 20 leads por análisis. Aplica más filtros.' });
+    if (leads.length > 50) return res.status(400).json({ error: 'Máximo 50 leads por análisis. Aplica más filtros.' });
     const contexto = leads.map(l => {
       const vendedor = allUsers.find(u => u.username === l.assignedTo)?.name || l.assignedTo || 'Sin asignar';
       const diasSinActividad = l.lastClientTs ? Math.floor((Date.now() - new Date(l.lastClientTs).getTime()) / 86400000) : '?';
