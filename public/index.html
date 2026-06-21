@@ -1354,19 +1354,19 @@ window.saveTiFields = async function(leadId) {
   const model = (document.getElementById('ti-model')||{}).value||'';
   const year = (document.getElementById('ti-year')||{}).value||'';
   const color = (document.getElementById('ti-color')||{}).value||'';
-  const h = {'Content-Type':'application/json','x-token': S.token||''};
+  const h = {'Content-Type':'application/json','X-Auth-Token': S.token||''};
   const r = await fetch('/api/leads/'+leadId+'/tradein', { method:'PATCH', headers:h, body:JSON.stringify({make,model,year,color,plate:(document.getElementById('ti-plate')||{}).value?.toUpperCase()||'',km:document.getElementById('ti-km')?.value||'',version:document.getElementById('ti-version')?.value||''}) });
   toast(r.ok ? 'Datos de retoma guardados ✓' : 'Error al guardar', !r.ok);
 };
 window.solicitarTasacion = async function(leadId) {
-  const h = {'Content-Type':'application/json','x-token': S.token||''};
+  const h = {'Content-Type':'application/json','X-Auth-Token': S.token||''};
   const r = await fetch('/api/tasacion/request', { method:'POST', headers:h, body:JSON.stringify({leadId}) });
   toast(r.ok ? 'Tasación solicitada a taller 🔧' : 'Error al solicitar', !r.ok);
 };
 window.registrarOferta = async function(leadId) {
   const offerAmount = parseFloat((document.getElementById('offerInput')||{}).value||'0');
   if (!offerAmount) return toast('Ingresa un monto válido', true);
-  const h = {'Content-Type':'application/json','x-token': S.token||''};
+  const h = {'Content-Type':'application/json','X-Auth-Token': S.token||''};
   const r = await fetch('/api/tasacion/offer', { method:'POST', headers:h, body:JSON.stringify({leadId, offerAmount}) });
   if (r.ok) { toast('Oferta registrada ✓ Vendedor notificado'); closeModal(); refresh(); }
 };
