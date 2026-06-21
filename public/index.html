@@ -367,6 +367,14 @@ async function ejecutarAnalisisIA(){
 </div>
 <div id="backupList" style="display:flex;flex-direction:column;gap:6px;max-height:380px;overflow-y:auto"></div>
 </div>
+<div class="cfs" id="cfgBackups">
+<h3>💾 Respaldos del Sistema</h3>
+<div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
+  <button onclick="loadBackups()" style="background:var(--ac);color:#fff;border:none;border-radius:8px;padding:8px 16px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">🔄 Actualizar lista</button>
+  <span id="backupStatus" style="font-size:12px;color:var(--tm)">Haz click para cargar</span>
+</div>
+<div id="backupList" style="display:flex;flex-direction:column;gap:6px;max-height:380px;overflow-y:auto"></div>
+</div>
 </section>
 <section id="view-analisis" class="view" style="padding:20px;max-width:1100px;margin:0 auto">
 <div class="st">🔍 Análisis Estratégico IA</div>
@@ -2334,6 +2342,54 @@ async function loadBackups(){
   } catch(e) {
     status.textContent = 'Error: ' + e.message;
   }
+}
+
+
+function renderTasaciones(){
+  var leads=S.leads||[];
+  var elP=$('tasPendCount');if(elP)elP.textContent=leads.filter(function(l){return l.tradeIn&&l.tradeIn.status==='Pendiente';}).length;
+  var elR=$('tasRealCount');if(elR)elR.textContent=leads.filter(function(l){return l.tradeIn&&l.tradeIn.status==='Evaluado';}).length;
+}
+var _tasOpen=null;
+function toggleTasPanel(tipo){
+  if(_tasOpen===tipo){_tasOpen=null;var px=$('tasX');if(px)px.style.display='none';return;}
+  _tasOpen=tipo;
+  var px=$('tasX');if(px)px.style.display='';
+  var xt=$('tasXT');if(xt)xt.textContent=tipo==='pendientes'?'🔧 Tasaciones Solicitadas — esperando taller':'✅ Tasaciones Realizadas — con oferta registrada';
+  var leads=S.leads||[];
+  var items=leads.filter(function(l){if(!l.tradeIn)return false;return tipo==='pendientes'?l.tradeIn.status==='Pendiente':l.tradeIn.status==='Evaluado';});
+  items.sort(function(a,b){return new Date(b.lastInteraction||0)-new Date(a.lastInteraction||0);});
+  var gc='grid-template-columns:14px 1.2fr 1.2fr 1fr 1fr 1fr auto';
+  var fmt=function(n){return n?new Intl.NumberFormat('es-CL',{style:'currency',currency:'CLP',maximumFractionDigits:0}).format(n):'—';};
+  var hd='<div class="xlr" style="'+gc+';cursor:default;background:var(--p2)"><div></div><div style="font-size:10px;font-weight:700;color:var(--tm)">CLIENTE</div><div style="font-size:10px;font-weight:700;color:var(--tm)">VEHÍCULO</div><div style="font-size:10px;font-weight:700;color:var(--tm)">AÑO</div><div style="font-size:10px;font-weight:700;color:var(--tm)">KM</div><div style="font-size:10px;font-weight:700;color:var(--tm)">'+(tipo==='realizadas'?'OFERTA':'FECHA')+'</div><div style="font-size:10px;font-weight:700;color:var(--tm)">VENDEDOR</div></div>';
+  var rows=items.length?items.map(function(l){
+    var ti=l.tradeIn||{};
+    var veh=[ti.make,ti.model].filter(Boolean).join(' ')||'—';
+    var extra=tipo==='realizadas'?'<div style="font-size:12px;color:var(--ok);font-weight:700">'+fmt(ti.offer)+'</div>':'<div style="font-size:11px;color:var(--tm)">'+fDT(l.lastInteraction)+'</div>';
+    return '<div class="xlr" data-id="'+l.id+'" style="'+gc+';cursor:pointer">'+adot(l.alertLevel)+'<div><div class="lrn">'+esc(l.name)+'</div><div class="lrs">'+esc(l.phone||'')+'</div></div><div><div style="font-size:12px;color:var(--ts)">'+esc(veh)+'</div>'+(ti.plate?'<div style="font-size:10px;color:var(--tm)">'+esc(ti.plate)+'</div>':'')+'</div><div style="font-size:12px;color:var(--tm)">'+esc(String(ti.year||'—'))+'</div><div style="font-size:12px;color:var(--tm)">'+esc(ti.km?ti.km+' km':'—')+'</div>'+extra+'<div>'+cUsr(l.assignedTo)+'</div></div>';
+  }).join(''):'<div class="ke" style="padding:14px">Sin tasaciones '+tipo+' aún.</div>';
+  var xb=$('tasXB');
+  if(xb){xb.innerHTML=hd+rows;xb.querySelectorAll('.xlr[data-id]').forEach(function(el){el.addEventListener('click',function(){openModal(+el.dataset.id);});});}
+}
+async function loadBackups(){
+  var list=$('backupList'),status=$('backupStatus');
+  if(!list||!status)return;
+  status.textContent='Cargando...';list.innerHTML='';
+  try{
+    var r=await api('GET','/api/backups/list');
+    var backs=r.backups||[];
+    status.textContent=backs.length+' respaldo(s) disponibles';
+    if(!backs.length){list.innerHTML='<div style="color:var(--tm);font-size:12px;padding:12px">No hay respaldos aún.</div>';return;}
+    backs.forEach(function(b){
+      var kb=Math.round(b.size/1024);
+      var dt=new Date(b.mtime);
+      var ds=dt.toLocaleDateString('es-CL',{day:'2-digit',month:'2-digit',year:'numeric'})+' '+dt.toLocaleTimeString('es-CL',{hour:'2-digit',minute:'2-digit'});
+      var row=document.createElement('div');
+      row.style.cssText='display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:var(--p2);border:1px solid var(--bd);border-radius:8px;gap:10px;margin-bottom:6px';
+      row.innerHTML='<div style="flex:1;min-width:0"><div style="font-size:12px;font-weight:600;color:var(--ts);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+b.name+'</div><div style="font-size:11px;color:var(--tm)">'+ds+' · '+kb+' KB</div></div><a href="/api/backups/download/'+encodeURIComponent(b.name)+'?token='+S.token+'" download="'+b.name+'" style="background:var(--ac);color:#fff;border-radius:7px;padding:7px 14px;font-size:12px;font-weight:700;text-decoration:none;white-space:nowrap">⬇ Descargar</a>';
+      list.appendChild(row);
+    });
+  }catch(e){status.textContent='Error: '+e.message;}
 }
 
 </script>
