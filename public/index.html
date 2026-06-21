@@ -206,7 +206,7 @@ async function ejecutarAnalisisIA(){
   <div class="sh">Con oferta del taller registrada</div>
 </div>
 </div>
-<div class="xe" id="tasX" style="display:none;margin-top:6px">
+<div class="xe" id="tasX" style="margin-top:6px">
   <div class="xt" id="tasXT">—</div>
   <div id="tasXB" class="xs"></div>
 </div>
@@ -2352,9 +2352,9 @@ function renderTasaciones(){
 }
 var _tasOpen=null;
 function toggleTasPanel(tipo){
-  if(_tasOpen===tipo){_tasOpen=null;var px=$('tasX');if(px)px.style.display='none';return;}
+  if(_tasOpen===tipo){_tasOpen=null;var px=$('tasX');if(px)px.classList.remove('open');return;}
   _tasOpen=tipo;
-  var px=$('tasX');if(px)px.style.display='';
+  var px=$('tasX');if(px)px.classList.add('open');
   var xt=$('tasXT');if(xt)xt.textContent=tipo==='pendientes'?'🔧 Tasaciones Solicitadas — esperando taller':'✅ Tasaciones Realizadas — con oferta registrada';
   var leads=S.leads||[];
   var items=leads.filter(function(l){if(!l.tradeIn)return false;return tipo==='pendientes'?l.tradeIn.status==='Pendiente':l.tradeIn.status==='Evaluado';});
