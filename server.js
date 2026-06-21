@@ -1844,6 +1844,39 @@ app.get('/api/disk-backup', async (req, res) => {
 });
 // ─────────────────────────────────────────────────────────────────────────────
 
+
+// ─── LISTAR BACKUPS DISPONIBLES ──────────────────────────────────────────────
+app.get('/api/backups/list', auth('admin'), (req, res) => {
+  try {
+    const BACKUP_DIR = require('path').join(DATA, 'backups');
+    if (!fsSync.existsSync(BACKUP_DIR)) return res.json({ backups: [] });
+    const files = fsSync.readdirSync(BACKUP_DIR)
+      .filter(f => f.startsWith('backup-') && f.endsWith('.tar.gz'))
+      .map(f => {
+        const fp = require('path').join(BACKUP_DIR, f);
+        const stat = fsSync.statSync(fp);
+        return { name: f, size: stat.size, mtime: stat.mtimeMs };
+      })
+      .sort((a, b) => b.mtime - a.mtime);
+    res.json({ backups: files });
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+// ─────────────────────────────────────────────────────────────────────────────
+
+// ─── DESCARGAR BACKUP ESPECÍFICO ─────────────────────────────────────────────
+app.get('/api/backups/download/:filename', auth('admin'), (req, res) => {
+  try {
+    const BACKUP_DIR = require('path').join(DATA, 'backups');
+    const filename = req.params.filename.replace(/[^a-zA-Z0-9._-]/g, '');
+    if (!filename.startsWith('backup-') || !filename.endsWith('.tar.gz'))
+      return res.status(400).json({ error: 'Archivo no válido' });
+    const fp = require('path').join(BACKUP_DIR, filename);
+    if (!fsSync.existsSync(fp)) return res.status(404).json({ error: 'No encontrado' });
+    res.download(fp, filename);
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+// ─────────────────────────────────────────────────────────────────────────────
+
 app.get('*',(req,res)=>res.sendFile(path.join(__dirname,'public','index.html')));
 setInterval(async()=>{for(const t of TENANTS){try{await applySlaRules(t);}catch(e){console.error('SLA',t,e.message);}}},60000);
 
