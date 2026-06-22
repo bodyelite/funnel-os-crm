@@ -122,8 +122,98 @@ function initAnalisisIA(){
   const sel=document.getElementById('iaFiltroVendedor');if(!sel)return;
   sel.innerHTML='<option value="">Todos</option>';
   (S.users||[]).filter(u=>u.role!=='admin').forEach(u=>{sel.innerHTML+='<option value="'+u.username+'">'+u.name+'</option>';});
+  // Poblar también el select del panel Profundo
+  const selDp=document.getElementById('dpFiltroVendedor');
+  if(selDp){selDp.innerHTML='<option value="">Todos</option>';(S.users||[]).filter(u=>u.role!=='admin').forEach(u=>{selDp.innerHTML+='<option value="'+u.username+'">'+u.name+'</option>';});}
   actualizarConteoIA();
+  actualizarDpCount();
   ['iaFiltroSource','iaFiltroStatus','iaFiltroVendedor','iaFiltroDes','iaFiltroHas'].forEach(id=>{const el=document.getElementById(id);if(el)el.addEventListener('change',actualizarConteoIA);});
+  ['dpFiltroVendedor','dpFiltroDes','dpFiltroHas'].forEach(id=>{const el=document.getElementById(id);if(el)el.addEventListener('change',actualizarDpCount);});
+}
+function switchAnalisisTab(tab){
+  var panR=document.getElementById('panelRapido');
+  var panP=document.getElementById('panelProfundo');
+  var tabR=document.getElementById('tabRapido');
+  var tabP=document.getElementById('tabProfundo');
+  if(!panR||!panP||!tabR||!tabP)return;
+  if(tab==='rapido'){
+    panR.style.display='';panP.style.display='none';
+    tabR.style.color='var(--ac)';tabR.style.borderBottomColor='var(--ac)';
+    tabP.style.color='var(--tm)';tabP.style.borderBottomColor='transparent';
+  } else {
+    panR.style.display='none';panP.style.display='';
+    tabP.style.color='var(--ac)';tabP.style.borderBottomColor='var(--ac)';
+    tabR.style.color='var(--tm)';tabR.style.borderBottomColor='transparent';
+    actualizarDpCount();
+  }
+}
+function actualizarDpCount(){
+  var el=document.getElementById('dpLeadsCount');
+  if(!el)return;
+  var leads=S.leads||[];
+  var vend=(document.getElementById('dpFiltroVendedor')||{}).value||'';
+  var des=(document.getElementById('dpFiltroDes')||{}).value||'';
+  var has=(document.getElementById('dpFiltroHas')||{}).value||'';
+  if(vend)leads=leads.filter(function(l){return l.assignedTo===vend;});
+  if(des)leads=leads.filter(function(l){return new Date(l.lastInteraction||l.createdAt||0)>=new Date(des);});
+  if(has)leads=leads.filter(function(l){return new Date(l.lastInteraction||l.createdAt||0)<=new Date(has+'T23:59:59');});
+  el.textContent=leads.length+' lead'+(leads.length!==1?'s':'')+' en alcance';
+}
+function limpiarAnalisisProfundo(){
+  var res=document.getElementById('dpResultado');
+  if(res)res.innerHTML='<div style="color:var(--tm);font-size:13px;text-align:center;padding:60px 20px"><div style="font-size:40px;margin-bottom:12px">🧠</div><div style="font-weight:600;margin-bottom:6px">Análisis Profundo</div><div style="font-size:12px">Sin límite de leads — streaming en tiempo real</div></div>';
+  var btn=document.getElementById('btnAnalisisProfundo');
+  if(btn){btn.disabled=false;btn.textContent='🧠 Generar Análisis Profundo';}
+}
+async function ejecutarAnalisisProfundo(){
+  var btn=document.getElementById('btnAnalisisProfundo');
+  var res=document.getElementById('dpResultado');
+  if(!btn||!res)return;
+  var vend=(document.getElementById('dpFiltroVendedor')||{}).value||'';
+  var des=(document.getElementById('dpFiltroDes')||{}).value||'';
+  var has=(document.getElementById('dpFiltroHas')||{}).value||'';
+  var leads=S.leads||[];
+  if(vend)leads=leads.filter(function(l){return l.assignedTo===vend;});
+  if(leads.length===0){res.innerHTML='<div style="color:#f59e0b;padding:20px;text-align:center">⚠️ No hay leads con esos filtros.</div>';return;}
+  btn.disabled=true;btn.textContent='⏳ Analizando '+leads.length+' leads...';
+  res.innerHTML='<div style="text-align:center;padding:40px 20px;color:var(--tm)"><div style="font-size:32px;margin-bottom:12px">🧠</div><div id="dpStatus" style="font-weight:700;font-size:15px;margin-bottom:8px">Preparando análisis profundo de '+leads.length+' leads...</div><div style="font-size:12px;margin-bottom:20px">El reporte aparece aquí mientras se genera</div><div style="background:var(--bd);border-radius:4px;height:6px;width:100%;max-width:320px;margin:0 auto;overflow:hidden"><div id="dpBar" style="height:100%;background:#1e40af;width:2%;transition:width 0.4s;border-radius:4px"></div></div></div><div id="dpTexto" style="font-size:13px;line-height:1.8;color:var(--ts);padding:0 4px"></div>';
+  var filtros={};
+  if(vend)filtros.assignedTo=vend;
+  if(des)filtros.desde=des;
+  if(has)filtros.hasta=has+'T23:59:59';
+  try{
+    var r=await fetch('/api/leads/analisis-ia',{method:'POST',headers:{'Content-Type':'application/json','X-Auth-Token':S.token||''},body:JSON.stringify({filtros,profundo:true})});
+    if(!r.ok){var ej=await r.json();throw new Error(ej.error||'Error '+r.status);}
+    var reader=r.body.getReader();
+    var dec=new TextDecoder();
+    var buf='';var texto='';var chars=0;var max=12000;
+    var bar=document.getElementById('dpBar');
+    var status=document.getElementById('dpStatus');
+    var textoEl=document.getElementById('dpTexto');
+    var fmt=function(t){return t.replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>').replace(/
+/g,'<br>');};
+    while(true){
+      var rd=await reader.read();
+      if(rd.done)break;
+      buf+=dec.decode(rd.value,{stream:true});
+      var lines=buf.split('
+');buf=lines.pop();
+      for(var i=0;i<lines.length;i++){
+        var line=lines[i];
+        if(!line.startsWith('data:'))continue;
+        try{
+          var d=JSON.parse(line.slice(5).trim());
+          if(d.type==='start'){if(status)status.textContent='Analizando '+d.total+' leads con IA...';}
+          else if(d.type==='delta'){texto+=d.text;chars+=d.text.length;if(textoEl)textoEl.innerHTML=fmt(texto);if(bar)bar.style.width=Math.min(95,Math.round(chars/max*100))+'%';}
+          else if(d.type==='done'){if(bar)bar.style.width='100%';if(status)status.textContent='Reporte completo — '+d.total+' leads analizados';btn.disabled=false;btn.textContent='🧠 Generar Análisis Profundo';}
+          else if(d.type==='error'){throw new Error(d.error);}
+        }catch(pe){}
+      }
+    }
+  }catch(e){
+    res.innerHTML='<div style="color:#ef4444;padding:20px;text-align:center">❌ '+e.message+'</div>';
+    btn.disabled=false;btn.textContent='🧠 Generar Análisis Profundo';
+  }
 }
 function getFiltrosIA(){return{source:document.getElementById('iaFiltroSource')?.value||'',status:document.getElementById('iaFiltroStatus')?.value||'',assignedTo:document.getElementById('iaFiltroVendedor')?.value||'',desde:document.getElementById('iaFiltroDes')?.value||'',hasta:document.getElementById('iaFiltroHas')?.value||''};}
 function actualizarConteoIA(){
@@ -396,6 +486,13 @@ async function ejecutarAnalisisIA(){
 </section>
 <section id="view-analisis" class="view" style="padding:20px;max-width:1100px;margin:0 auto">
 <div class="st">🔍 Análisis Estratégico IA</div>
+<!-- Pestañas Rápido / Profundo -->
+<div style="display:flex;border-bottom:2px solid var(--bd);margin-bottom:20px;gap:0">
+  <button id="tabRapido" onclick="switchAnalisisTab('rapido')" style="padding:10px 22px;font-size:13px;font-weight:700;border:none;background:none;color:var(--ac);border-bottom:3px solid var(--ac);margin-bottom:-2px;cursor:pointer;font-family:inherit">⚡ Rápido</button>
+  <button id="tabProfundo" onclick="switchAnalisisTab('profundo')" style="padding:10px 22px;font-size:13px;font-weight:700;border:none;background:none;color:var(--tm);border-bottom:3px solid transparent;margin-bottom:-2px;cursor:pointer;font-family:inherit">🧠 Profundo</button>
+</div>
+<!-- ── PESTAÑA RÁPIDO (≤50 leads, sin SSE, preservada intacta) ─────────── -->
+<div id="panelRapido">
 <div style="display:grid;grid-template-columns:280px 1fr;gap:20px;align-items:start">
 <div style="background:var(--p2);border:1px solid var(--bd);border-radius:12px;padding:16px;display:flex;flex-direction:column;gap:12px">
   <div style="font-weight:700;font-size:13px;color:var(--ts)">Filtros de Análisis</div>
@@ -409,7 +506,25 @@ async function ejecutarAnalisisIA(){
   <button onclick="limpiarAnalisis()" style="background:var(--bg);color:var(--tm);border:1px solid var(--bd);border-radius:8px;padding:8px;font-size:12px;cursor:pointer;font-family:inherit">🗑 Limpiar</button>
 </div>
 <div id="iaResultado" style="background:var(--p2);border:1px solid var(--bd);border-radius:12px;padding:20px;min-height:400px"><div style="color:var(--tm);font-size:13px;text-align:center;padding:60px 20px"><div style="font-size:32px;margin-bottom:12px">🔍</div><div style="font-weight:600">Selecciona filtros y genera el análisis</div></div></div>
-</div></section>
+</div>
+</div>
+<!-- ── PESTAÑA PROFUNDO (todos los leads, SSE streaming) ───────────────── -->
+<div id="panelProfundo" style="display:none">
+<div style="display:grid;grid-template-columns:280px 1fr;gap:20px;align-items:start">
+<div style="background:var(--p2);border:1px solid var(--bd);border-radius:12px;padding:16px;display:flex;flex-direction:column;gap:12px">
+  <div style="font-weight:700;font-size:13px;color:var(--ts)">Alcance del Análisis</div>
+  <div style="font-size:11px;color:var(--tm);line-height:1.6;background:var(--bg);border-radius:8px;padding:10px;border:1px solid var(--bd)">Analiza <strong>todos los leads</strong> del CRM sin límite. Usa SSE streaming para mostrar el reporte mientras se genera. Ideal para diagnósticos completos del embudo.</div>
+  <div><label style="font-size:11px;color:var(--tm);font-weight:600">VENDEDOR</label><select id="dpFiltroVendedor" style="width:100%;margin-top:4px;padding:7px;border-radius:7px;border:1px solid var(--bd);background:var(--bg);color:var(--ts);font-size:12px;font-family:inherit"><option value="">Todos</option></select></div>
+  <div><label style="font-size:11px;color:var(--tm);font-weight:600">DESDE</label><input type="date" id="dpFiltroDes" style="width:100%;margin-top:4px;padding:7px;border-radius:7px;border:1px solid var(--bd);background:var(--bg);color:var(--ts);font-size:12px;font-family:inherit;box-sizing:border-box"></div>
+  <div><label style="font-size:11px;color:var(--tm);font-weight:600">HASTA</label><input type="date" id="dpFiltroHas" style="width:100%;margin-top:4px;padding:7px;border-radius:7px;border:1px solid var(--bd);background:var(--bg);color:var(--ts);font-size:12px;font-family:inherit;box-sizing:border-box"></div>
+  <div id="dpLeadsCount" style="font-size:11px;color:var(--tm);text-align:center;padding:6px;background:var(--bg);border-radius:6px;border:1px solid var(--bd)">— leads totales</div>
+  <button onclick="ejecutarAnalisisProfundo()" id="btnAnalisisProfundo" style="background:linear-gradient(135deg,#0f172a,#1e40af);color:#fff;border:none;border-radius:8px;padding:11px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">🧠 Generar Análisis Profundo</button>
+  <button onclick="limpiarAnalisisProfundo()" style="background:var(--bg);color:var(--tm);border:1px solid var(--bd);border-radius:8px;padding:8px;font-size:12px;cursor:pointer;font-family:inherit">🗑 Limpiar</button>
+</div>
+<div id="dpResultado" style="background:var(--p2);border:1px solid var(--bd);border-radius:12px;padding:20px;min-height:400px"><div style="color:var(--tm);font-size:13px;text-align:center;padding:60px 20px"><div style="font-size:40px;margin-bottom:12px">🧠</div><div style="font-weight:600;margin-bottom:6px">Análisis Profundo</div><div style="font-size:12px">Sin límite de leads — streaming en tiempo real</div></div></div>
+</div>
+</div>
+</section>
 
 <section id="view-bi" class="view" style="padding:0;height:calc(100vh - 110px);overflow:hidden"><div style="display:flex;border-bottom:1px solid #e2e8f0;background:#fff;padding:0 20px"><button onclick="loadBI('mapa')" id="biT1" style="font-size:11px;font-weight:700;padding:12px 16px;border:none;background:none;color:#6d28d9;border-bottom:2px solid #6d28d9;cursor:pointer;font-family:inherit">🗺️ Mapa Zonas</button><button onclick="loadBI('precios')" id="biT2" style="font-size:11px;font-weight:700;padding:12px 16px;border:none;background:none;color:#888;border-bottom:2px solid transparent;cursor:pointer;font-family:inherit">💰 Agente Precios</button></div><iframe id="biFr" src="/mapa_zonas_v4.html" style="width:100%;height:calc(100% - 44px);border:none"></iframe></section>
 </main>
