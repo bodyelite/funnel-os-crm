@@ -137,7 +137,7 @@ function switchAnalisisTab(tab){
   var tabP=document.getElementById('tabProfundo');
   if(!panR||!panP||!tabR||!tabP)return;
   if(tab==='rapido'){
-    panR.style.display='';panP.style.display='none';
+    panR.style.display='block';panP.style.display='none';
     tabR.style.color='var(--ac)';tabR.style.borderBottomColor='var(--ac)';
     tabP.style.color='var(--tm)';tabP.style.borderBottomColor='transparent';
   } else {
@@ -492,7 +492,7 @@ async function ejecutarAnalisisIA(){
   <button id="tabProfundo" onclick="switchAnalisisTab('profundo')" style="padding:10px 22px;font-size:13px;font-weight:700;border:none;background:none;color:var(--tm);border-bottom:3px solid transparent;margin-bottom:-2px;cursor:pointer;font-family:inherit">🧠 Profundo</button>
 </div>
 <!-- ── PESTAÑA RÁPIDO (≤50 leads, sin SSE, preservada intacta) ─────────── -->
-<div id="panelRapido">
+<div id="panelRapido" style="display:block">
 <div style="display:grid;grid-template-columns:280px 1fr;gap:20px;align-items:start">
 <div style="background:var(--p2);border:1px solid var(--bd);border-radius:12px;padding:16px;display:flex;flex-direction:column;gap:12px">
   <div style="font-weight:700;font-size:13px;color:var(--ts)">Filtros de Análisis</div>
