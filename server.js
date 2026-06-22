@@ -117,7 +117,7 @@ async function marcela(tenant, history, msg, notes, assignedName, leadSource) {
   try {
     let botCfg = await tRead(F.bot, tenant, {});
     let baseSysPrompt = botCfg?.systemPrompt;
-    if (leadSource === 'Compra Directa' && botCfg?.compras_rmg?.systemPrompt) {
+    if ((leadSource === 'Compra Directa' || leadSource === 'Compramos tu Auto' || leadSource === 'Compramos tu auto') && botCfg?.compras_rmg?.systemPrompt) {
       baseSysPrompt = botCfg.compras_rmg.systemPrompt;
       console.log('[BOT] Modo COMPRADORA activado (origen:', leadSource, ')');
     }
@@ -1421,7 +1421,7 @@ app.post('/webhook',async(req,res)=>{
         const titularAd = hasReferral ? (adTracing.headline || '') : '';
         const adId = hasReferral ? (adTracing.source_id || '') : '';
 
-        if (titularAd.toLowerCase().includes('compra') || (typeof body === 'string' && body.match(/compra directa/i))) {
+        if (titularAd.toLowerCase().includes('compra') || titularAd.toLowerCase().includes('vende') || (typeof body === 'string' && body.match(/compra directa|evaluar la venta|quiero vender|tasar|retoma|vender mi auto/i))) {
             detectedSource = 'Compra Directa';
         }
         
@@ -1504,7 +1504,7 @@ app.post('/webhook',async(req,res)=>{
     let newInterest = null;
 
     if (mt_meta) {
-        newSource = (adTracing && adTracing.headline && adTracing.headline.toLowerCase().includes('compra')) ? 'Compra Directa' : 'Meta Ads';
+        newSource = (adTracing && adTracing.headline && (adTracing.headline.toLowerCase().includes('compra') || adTracing.headline.toLowerCase().includes('vende'))) ? 'Compra Directa' : 'Meta Ads';
         newInterest = (adTracing && adTracing.headline) ? adTracing.headline : 'Anuncio Meta Ads';
         if (newInterest.includes('3008') || newInterest.includes('Peugeot')) newInterest = 'Peugeot 3008 Hybrid (con TV de regalo 📺)';
         else if (newInterest.includes('Silverado') || newInterest.includes('Trailboss')) newInterest = 'Silverado Trailboss (Transferencia Gratis 📄)';
