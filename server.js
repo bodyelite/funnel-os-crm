@@ -1832,6 +1832,32 @@ app.post('/api/leads/analisis-ia', auth('admin','vendedor'), async (req, res) =>
   }
 });
 
+// ─── BACKUPS: listar y descargar ─────────────────────────────────────────────
+app.get('/api/backups/list', auth('admin'), async (req, res) => {
+  try {
+    const dir = require('path').join(DATA, 'backups');
+    if (!fsSync.existsSync(dir)) return res.json({ backups: [] });
+    const files = fsSync.readdirSync(dir)
+      .filter(f => f.endsWith('.tar.gz'))
+      .map(f => {
+        const st = fsSync.statSync(require('path').join(dir, f));
+        return { name: f, size: st.size, mtime: st.mtime };
+      })
+      .sort((a, b) => new Date(b.mtime) - new Date(a.mtime));
+    res.json({ backups: files });
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+app.get('/api/backups/download/:filename', auth('admin'), (req, res) => {
+  try {
+    const dir = require('path').join(DATA, 'backups');
+    const file = require('path').join(dir, req.params.filename);
+    if (!fsSync.existsSync(file)) return res.status(404).json({ error: 'No encontrado' });
+    res.download(file, req.params.filename);
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+
 app.get('*',(req,res)=>res.sendFile(path.join(__dirname,'public','index.html')));
 setInterval(async()=>{for(const t of TENANTS){try{await applySlaRules(t);}catch(e){console.error('SLA',t,e.message);}}},60000);
 
