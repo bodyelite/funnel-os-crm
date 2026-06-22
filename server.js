@@ -2136,7 +2136,7 @@ app.get('/api/rescate', async (req, res) => {
             }
         }
 
-        const dirBak = path.join(DATA, 'backups_automaticos');
+        const dirBak = path.join(DATA, 'backups');
         if (fsSync.existsSync(dirBak)) {
             const baks = await fsP.readdir(dirBak);
             for (const b of baks) {
