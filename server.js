@@ -1467,19 +1467,27 @@ app.post('/webhook',async(req,res)=>{
         ? [{ content: portalNote, author: 'Sistema', ts: Date.now() }]
         : [];
 
+      // Leads de Compra Directa van siempre a Rmino
+      const esCompra = detectedSource === 'Compra Directa';
+      const assignedFinal = esCompra ? 'Rmino' : assignedObj.username;
+
       ld[tenant].unshift({
         id: Date.now(), name: contactName, phone: '+'+from,
         source: detectedSource, status: 'Nuevo',
         lastInteraction: n, lastClientTs: n,
         interest: detectedInterest,
-        assignedTo: assignedObj.username, botActive: true,
+        assignedTo: assignedFinal, botActive: true,
         alertLevel: 'none', intentSignal: 'NONE', unread: true,
         notes: initNotes, chatHistory: [],
         adTracing: adTracing
       });
       idx = 0;
       const srcTag = detectedSource !== 'WhatsApp' ? ` [${detectedSource}]` : '';
-      alertStaff(tenant, assignedObj, '🔔 Nuevo Lead WA', `🔔 NUEVO LEAD WA${srcTag}: ${contactName} — "${detectedInterest.slice(0,60)}" — atiéndelo ahora.`);
+      if (esCompra) {
+        alertStaff(tenant, assignedObj, '🛍 Nuevo Lead Compra', `🛍 NUEVO LEAD COMPRA: ${contactName} — "${detectedInterest.slice(0,60)}" — asignado a Raúl Miño.`);
+      } else {
+        alertStaff(tenant, assignedObj, '🔔 Nuevo Lead WA', `🔔 NUEVO LEAD WA${srcTag}: ${contactName} — "${detectedInterest.slice(0,60)}" — atiéndelo ahora.`);
+      }
     }
     if(ld[tenant][idx].status==='esperando_respuesta_chileautos'||ld[tenant][idx].status==='esperando_respuesta_general'){
       const prevSrc = ld[tenant][idx].status==='esperando_respuesta_chileautos' ? 'Chileautos' : (ld[tenant][idx].source||'Canal');
@@ -1832,59 +1840,25 @@ app.post('/api/leads/analisis-ia', auth('admin','vendedor'), async (req, res) =>
   }
 });
 
-// ── CLASIFICACIÓN IA DE LEADS (Pipeline Inteligencia) ──────────────────────
-app.post('/api/leads/clasificar-ia', auth('admin','vendedor'), async (req, res) => {
+// ── MIGRAR LEADS COMPRA A RMINO ────────────────────────────────────────────
+app.post('/api/leads/migrar-compras', auth('admin'), async (req, res) => {
   try {
-    const { filtros } = req.body || {};
-    const allLeads = await tRead(F.leads, req.tenant);
-    const allUsers = await tRead(F.users, req.tenant);
-    let leads = allLeads;
-    if (filtros) {
-      if (filtros.source)     leads = leads.filter(l => l.source === filtros.source);
-      if (filtros.assignedTo) leads = leads.filter(l => l.assignedTo === filtros.assignedTo);
-      if (filtros.desde)      leads = leads.filter(l => new Date(l.lastInteraction||l.createdAt||0) >= new Date(filtros.desde));
-      if (filtros.hasta)      leads = leads.filter(l => new Date(l.lastInteraction||l.createdAt||0) <= new Date(filtros.hasta));
-    }
-    if (!leads.length) return res.json({ ok: true, clasificaciones: [] });
-
-    // Construir contexto resumido para cada lead
-    const contexto = leads.map(l => {
-      const vendedor = allUsers.find(u => u.username === l.assignedTo)?.name || l.assignedTo || 'Sin asignar';
-      const clientMsgs = (l.chatHistory||[]).filter(m => m.role==='user').length;
-      const chat = (l.chatHistory||[]).slice(-6).map(m => `[${m.role==='user'?'Cliente':'Asesor'}]: ${(m.content||'').slice(0,100)}`).join(' | ');
-      const notas = (l.notes||[]).slice(-3).map(n => `${n.author}: ${(n.content||'').slice(0,80)}`).join(' | ');
-      const diasSin = l.lastClientTs ? Math.floor((Date.now()-new Date(l.lastClientTs).getTime())/86400000) : '?';
-      return `ID:${l.id}|NOMBRE:${l.name}|ORIGEN:${l.source}|ESTADO:${l.status}|VENDEDOR:${vendedor}|INTERES:${(l.interest||'').slice(0,60)}|MSGS_CLIENTE:${clientMsgs}|DIAS_SIN_RESP:${diasSin}|NOTAS:${notas||'ninguna'}|CHAT:${chat||'sin historial'}`;
-    }).join('\n');
-
-    const prompt = `Eres un analista comercial de una automotora chilena. Clasifica cada lead en el siguiente JSON.
-
-Para cada lead devuelve exactamente: id, calidad (Alta|Media|Baja), estancamiento (max 20 chars: "seguimiento"|"lead frio"|"sin datos"|"en proceso"), resumen (max 80 chars explicando que paso con este lead).
-
-Criterios calidad:
-- Alta: cliente activo, pidio info especifica, tasacion, credito, agenda
-- Media: respondio pero sin avanzar, interes vago
-- Baja: nunca respondio, numero invalido, sin interaccion real
-
-Leads a clasificar:
-${contexto}
-
-Responde SOLO con JSON valido, sin texto adicional, sin markdown:
-{"clasificaciones":[{"id":123,"calidad":"Alta","estancamiento":"seguimiento","resumen":"Cliente interesado en Corolla, pendiente llamada de cierre"},...]}`;
-
-    const completion = await openai.chat.completions.create({
-      model: 'gpt-4o-mini',
-      temperature: 0.2,
-      max_tokens: Math.min(4000, leads.length * 60 + 200),
-      response_format: { type: 'json_object' },
-      messages: [{ role: 'user', content: prompt }]
+    const leads = await tRead(F.leads, req.tenant);
+    const FUENTES_COMPRA = ['Compra Directa', 'Compramos tu Auto', 'Compramos tu auto'];
+    let migrados = 0;
+    leads.forEach(l => {
+      if (FUENTES_COMPRA.includes(l.source) && l.assignedTo !== 'Rmino') {
+        l.assignedTo = 'Rmino';
+        l.notes = l.notes || [];
+        l.notes.push({ content: 'Lead migrado a Compras RMG — asignado a Raúl Miño.', author: 'Sistema', ts: Date.now() });
+        migrados++;
+      }
     });
-
-    let result = {};
-    try { result = JSON.parse(completion.choices[0]?.message?.content || '{}'); } catch(_) {}
-    res.json({ ok: true, clasificaciones: result.clasificaciones || [] });
+    await tWrite(F.leads, req.tenant, leads);
+    console.log(`[MIGRAR-COMPRAS] ${migrados} leads migrados a Rmino`);
+    res.json({ ok: true, migrados });
   } catch(e) {
-    console.error('[CLASIFICAR-IA]', e.message);
+    console.error('[MIGRAR-COMPRAS]', e.message);
     res.status(500).json({ error: e.message });
   }
 });
