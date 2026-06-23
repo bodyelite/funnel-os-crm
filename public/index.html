@@ -2578,9 +2578,15 @@ function switchComprasTab(tab, btn) {
     document.getElementById('compras-' + tab).style.display = 'block';
 }
 
-function renderComprasFull() {
-    const FUENTES_COMPRA_RMG = ['Compra Directa', 'Compramos tu Auto', 'Compramos tu auto', 'Compra Directa '];
-    const leads = (window.S && S.leads ? S.leads : []).filter(l => FUENTES_COMPRA_RMG.includes((l.source||'').trim()));
+async function renderComprasFull() {
+    const FUENTES_COMPRA_RMG = ['Compra Directa', 'Compramos tu Auto', 'Compramos tu auto'];
+    // Llamada directa sin filtros de fecha/vendedor para siempre ver todos los leads de compra
+    let allLeads = S.leads || [];
+    try {
+      const fresh = await api('GET', '/api/leads');
+      if (Array.isArray(fresh)) allLeads = fresh;
+    } catch(e) { /* usar S.leads como fallback */ }
+    const leads = allLeads.filter(l => FUENTES_COMPRA_RMG.includes((l.source||'').trim()));
     
     const cl = document.getElementById('compras-leads-tbl');
     if(cl) {
