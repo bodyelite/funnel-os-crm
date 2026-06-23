@@ -1215,7 +1215,8 @@ function renderLeads(){
   const filtCanal = document.getElementById('filtCanal')?.value || '';
   const filtEstado = document.getElementById('filtEstado')?.value || '';
   const filtSearch = document.getElementById('filtSearch')?.value.toLowerCase().trim() || '';
-  let leads = S.leads || [];
+  const FUENTES_COMPRA = ['Compra Directa', 'Compramos tu Auto', 'Compramos tu auto'];
+  let leads = (S.leads || []).filter(l => !FUENTES_COMPRA.includes(l.source||''));
   if(filtCanal) leads = leads.filter(l => (l.source||'') === filtCanal);
   if(filtEstado) leads = leads.filter(l => (l.status||'') === filtEstado);
   if(filtSearch) leads = leads.filter(l => (l.name||'').toLowerCase().includes(filtSearch) || (l.phone||'').includes(filtSearch) || (l.interest||'').toLowerCase().includes(filtSearch));
