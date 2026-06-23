@@ -161,58 +161,287 @@ function actualizarDpCount(){
 }
 function limpiarAnalisisProfundo(){
   var res=document.getElementById('dpResultado');
-  if(res)res.innerHTML='<div style="color:var(--tm);font-size:13px;text-align:center;padding:60px 20px"><div style="font-size:40px;margin-bottom:12px">🧠</div><div style="font-weight:600;margin-bottom:6px">Análisis Profundo</div><div style="font-size:12px">Sin límite de leads — streaming en tiempo real</div></div>';
+  var kpis=document.getElementById('dpKpis');
+  var charts=document.getElementById('dpCharts');
+  var aban=document.getElementById('dpAbanico');
+  if(res){res.style.display='';res.innerHTML='<div style="font-size:40px;margin-bottom:12px">\ud83e\udde0</div><div style="font-weight:600;font-size:14px;color:var(--ts);margin-bottom:6px">Pipeline de Inteligencia de Leads</div><div style="font-size:12px;color:var(--tm)">Aplica filtros y presiona Analizar</div>';}
+  if(kpis){kpis.style.display='none';kpis.innerHTML='';}
+  if(charts){charts.style.display='none';charts.innerHTML='';}
+  if(aban){aban.style.display='none';aban.innerHTML='';}
   var btn=document.getElementById('btnAnalisisProfundo');
-  if(btn){btn.disabled=false;btn.textContent='🧠 Generar Análisis Profundo';}
+  if(btn){btn.disabled=false;btn.textContent='\ud83e\udde0 Analizar';}
+  window._dpData=null;
 }
+
+function dpCatLead(l){
+  var msgs=(l.chatHistory||[]);
+  var clientMsgs=msgs.filter(function(m){return m.role==='user';}).length;
+  var status=(l.status||'').toLowerCase();
+  var notas=(l.notes||[]).map(function(n){return(n.content||'').toLowerCase();}).join(' ');
+  var interes=(l.interest||'').toLowerCase();
+  if(status==='cerrado'||status==='vendido') return 5;
+  if(status==='reservado'||status==='agendado'||notas.indexOf('agend')>-1||notas.indexOf('visita')>-1) return 4;
+  if(notas.indexOf('tasaci')>-1||notas.indexOf('cr\u00e9dito')>-1||notas.indexOf('credito')>-1||interes.indexOf('tasaci')>-1||interes.indexOf('credito')>-1) return 3;
+  if(clientMsgs>=3) return 2;
+  return 1;
+}
+
+function dpFiltrarLeads(leads){
+  var origen=((document.getElementById('dpFOrigen')||{}).value)||'';
+  var vend=((document.getElementById('dpFiltroVendedor')||{}).value)||'';
+  var cat=((document.getElementById('dpFCat')||{}).value)||'';
+  var calidad=((document.getElementById('dpFCalidad')||{}).value)||'';
+  var des=((document.getElementById('dpFiltroDes')||{}).value)||'';
+  var has=((document.getElementById('dpFiltroHas')||{}).value)||'';
+  return leads.filter(function(l){
+    if(origen && l.source!==origen) return false;
+    if(vend && l.assignedTo!==vend) return false;
+    if(cat && dpCatLead(l)!==parseInt(cat)) return false;
+    if(calidad && (l._iaCalidad||'')<calidad) return false;
+    if(des && new Date(l.lastInteraction||l.createdAt||0)<new Date(des)) return false;
+    if(has && new Date(l.lastInteraction||l.createdAt||0)>new Date(has+'T23:59:59')) return false;
+    return true;
+  });
+}
+
+function dpAplicarFiltros(){
+  if(!window._dpData) return;
+  var leads=dpFiltrarLeads(window._dpData);
+  var el=document.getElementById('dpLeadsCount');
+  if(el) el.textContent=leads.length+' lead'+(leads.length!==1?'s':'')+' en selecci\u00f3n';
+  dpRenderAbanico(leads);
+  dpRenderKpis(leads);
+  dpRenderCharts(leads);
+}
+
+function actualizarDpCount(){
+  var leads=S.leads||[];
+  var el=document.getElementById('dpLeadsCount');
+  if(el) el.textContent=leads.length+' lead'+(leads.length!==1?'s':'')+' totales';
+}
+
+function dpRenderKpis(leads){
+  var el=document.getElementById('dpKpis');
+  if(!el) return;
+  var cats=[0,0,0,0,0];
+  leads.forEach(function(l){cats[dpCatLead(l)-1]++;});
+  var total=leads.length||1;
+  var calAlt=leads.filter(function(l){return l._iaCalidad==='Alta';}).length;
+  var calBaj=leads.filter(function(l){return l._iaCalidad==='Baja';}).length;
+  var labels=['Sin interacci\u00f3n','Con actividad','Intenci\u00f3n alta','Agendados','Cerrados'];
+  var colors=['#94a3b8','#3b82f6','#f59e0b','#8b5cf6','#10b981'];
+  var html='';
+  cats.forEach(function(c,i){
+    html+='<div style="background:var(--p);border:1px solid var(--bd);border-radius:8px;padding:10px;text-align:center;cursor:pointer" onclick="dpScrollCat('+(i+1)+')">'
+      +'<div style="font-size:18px;font-weight:800;color:'+colors[i]+'">'+c+'</div>'
+      +'<div style="font-size:10px;color:var(--tm);margin-top:2px">C'+(i+1)+': '+labels[i]+'</div>'
+      +'<div style="font-size:10px;color:var(--ts);font-weight:600">'+Math.round(c/total*100)+'%</div>'
+      +'</div>';
+  });
+  el.innerHTML=html;
+  el.style.display='grid';
+}
+
+function dpRenderCharts(leads){
+  var el=document.getElementById('dpCharts');
+  if(!el) return;
+  // Contar por origen
+  var porOrigen={};
+  leads.forEach(function(l){var o=l.source||'Otro';porOrigen[o]=(porOrigen[o]||0)+1;});
+  // Contar por vendedor
+  var porVend={};
+  leads.forEach(function(l){var v=cUsr(l.assignedTo)||l.assignedTo||'?';porVend[v]=(porVend[v]||0)+1;});
+  // Contar calidad
+  var calidad={Alta:0,Media:0,Baja:0,Pendiente:0};
+  leads.forEach(function(l){var q=l._iaCalidad||'Pendiente';calidad[q]=(calidad[q]||0)+1;});
+
+  el.innerHTML=
+    '<canvas id="dpChOrigen" width="300" height="180" style="background:var(--p);border:1px solid var(--bd);border-radius:10px;padding:8px"></canvas>'+
+    '<canvas id="dpChVend" width="300" height="180" style="background:var(--p);border:1px solid var(--bd);border-radius:10px;padding:8px"></canvas>'+
+    '<canvas id="dpChCal" width="200" height="180" style="background:var(--p);border:1px solid var(--bd);border-radius:10px;padding:8px"></canvas>';
+  el.style.display='flex';
+
+  if(window.Chart){
+    var oKeys=Object.keys(porOrigen);
+    new Chart(document.getElementById('dpChOrigen'),{type:'bar',data:{labels:oKeys,datasets:[{label:'Leads por Origen',data:oKeys.map(function(k){return porOrigen[k];}),backgroundColor:'rgba(59,130,246,0.7)',borderRadius:4}]},options:{responsive:false,plugins:{legend:{display:false},title:{display:true,text:'Por Origen',font:{size:11}}},scales:{y:{beginAtZero:true,ticks:{stepSize:1}}}}});
+    var vKeys=Object.keys(porVend);
+    new Chart(document.getElementById('dpChVend'),{type:'bar',data:{labels:vKeys,datasets:[{label:'Leads por Vendedor',data:vKeys.map(function(k){return porVend[k];}),backgroundColor:'rgba(139,92,246,0.7)',borderRadius:4}]},options:{responsive:false,plugins:{legend:{display:false},title:{display:true,text:'Por Vendedor',font:{size:11}}},scales:{y:{beginAtZero:true,ticks:{stepSize:1}}}}});
+    new Chart(document.getElementById('dpChCal'),{type:'doughnut',data:{labels:['Alta','Media','Baja','Pendiente'],datasets:[{data:[calidad.Alta,calidad.Media,calidad.Baja,calidad.Pendiente],backgroundColor:['#10b981','#f59e0b','#ef4444','#94a3b8']}]},options:{responsive:false,plugins:{legend:{position:'bottom',labels:{font:{size:10}}},title:{display:true,text:'Calidad IA',font:{size:11}}}}});
+  }
+}
+
+function dpScrollCat(n){
+  var el=document.getElementById('dpCatRow'+n);
+  if(el) el.scrollIntoView({behavior:'smooth',block:'start'});
+}
+
+function dpRenderAbanico(leads){
+  var el=document.getElementById('dpAbanico');
+  if(!el) return;
+  var cats=[
+    {id:1,label:'Sin interacci\u00f3n',icon:'\u23f8\ufe0f',color:'#64748b',bg:'#f1f5f9'},
+    {id:2,label:'Con actividad (3+ msgs)',icon:'\ud83d\udcac',color:'#2563eb',bg:'#eff6ff'},
+    {id:3,label:'Intenci\u00f3n alta (tasaci\u00f3n/cr\u00e9dito)',icon:'\u26a1',color:'#d97706',bg:'#fffbeb'},
+    {id:4,label:'Agendado para visita',icon:'\ud83d\udcc5',color:'#7c3aed',bg:'#f5f3ff'},
+    {id:5,label:'Cerrado',icon:'\u2705',color:'#059669',bg:'#f0fdf4'}
+  ];
+  var total=leads.length||1;
+  var html='<div style="border-bottom:2px solid var(--bd);padding:10px 14px;display:grid;grid-template-columns:28px 1fr 60px 80px 90px 90px 100px;gap:8px;font-size:10px;font-weight:700;color:var(--tm);text-transform:uppercase">'
+    +'<div></div><div>Lead / Anuncio</div><div>Origen</div><div>Vendedor</div><div>Calidad IA</div><div>Estancamiento</div><div>Fecha</div></div>';
+  cats.forEach(function(cat){
+    var grupo=leads.filter(function(l){return dpCatLead(l)===cat.id;});
+    var pct=Math.round(grupo.length/total*100);
+    html+='<div id="dpCatRow'+cat.id+'" style="border-bottom:1px solid var(--bd)">';
+    // Cabecera de categoría — clickeable
+    html+='<div onclick="dpToggleCat('+cat.id+')" style="display:grid;grid-template-columns:28px 1fr 60px 80px 90px 90px 100px;gap:8px;align-items:center;padding:10px 14px;cursor:pointer;background:'+cat.bg+';user-select:none">'
+      +'<div id="dpCatIcon'+cat.id+'" style="font-size:14px;text-align:center;transition:transform .2s">\u25b6</div>'
+      +'<div style="display:flex;align-items:center;gap:8px">'
+        +'<span style="font-size:14px">'+cat.icon+'</span>'
+        +'<div>'
+          +'<div style="font-size:12px;font-weight:700;color:'+cat.color+'">C'+cat.id+' \u2014 '+cat.label+'</div>'
+          +'<div style="font-size:10px;color:var(--tm)">'+grupo.length+' leads \u00b7 '+pct+'% del total</div>'
+        +'</div>'
+        +'<div style="margin-left:12px;height:6px;background:var(--bd);border-radius:3px;flex:1;max-width:160px"><div style="height:100%;background:'+cat.color+';border-radius:3px;width:'+pct+'%"></div></div>'
+      +'</div>'
+      +'<div style="font-size:11px;color:var(--tm)"></div>'
+      +'<div style="font-size:11px;color:var(--tm)"></div>'
+      +'<div style="font-size:11px;color:var(--tm)"></div>'
+      +'<div style="font-size:11px;color:var(--tm)"></div>'
+      +'<div style="font-size:11px;color:var(--tm)"></div>'
+    +'</div>';
+    // Filas de leads (ocultas por defecto)
+    html+='<div id="dpCatBody'+cat.id+'" style="display:none">';
+    if(!grupo.length){
+      html+='<div style="padding:10px 14px;font-size:11px;color:var(--tm);font-style:italic">Sin leads en esta categor\u00eda</div>';
+    } else {
+      grupo.forEach(function(l){
+        var calidad=l._iaCalidad||'...';
+        var estanc=l._iaEstanc||'...';
+        var resumen=l._iaResumen||'Pendiente an\u00e1lisis IA';
+        var calColor=calidad==='Alta'?'#059669':calidad==='Media'?'#d97706':'#dc2626';
+        var fecha=l.lastInteraction?new Date(l.lastInteraction).toLocaleDateString('es-CL'):'—';
+        var anuncio=l.interest||'—';
+        if(anuncio.length>22) anuncio=anuncio.slice(0,20)+'…';
+        var vendNom=cUsr(l.assignedTo)||l.assignedTo||'—';
+        html+='<div onclick="dpToggleLead(\''+l.id+'\')" style="display:grid;grid-template-columns:28px 1fr 60px 80px 90px 90px 100px;gap:8px;align-items:center;padding:8px 14px;border-top:1px solid var(--bd);cursor:pointer;background:var(--p)" onmouseover="this.style.background=\'var(--p2)\'" onmouseout="this.style.background=\'var(--p)\'">'
+          +'<div id="dpLdIcon'+l.id+'" style="font-size:11px;color:var(--tm);text-align:center">\u25b6</div>'
+          +'<div>'
+            +'<div style="font-size:12px;font-weight:600;color:var(--ts)">'+esc(l.name)+'</div>'
+            +'<div style="font-size:10px;color:var(--tm)">'+esc(anuncio)+'</div>'
+          +'</div>'
+          +'<div style="font-size:10px;color:var(--tm)">'+esc(l.source||'—')+'</div>'
+          +'<div style="font-size:10px;color:var(--tm)">'+esc(vendNom)+'</div>'
+          +'<div style="font-size:10px;font-weight:600;color:'+calColor+'">'+calidad+'</div>'
+          +'<div style="font-size:10px;color:var(--tm)">'+esc(estanc.slice(0,18))+'</div>'
+          +'<div style="font-size:10px;color:var(--tm)">'+fecha+'</div>'
+        +'</div>'
+        +'<div id="dpLdDetail'+l.id+'" style="display:none;padding:10px 14px 14px 56px;background:var(--bg);border-top:1px dashed var(--bd)">'
+          +'<div style="font-size:11px;color:var(--ts);line-height:1.7"><strong>Resumen IA:</strong> '+esc(resumen)+'</div>'
+          +'<div style="font-size:11px;color:var(--tm);margin-top:4px"><strong>Tel:</strong> '+esc(l.phone)+'</div>'
+          +'<div style="font-size:11px;color:var(--tm)"><strong>Estado CRM:</strong> '+esc(l.status)+'</div>'
+          +'<div style="font-size:11px;color:var(--tm)"><strong>Anuncio/Inter\u00e9s:</strong> '+esc(l.interest||'—')+'</div>'
+        +'</div>';
+      });
+    }
+    html+='</div></div>';
+  });
+  el.innerHTML=html;
+  el.style.display='';
+}
+
+function dpToggleCat(id){
+  var body=document.getElementById('dpCatBody'+id);
+  var icon=document.getElementById('dpCatIcon'+id);
+  if(!body) return;
+  var open=body.style.display!=='none';
+  body.style.display=open?'none':'';
+  if(icon) icon.style.transform=open?'':'rotate(90deg)';
+}
+
+function dpToggleLead(id){
+  var det=document.getElementById('dpLdDetail'+id);
+  var icon=document.getElementById('dpLdIcon'+id);
+  if(!det) return;
+  var open=det.style.display!=='none';
+  det.style.display=open?'none':'';
+  if(icon) icon.style.transform=open?'':'rotate(90deg)';
+}
+
 async function ejecutarAnalisisProfundo(){
   var btn=document.getElementById('btnAnalisisProfundo');
   var res=document.getElementById('dpResultado');
-  if(!btn||!res)return;
-  var vend=(document.getElementById('dpFiltroVendedor')||{}).value||'';
-  var des=(document.getElementById('dpFiltroDes')||{}).value||'';
-  var has=(document.getElementById('dpFiltroHas')||{}).value||'';
-  var leads=S.leads||[];
-  if(vend)leads=leads.filter(function(l){return l.assignedTo===vend;});
-  if(leads.length===0){res.innerHTML='<div style="color:#f59e0b;padding:20px;text-align:center">\u26a0\ufe0f No hay leads con esos filtros.</div>';return;}
-  btn.disabled=true;btn.textContent='\u23f3 Analizando '+leads.length+' leads...';
-  res.innerHTML='<div style="text-align:center;padding:40px 20px;color:var(--tm)"><div style="font-size:32px;margin-bottom:12px">\ud83e\udde0</div><div id="dpStatus" style="font-weight:700;font-size:15px;margin-bottom:8px">Preparando an\u00e1lisis profundo de '+leads.length+' leads...</div><div style="font-size:12px;margin-bottom:20px">El reporte aparece aqu\u00ed mientras se genera</div><div style="background:var(--bd);border-radius:4px;height:6px;width:100%;max-width:320px;margin:0 auto;overflow:hidden"><div id="dpBar" style="height:100%;background:#1e40af;width:2%;transition:width 0.4s;border-radius:4px"></div></div></div><div id="dpTexto" style="font-size:13px;line-height:1.8;color:var(--ts);padding:0 4px"></div>';
-  var filtros={};
-  if(vend)filtros.assignedTo=vend;
-  if(des)filtros.desde=des;
-  if(has)filtros.hasta=has+'T23:59:59';
-  try{
-    var r=await fetch('/api/leads/analisis-ia',{method:'POST',headers:{'Content-Type':'application/json','X-Auth-Token':S.token||''},body:JSON.stringify({filtros,profundo:true})});
-    if(!r.ok){var ej=await r.json();throw new Error(ej.error||'Error '+r.status);}
-    var reader=r.body.getReader();
-    var dec=new TextDecoder();
-    var buf='';var texto='';var chars=0;var max=12000;
-    var bar=document.getElementById('dpBar');
-    var status=document.getElementById('dpStatus');
-    var textoEl=document.getElementById('dpTexto');
-    var fmt=function(t){return t.replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>').split('\n').join('<br>');};
-    while(true){
-      var rd=await reader.read();
-      if(rd.done)break;
-      buf+=dec.decode(rd.value,{stream:true});
-      var evts=buf.split('\n');buf=evts.pop();
-      for(var i=0;i<evts.length;i++){
-        var line=evts[i];
-        if(!line.startsWith('data:'))continue;
-        try{
-          var d=JSON.parse(line.slice(5).trim());
-          if(d.type==='start'){if(status)status.textContent='Analizando '+d.total+' leads con IA...';}
-          else if(d.type==='delta'){texto+=d.text;chars+=d.text.length;if(textoEl)textoEl.innerHTML=fmt(texto);if(bar)bar.style.width=Math.min(95,Math.round(chars/max*100))+'%';}
-          else if(d.type==='done'){if(bar)bar.style.width='100%';if(status)status.textContent='Reporte completo \u2014 '+d.total+' leads analizados';btn.disabled=false;btn.textContent='\ud83e\udde0 Generar An\u00e1lisis Profundo';}
-          else if(d.type==='error'){throw new Error(d.error);}
-        }catch(pe){}
-      }
-    }
-  }catch(e){
-    res.innerHTML='<div style="color:#ef4444;padding:20px;text-align:center">\u274c '+e.message+'</div>';
-    btn.disabled=false;btn.textContent='\ud83e\udde0 Generar An\u00e1lisis Profundo';
+  if(!btn) return;
+
+  var origen=((document.getElementById('dpFOrigen')||{}).value)||'';
+  var vend=((document.getElementById('dpFiltroVendedor')||{}).value)||'';
+  var des=((document.getElementById('dpFiltroDes')||{}).value)||'';
+  var has=((document.getElementById('dpFiltroHas')||{}).value)||'';
+
+  var leads=(S.leads||[]).filter(function(l){
+    if(origen && l.source!==origen) return false;
+    if(vend && l.assignedTo!==vend) return false;
+    if(des && new Date(l.lastInteraction||l.createdAt||0)<new Date(des)) return false;
+    if(has && new Date(l.lastInteraction||l.createdAt||0)>new Date(has+'T23:59:59')) return false;
+    return true;
+  });
+
+  if(!leads.length){
+    if(res){res.style.display='';res.innerHTML='<div style="color:#f59e0b;padding:20px;text-align:center">\u26a0\ufe0f No hay leads con esos filtros.</div>';}
+    return;
   }
+
+  btn.disabled=true;
+  btn.textContent='\u23f3 Analizando '+leads.length+'...';
+  if(res) res.style.display='none';
+
+  // Mostrar abanico inicial sin datos IA (instantáneo)
+  window._dpData=leads;
+  dpRenderKpis(leads);
+  dpRenderCharts(leads);
+  dpRenderAbanico(leads);
+
+  var elCount=document.getElementById('dpLeadsCount');
+  if(elCount) elCount.textContent=leads.length+' lead'+(leads.length!==1?'s':'')+' en selecci\u00f3n';
+
+  btn.textContent='\u23f3 Clasificando con IA...';
+
+  // Llamar al endpoint de clasificación IA por lotes
+  try{
+    var filtros={};
+    if(origen) filtros.source=origen;
+    if(vend) filtros.assignedTo=vend;
+    if(des) filtros.desde=des;
+    if(has) filtros.hasta=has+'T23:59:59';
+
+    var r=await fetch('/api/leads/clasificar-ia',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','X-Auth-Token':S.token||''},
+      body:JSON.stringify({filtros})
+    });
+    if(!r.ok){var ej=await r.json();throw new Error(ej.error||'Error '+r.status);}
+    var data=await r.json();
+
+    // Enriquecer leads con datos IA
+    var mapa={};
+    (data.clasificaciones||[]).forEach(function(c){mapa[c.id]=c;});
+    leads.forEach(function(l){
+      var c=mapa[l.id]||mapa[String(l.id)];
+      if(c){l._iaCalidad=c.calidad;l._iaEstanc=c.estancamiento;l._iaResumen=c.resumen;}
+    });
+
+    // Re-render con datos IA completos
+    dpRenderKpis(leads);
+    dpRenderCharts(leads);
+    dpRenderAbanico(leads);
+  }catch(e){
+    // Si falla la IA, el abanico sigue mostrando con "Pendiente"
+    console.warn('[IA clasificacion]',e.message);
+  }
+
+  btn.disabled=false;
+  btn.textContent='\ud83e\udde0 Analizar';
 }
+
 function getFiltrosIA(){return{source:document.getElementById('iaFiltroSource')?.value||'',status:document.getElementById('iaFiltroStatus')?.value||'',assignedTo:document.getElementById('iaFiltroVendedor')?.value||'',desde:document.getElementById('iaFiltroDes')?.value||'',hasta:document.getElementById('iaFiltroHas')?.value||''};}
 function actualizarConteoIA(){
   const f=getFiltrosIA();let leads=S.leads||[];
@@ -508,18 +737,35 @@ async function ejecutarAnalisisIA(){
 </div>
 <!-- ── PESTAÑA PROFUNDO (todos los leads, SSE streaming) ───────────────── -->
 <div id="panelProfundo" style="display:none">
-<div style="display:grid;grid-template-columns:280px 1fr;gap:20px;align-items:start">
-<div style="background:var(--p2);border:1px solid var(--bd);border-radius:12px;padding:16px;display:flex;flex-direction:column;gap:12px">
-  <div style="font-weight:700;font-size:13px;color:var(--ts)">Alcance del Análisis</div>
-  <div style="font-size:11px;color:var(--tm);line-height:1.6;background:var(--bg);border-radius:8px;padding:10px;border:1px solid var(--bd)">Analiza <strong>todos los leads</strong> del CRM sin límite. Usa SSE streaming para mostrar el reporte mientras se genera. Ideal para diagnósticos completos del embudo.</div>
-  <div><label style="font-size:11px;color:var(--tm);font-weight:600">VENDEDOR</label><select id="dpFiltroVendedor" style="width:100%;margin-top:4px;padding:7px;border-radius:7px;border:1px solid var(--bd);background:var(--bg);color:var(--ts);font-size:12px;font-family:inherit"><option value="">Todos</option></select></div>
-  <div><label style="font-size:11px;color:var(--tm);font-weight:600">DESDE</label><input type="date" id="dpFiltroDes" style="width:100%;margin-top:4px;padding:7px;border-radius:7px;border:1px solid var(--bd);background:var(--bg);color:var(--ts);font-size:12px;font-family:inherit;box-sizing:border-box"></div>
-  <div><label style="font-size:11px;color:var(--tm);font-weight:600">HASTA</label><input type="date" id="dpFiltroHas" style="width:100%;margin-top:4px;padding:7px;border-radius:7px;border:1px solid var(--bd);background:var(--bg);color:var(--ts);font-size:12px;font-family:inherit;box-sizing:border-box"></div>
-  <div id="dpLeadsCount" style="font-size:11px;color:var(--tm);text-align:center;padding:6px;background:var(--bg);border-radius:6px;border:1px solid var(--bd)">— leads totales</div>
-  <button onclick="ejecutarAnalisisProfundo()" id="btnAnalisisProfundo" style="background:linear-gradient(135deg,#0f172a,#1e40af);color:#fff;border:none;border-radius:8px;padding:11px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">🧠 Generar Análisis Profundo</button>
-  <button onclick="limpiarAnalisisProfundo()" style="background:var(--bg);color:var(--tm);border:1px solid var(--bd);border-radius:8px;padding:8px;font-size:12px;cursor:pointer;font-family:inherit">🗑 Limpiar</button>
+<div style="display:flex;gap:16px;align-items:start">
+<!-- SIDEBAR FILTROS -->
+<div style="width:220px;flex-shrink:0;background:var(--p2);border:1px solid var(--bd);border-radius:12px;padding:14px;display:flex;flex-direction:column;gap:10px">
+  <div style="font-weight:700;font-size:12px;color:var(--ts)">Filtros</div>
+  <div><label style="font-size:10px;color:var(--tm);font-weight:600;display:block;margin-bottom:3px">ORIGEN</label><select id="dpFOrigen" onchange="dpAplicarFiltros()" style="width:100%;padding:6px;border-radius:6px;border:1px solid var(--bd);background:var(--bg);color:var(--ts);font-size:11px;font-family:inherit"><option value="">Todos</option><option value="Meta Ads">Meta Ads</option><option value="MercadoLibre">MercadoLibre</option><option value="Chileautos">Chileautos</option><option value="WhatsApp">WhatsApp</option><option value="Yapo">Yapo</option><option value="Manual">Manual</option></select></div>
+  <div><label style="font-size:10px;color:var(--tm);font-weight:600;display:block;margin-bottom:3px">VENDEDOR</label><select id="dpFiltroVendedor" onchange="dpAplicarFiltros()" style="width:100%;padding:6px;border-radius:6px;border:1px solid var(--bd);background:var(--bg);color:var(--ts);font-size:11px;font-family:inherit"><option value="">Todos</option></select></div>
+  <div><label style="font-size:10px;color:var(--tm);font-weight:600;display:block;margin-bottom:3px">CATEGORIA</label><select id="dpFCat" onchange="dpAplicarFiltros()" style="width:100%;padding:6px;border-radius:6px;border:1px solid var(--bd);background:var(--bg);color:var(--ts);font-size:11px;font-family:inherit"><option value="">Todas</option><option value="1">1 - Sin interacción</option><option value="2">2 - Con actividad</option><option value="3">3 - Intención alta</option><option value="4">4 - Agendado</option><option value="5">5 - Cerrado</option></select></div>
+  <div><label style="font-size:10px;color:var(--tm);font-weight:600;display:block;margin-bottom:3px">CALIDAD IA</label><select id="dpFCalidad" onchange="dpAplicarFiltros()" style="width:100%;padding:6px;border-radius:6px;border:1px solid var(--bd);background:var(--bg);color:var(--ts);font-size:11px;font-family:inherit"><option value="">Todas</option><option value="Alta">Alta</option><option value="Media">Media</option><option value="Baja">Baja</option></select></div>
+  <div><label style="font-size:10px;color:var(--tm);font-weight:600;display:block;margin-bottom:3px">DESDE</label><input type="date" id="dpFiltroDes" onchange="dpAplicarFiltros()" style="width:100%;padding:6px;border-radius:6px;border:1px solid var(--bd);background:var(--bg);color:var(--ts);font-size:11px;font-family:inherit;box-sizing:border-box"></div>
+  <div><label style="font-size:10px;color:var(--tm);font-weight:600;display:block;margin-bottom:3px">HASTA</label><input type="date" id="dpFiltroHas" onchange="dpAplicarFiltros()" style="width:100%;padding:6px;border-radius:6px;border:1px solid var(--bd);background:var(--bg);color:var(--ts);font-size:11px;font-family:inherit;box-sizing:border-box"></div>
+  <div id="dpLeadsCount" style="font-size:10px;color:var(--tm);text-align:center;padding:5px;background:var(--bg);border-radius:5px;border:1px solid var(--bd)">— leads</div>
+  <button onclick="ejecutarAnalisisProfundo()" id="btnAnalisisProfundo" style="background:linear-gradient(135deg,#0f172a,#1e40af);color:#fff;border:none;border-radius:7px;padding:9px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">🧠 Analizar</button>
+  <button onclick="limpiarAnalisisProfundo()" style="background:var(--bg);color:var(--tm);border:1px solid var(--bd);border-radius:7px;padding:6px;font-size:11px;cursor:pointer;font-family:inherit">🗑 Limpiar</button>
 </div>
-<div id="dpResultado" style="background:var(--p2);border:1px solid var(--bd);border-radius:12px;padding:20px;min-height:400px"><div style="color:var(--tm);font-size:13px;text-align:center;padding:60px 20px"><div style="font-size:40px;margin-bottom:12px">🧠</div><div style="font-weight:600;margin-bottom:6px">Análisis Profundo</div><div style="font-size:12px">Sin límite de leads — streaming en tiempo real</div></div></div>
+<!-- AREA PRINCIPAL -->
+<div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:14px">
+  <!-- KPIs rápidos -->
+  <div id="dpKpis" style="display:none;grid-template-columns:repeat(5,1fr);gap:8px"></div>
+  <!-- Gráficos -->
+  <div id="dpCharts" style="display:none;gap:12px;flex-wrap:wrap"></div>
+  <!-- Abanico / tabla dinámica -->
+  <div id="dpAbanico" style="display:none;background:var(--p2);border:1px solid var(--bd);border-radius:12px;overflow:hidden"></div>
+  <!-- Estado vacío / loading -->
+  <div id="dpResultado" style="background:var(--p2);border:1px solid var(--bd);border-radius:12px;padding:40px 20px;text-align:center">
+    <div style="font-size:40px;margin-bottom:12px">🧠</div>
+    <div style="font-weight:600;font-size:14px;color:var(--ts);margin-bottom:6px">Pipeline de Inteligencia de Leads</div>
+    <div style="font-size:12px;color:var(--tm)">Aplica filtros y presiona Analizar</div>
+  </div>
+</div>
 </div>
 </div>
 </section>

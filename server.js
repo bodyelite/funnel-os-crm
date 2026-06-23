@@ -1816,12 +1816,9 @@ app.post('/api/leads/analisis-ia', auth('admin','vendedor'), async (req, res) =>
     res.setHeader('Connection', 'keep-alive');
     res.flushHeaders();
     res.write('data: ' + JSON.stringify({type:'start', total: leads.length}) + '\n\n');
-    const esProfundo = (req.body || {}).profundo === true;
-    const promptRapido = 'Eres un analista comercial senior de una automotora chilena. Analiza estos ' + leads.length + ' leads del CRM.\n\nPara cada lead entrega:\n**Nombre** | Estado | Origen | Vendedor | Dias sin respuesta\n- Diagnostico: que esta pasando con este lead especificamente\n- Estancamiento: por que no avanza (basate en el chat y notas reales)\n- Accion HOY: que hacer hoy, especifico con nombre del cliente y auto\n- Urgencia: Alta / Media / Baja\n\nFinal del reporte: resumen por vendedor con sus leads y top 5 prioridades del dia.\n\n' + contexto + '\n\nEspanol. Se especifico con los nombres reales, autos mencionados y conversaciones. No uses frases genericas.';
-    const promptProfundo = 'Eres un analista comercial senior de una automotora chilena. Realiza un ANALISIS PROFUNDO Y COMPLETO del embudo de ventas con estos ' + leads.length + ' leads.\n\nESTRUCTURA DEL REPORTE:\n\n## 1. RESUMEN EJECUTIVO\nMetricas clave: total leads, tasa conversion por estado, tiempo promedio en CRM, canales mas efectivos.\n\n## 2. DIAGNOSTICO POR VENDEDOR\nPara cada vendedor: leads asignados, distribucion por estado, dias promedio sin respuesta, oportunidades calientes y leads abandonados.\n\n## 3. ANALISIS POR CANAL\nRendimiento de cada origen (WhatsApp, MercadoLibre, Chileautos, Meta Ads, etc): volumen, conversion, calidad de leads.\n\n## 4. LEADS CRITICOS (top 10 prioridad)\nLos leads que requieren accion URGENTE HOY con nombre, telefono, vendedor asignado y accion especifica.\n\n## 5. LEADS EN RIESGO DE PERDIDA\nLeads con mas de 5 dias sin actividad que aun estan en estados activos. Accion de rescate sugerida.\n\n## 6. RECOMENDACIONES ESTRATEGICAS\n5 acciones concretas para mejorar el embudo esta semana.\n\n' + contexto + '\n\nEspanol. Usa los nombres reales de clientes, autos y vendedores. Se especifico y accionable.';
     const stream = await openai.chat.completions.create({
       model: 'gpt-4o-mini', temperature: 0.3, max_tokens: 8000, stream: true,
-      messages: [{ role: 'user', content: esProfundo ? promptProfundo : promptRapido }]
+      messages: [{ role: 'user', content: 'Eres un analista comercial senior de una automotora chilena. Analiza estos ' + leads.length + ' leads del CRM.\n\nPara cada lead entrega:\n**Nombre** | Estado | Origen | Vendedor | Dias sin respuesta\n- Diagnostico: que esta pasando con este lead especificamente\n- Estancamiento: por que no avanza (basate en el chat y notas reales)\n- Accion HOY: que hacer hoy, especifico con nombre del cliente y auto\n- Urgencia: Alta / Media / Baja\n\nFinal del reporte: resumen por vendedor con sus leads y top 5 prioridades del dia.\n\n' + contexto + '\n\nEspanol. Se especifico con los nombres reales, autos mencionados y conversaciones. No uses frases genericas.' }]
     });
     for await (const chunk of stream) {
       const delta = chunk.choices[0]?.delta?.content || '';
@@ -1832,6 +1829,63 @@ app.post('/api/leads/analisis-ia', auth('admin','vendedor'), async (req, res) =>
   } catch(e) {
     console.error('[ANALISIS-IA]', e.message);
     try { res.write('data: ' + JSON.stringify({type:'error', error: e.message}) + '\n\n'); res.end(); } catch(_) {}
+  }
+});
+
+// ── CLASIFICACIÓN IA DE LEADS (Pipeline Inteligencia) ──────────────────────
+app.post('/api/leads/clasificar-ia', auth('admin','vendedor'), async (req, res) => {
+  try {
+    const { filtros } = req.body || {};
+    const allLeads = await tRead(F.leads, req.tenant);
+    const allUsers = await tRead(F.users, req.tenant);
+    let leads = allLeads;
+    if (filtros) {
+      if (filtros.source)     leads = leads.filter(l => l.source === filtros.source);
+      if (filtros.assignedTo) leads = leads.filter(l => l.assignedTo === filtros.assignedTo);
+      if (filtros.desde)      leads = leads.filter(l => new Date(l.lastInteraction||l.createdAt||0) >= new Date(filtros.desde));
+      if (filtros.hasta)      leads = leads.filter(l => new Date(l.lastInteraction||l.createdAt||0) <= new Date(filtros.hasta));
+    }
+    if (!leads.length) return res.json({ ok: true, clasificaciones: [] });
+
+    // Construir contexto resumido para cada lead
+    const contexto = leads.map(l => {
+      const vendedor = allUsers.find(u => u.username === l.assignedTo)?.name || l.assignedTo || 'Sin asignar';
+      const clientMsgs = (l.chatHistory||[]).filter(m => m.role==='user').length;
+      const chat = (l.chatHistory||[]).slice(-6).map(m => `[${m.role==='user'?'Cliente':'Asesor'}]: ${(m.content||'').slice(0,100)}`).join(' | ');
+      const notas = (l.notes||[]).slice(-3).map(n => `${n.author}: ${(n.content||'').slice(0,80)}`).join(' | ');
+      const diasSin = l.lastClientTs ? Math.floor((Date.now()-new Date(l.lastClientTs).getTime())/86400000) : '?';
+      return `ID:${l.id}|NOMBRE:${l.name}|ORIGEN:${l.source}|ESTADO:${l.status}|VENDEDOR:${vendedor}|INTERES:${(l.interest||'').slice(0,60)}|MSGS_CLIENTE:${clientMsgs}|DIAS_SIN_RESP:${diasSin}|NOTAS:${notas||'ninguna'}|CHAT:${chat||'sin historial'}`;
+    }).join('\n');
+
+    const prompt = `Eres un analista comercial de una automotora chilena. Clasifica cada lead en el siguiente JSON.
+
+Para cada lead devuelve exactamente: id, calidad (Alta|Media|Baja), estancamiento (max 20 chars: "seguimiento"|"lead frio"|"sin datos"|"en proceso"), resumen (max 80 chars explicando que paso con este lead).
+
+Criterios calidad:
+- Alta: cliente activo, pidio info especifica, tasacion, credito, agenda
+- Media: respondio pero sin avanzar, interes vago
+- Baja: nunca respondio, numero invalido, sin interaccion real
+
+Leads a clasificar:
+${contexto}
+
+Responde SOLO con JSON valido, sin texto adicional, sin markdown:
+{"clasificaciones":[{"id":123,"calidad":"Alta","estancamiento":"seguimiento","resumen":"Cliente interesado en Corolla, pendiente llamada de cierre"},...]}`;
+
+    const completion = await openai.chat.completions.create({
+      model: 'gpt-4o-mini',
+      temperature: 0.2,
+      max_tokens: Math.min(4000, leads.length * 60 + 200),
+      response_format: { type: 'json_object' },
+      messages: [{ role: 'user', content: prompt }]
+    });
+
+    let result = {};
+    try { result = JSON.parse(completion.choices[0]?.message?.content || '{}'); } catch(_) {}
+    res.json({ ok: true, clasificaciones: result.clasificaciones || [] });
+  } catch(e) {
+    console.error('[CLASIFICAR-IA]', e.message);
+    res.status(500).json({ error: e.message });
   }
 });
 
