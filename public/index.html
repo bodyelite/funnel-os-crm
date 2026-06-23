@@ -160,22 +160,30 @@ function actualizarDpCount(){
   el.textContent=leads.length+' lead'+(leads.length!==1?'s':'')+' en alcance';
 }
 function limpiarAnalisisProfundo(){
+  ['dpKpis','dpCharts','dpAbanico'].forEach(function(id){
+    var el=document.getElementById(id);
+    if(el){el.style.display='none';el.innerHTML='';}
+  });
   var res=document.getElementById('dpResultado');
-  var kpis=document.getElementById('dpKpis');
-  var charts=document.getElementById('dpCharts');
-  var aban=document.getElementById('dpAbanico');
-  if(res){res.style.display='';res.innerHTML='<div style="font-size:40px;margin-bottom:12px">\ud83e\udde0</div><div style="font-weight:600;font-size:14px;color:var(--ts);margin-bottom:6px">Pipeline de Inteligencia de Leads</div><div style="font-size:12px;color:var(--tm)">Aplica filtros y presiona Analizar</div>';}
-  if(kpis){kpis.style.display='none';kpis.innerHTML='';}
-  if(charts){charts.style.display='none';charts.innerHTML='';}
-  if(aban){aban.style.display='none';aban.innerHTML='';}
+  if(res){
+    res.style.display='';
+    res.innerHTML='<div style="font-size:40px;margin-bottom:12px">\ud83e\udde0</div>'
+      +'<div style="font-weight:600;font-size:14px;color:var(--ts);margin-bottom:6px">Pipeline de Inteligencia de Leads</div>'
+      +'<div style="font-size:12px;color:var(--tm)">Aplica filtros y presiona Analizar</div>';
+  }
   var btn=document.getElementById('btnAnalisisProfundo');
   if(btn){btn.disabled=false;btn.textContent='\ud83e\udde0 Analizar';}
   window._dpData=null;
 }
 
+function dpNombre(username){
+  if(!username) return '—';
+  var found=(S.users||[]).find(function(x){return x.username===username;});
+  return found?found.name:username;
+}
+
 function dpCatLead(l){
-  var msgs=(l.chatHistory||[]);
-  var clientMsgs=msgs.filter(function(m){return m.role==='user';}).length;
+  var clientMsgs=(l.chatHistory||[]).filter(function(m){return m.role==='user';}).length;
   var status=(l.status||'').toLowerCase();
   var notas=(l.notes||[]).map(function(n){return(n.content||'').toLowerCase();}).join(' ');
   var interes=(l.interest||'').toLowerCase();
@@ -191,16 +199,38 @@ function dpFiltrarLeads(leads){
   var vend=((document.getElementById('dpFiltroVendedor')||{}).value)||'';
   var cat=((document.getElementById('dpFCat')||{}).value)||'';
   var calidad=((document.getElementById('dpFCalidad')||{}).value)||'';
+  var anuncio=((document.getElementById('dpFAnuncio')||{}).value)||'';
   var des=((document.getElementById('dpFiltroDes')||{}).value)||'';
   var has=((document.getElementById('dpFiltroHas')||{}).value)||'';
   return leads.filter(function(l){
     if(origen && l.source!==origen) return false;
     if(vend && l.assignedTo!==vend) return false;
     if(cat && dpCatLead(l)!==parseInt(cat)) return false;
-    if(calidad && (l._iaCalidad||'')<calidad) return false;
-    if(des && new Date(l.lastInteraction||l.createdAt||0)<new Date(des)) return false;
-    if(has && new Date(l.lastInteraction||l.createdAt||0)>new Date(has+'T23:59:59')) return false;
+    if(calidad && (l._iaCalidad||'')!==calidad) return false;
+    if(anuncio && (l.interest||'')!==anuncio) return false;
+    // Fecha por createdAt (ingreso al CRM)
+    var created=new Date(l.createdAt||l.lastInteraction||0);
+    if(des && created<new Date(des)) return false;
+    if(has && created>new Date(has+'T23:59:59')) return false;
     return true;
+  });
+}
+
+function dpPopularAnuncios(leads){
+  var sel=document.getElementById('dpFAnuncio');
+  if(!sel) return;
+  var anuncios={};
+  leads.forEach(function(l){
+    var a=(l.interest||'').trim();
+    if(a) anuncios[a]=(anuncios[a]||0)+1;
+  });
+  var sorted=Object.keys(anuncios).sort(function(a,b){return anuncios[b]-anuncios[a];});
+  sel.innerHTML='<option value="">Todos</option>';
+  sorted.slice(0,30).forEach(function(a){
+    var opt=document.createElement('option');
+    opt.value=a;
+    opt.textContent=a.slice(0,35)+(a.length>35?'\u2026':'')+' ('+anuncios[a]+')';
+    sel.appendChild(opt);
   });
 }
 
@@ -209,9 +239,9 @@ function dpAplicarFiltros(){
   var leads=dpFiltrarLeads(window._dpData);
   var el=document.getElementById('dpLeadsCount');
   if(el) el.textContent=leads.length+' lead'+(leads.length!==1?'s':'')+' en selecci\u00f3n';
-  dpRenderAbanico(leads);
   dpRenderKpis(leads);
   dpRenderCharts(leads);
+  dpRenderAbanico(leads);
 }
 
 function actualizarDpCount(){
@@ -226,16 +256,14 @@ function dpRenderKpis(leads){
   var cats=[0,0,0,0,0];
   leads.forEach(function(l){cats[dpCatLead(l)-1]++;});
   var total=leads.length||1;
-  var calAlt=leads.filter(function(l){return l._iaCalidad==='Alta';}).length;
-  var calBaj=leads.filter(function(l){return l._iaCalidad==='Baja';}).length;
   var labels=['Sin interacci\u00f3n','Con actividad','Intenci\u00f3n alta','Agendados','Cerrados'];
-  var colors=['#94a3b8','#3b82f6','#f59e0b','#8b5cf6','#10b981'];
+  var colors=['#64748b','#3b82f6','#f59e0b','#8b5cf6','#10b981'];
   var html='';
   cats.forEach(function(c,i){
     html+='<div style="background:var(--p);border:1px solid var(--bd);border-radius:8px;padding:10px;text-align:center;cursor:pointer" onclick="dpScrollCat('+(i+1)+')">'
-      +'<div style="font-size:18px;font-weight:800;color:'+colors[i]+'">'+c+'</div>'
+      +'<div style="font-size:20px;font-weight:800;color:'+colors[i]+'">'+c+'</div>'
       +'<div style="font-size:10px;color:var(--tm);margin-top:2px">C'+(i+1)+': '+labels[i]+'</div>'
-      +'<div style="font-size:10px;color:var(--ts);font-weight:600">'+Math.round(c/total*100)+'%</div>'
+      +'<div style="font-size:10px;color:'+colors[i]+';font-weight:700">'+Math.round(c/total*100)+'%</div>'
       +'</div>';
   });
   el.innerHTML=html;
@@ -245,15 +273,17 @@ function dpRenderKpis(leads){
 function dpRenderCharts(leads){
   var el=document.getElementById('dpCharts');
   if(!el) return;
-  // Contar por origen
   var porOrigen={};
   leads.forEach(function(l){var o=l.source||'Otro';porOrigen[o]=(porOrigen[o]||0)+1;});
-  // Contar por vendedor
   var porVend={};
-  leads.forEach(function(l){var v=cUsr(l.assignedTo)||l.assignedTo||'?';porVend[v]=(porVend[v]||0)+1;});
-  // Contar calidad
+  leads.forEach(function(l){var v=dpNombre(l.assignedTo);porVend[v]=(porVend[v]||0)+1;});
   var calidad={Alta:0,Media:0,Baja:0,Pendiente:0};
   leads.forEach(function(l){var q=l._iaCalidad||'Pendiente';calidad[q]=(calidad[q]||0)+1;});
+
+  // Destruir charts previos si existen
+  ['dpChOrigen','dpChVend','dpChCal'].forEach(function(id){
+    if(window['_chart_'+id]){try{window['_chart_'+id].destroy();}catch(e){}}
+  });
 
   el.innerHTML=
     '<canvas id="dpChOrigen" width="300" height="180" style="background:var(--p);border:1px solid var(--bd);border-radius:10px;padding:8px"></canvas>'+
@@ -263,10 +293,10 @@ function dpRenderCharts(leads){
 
   if(window.Chart){
     var oKeys=Object.keys(porOrigen);
-    new Chart(document.getElementById('dpChOrigen'),{type:'bar',data:{labels:oKeys,datasets:[{label:'Leads por Origen',data:oKeys.map(function(k){return porOrigen[k];}),backgroundColor:'rgba(59,130,246,0.7)',borderRadius:4}]},options:{responsive:false,plugins:{legend:{display:false},title:{display:true,text:'Por Origen',font:{size:11}}},scales:{y:{beginAtZero:true,ticks:{stepSize:1}}}}});
+    window['_chart_dpChOrigen']=new Chart(document.getElementById('dpChOrigen'),{type:'bar',data:{labels:oKeys,datasets:[{label:'Leads',data:oKeys.map(function(k){return porOrigen[k];}),backgroundColor:'rgba(59,130,246,0.7)',borderRadius:4}]},options:{responsive:false,plugins:{legend:{display:false},title:{display:true,text:'Por Origen',font:{size:11}}},scales:{y:{beginAtZero:true,ticks:{stepSize:1}}}}});
     var vKeys=Object.keys(porVend);
-    new Chart(document.getElementById('dpChVend'),{type:'bar',data:{labels:vKeys,datasets:[{label:'Leads por Vendedor',data:vKeys.map(function(k){return porVend[k];}),backgroundColor:'rgba(139,92,246,0.7)',borderRadius:4}]},options:{responsive:false,plugins:{legend:{display:false},title:{display:true,text:'Por Vendedor',font:{size:11}}},scales:{y:{beginAtZero:true,ticks:{stepSize:1}}}}});
-    new Chart(document.getElementById('dpChCal'),{type:'doughnut',data:{labels:['Alta','Media','Baja','Pendiente'],datasets:[{data:[calidad.Alta,calidad.Media,calidad.Baja,calidad.Pendiente],backgroundColor:['#10b981','#f59e0b','#ef4444','#94a3b8']}]},options:{responsive:false,plugins:{legend:{position:'bottom',labels:{font:{size:10}}},title:{display:true,text:'Calidad IA',font:{size:11}}}}});
+    window['_chart_dpChVend']=new Chart(document.getElementById('dpChVend'),{type:'bar',data:{labels:vKeys,datasets:[{label:'Leads',data:vKeys.map(function(k){return porVend[k];}),backgroundColor:'rgba(139,92,246,0.7)',borderRadius:4}]},options:{responsive:false,plugins:{legend:{display:false},title:{display:true,text:'Por Vendedor',font:{size:11}}},scales:{y:{beginAtZero:true,ticks:{stepSize:1}}}}});
+    window['_chart_dpChCal']=new Chart(document.getElementById('dpChCal'),{type:'doughnut',data:{labels:['Alta','Media','Baja','Pendiente'],datasets:[{data:[calidad.Alta,calidad.Media,calidad.Baja,calidad.Pendiente],backgroundColor:['#10b981','#f59e0b','#ef4444','#94a3b8']}]},options:{responsive:false,plugins:{legend:{position:'bottom',labels:{font:{size:10}}},title:{display:true,text:'Calidad IA',font:{size:11}}}}});
   }
 }
 
@@ -278,7 +308,8 @@ function dpScrollCat(n){
 function dpRenderAbanico(leads){
   var el=document.getElementById('dpAbanico');
   if(!el) return;
-  var cats=[
+
+  var CATS=[
     {id:1,label:'Sin interacci\u00f3n',icon:'\u23f8\ufe0f',color:'#64748b',bg:'#f1f5f9'},
     {id:2,label:'Con actividad (3+ msgs)',icon:'\ud83d\udcac',color:'#2563eb',bg:'#eff6ff'},
     {id:3,label:'Intenci\u00f3n alta (tasaci\u00f3n/cr\u00e9dito)',icon:'\u26a1',color:'#d97706',bg:'#fffbeb'},
@@ -286,65 +317,109 @@ function dpRenderAbanico(leads){
     {id:5,label:'Cerrado',icon:'\u2705',color:'#059669',bg:'#f0fdf4'}
   ];
   var total=leads.length||1;
-  var html='<div style="border-bottom:2px solid var(--bd);padding:10px 14px;display:grid;grid-template-columns:28px 1fr 60px 80px 90px 90px 100px;gap:8px;font-size:10px;font-weight:700;color:var(--tm);text-transform:uppercase">'
-    +'<div></div><div>Lead / Anuncio</div><div>Origen</div><div>Vendedor</div><div>Calidad IA</div><div>Estancamiento</div><div>Fecha</div></div>';
-  cats.forEach(function(cat){
-    var grupo=leads.filter(function(l){return dpCatLead(l)===cat.id;});
-    var pct=Math.round(grupo.length/total*100);
+
+  // Header tabla
+  var html='<div style="border-bottom:2px solid var(--bd);padding:10px 14px;display:grid;grid-template-columns:24px 1fr 70px 90px 80px 90px 90px;gap:6px;font-size:10px;font-weight:700;color:var(--tm);text-transform:uppercase;letter-spacing:.04em;background:var(--p)">'
+    +'<div></div><div>Lead / Anuncio</div><div>Origen</div><div>Vendedor</div><div>Calidad IA</div><div>Estancamiento</div><div>Ingreso</div>'
+    +'</div>';
+
+  CATS.forEach(function(cat){
+    var grupoLeads=leads.filter(function(l){return dpCatLead(l)===cat.id;});
+    var pct=Math.round(grupoLeads.length/total*100);
+
+    // Agrupar por anuncio dentro de la categoría
+    var anuncioMap={};
+    grupoLeads.forEach(function(l){
+      var key=(l.interest||'Sin anuncio').trim()||'Sin anuncio';
+      if(!anuncioMap[key]) anuncioMap[key]=[];
+      anuncioMap[key].push(l);
+    });
+    var anuncios=Object.keys(anuncioMap).sort(function(a,b){return anuncioMap[b].length-anuncioMap[a].length;});
+
     html+='<div id="dpCatRow'+cat.id+'" style="border-bottom:1px solid var(--bd)">';
-    // Cabecera de categoría — clickeable
-    html+='<div onclick="dpToggleCat('+cat.id+')" style="display:grid;grid-template-columns:28px 1fr 60px 80px 90px 90px 100px;gap:8px;align-items:center;padding:10px 14px;cursor:pointer;background:'+cat.bg+';user-select:none">'
-      +'<div id="dpCatIcon'+cat.id+'" style="font-size:14px;text-align:center;transition:transform .2s">\u25b6</div>'
+
+    // NIVEL 1: Fila de categoría
+    html+='<div onclick="dpToggleCat('+cat.id+')" style="display:grid;grid-template-columns:24px 1fr 70px 90px 80px 90px 90px;gap:6px;align-items:center;padding:11px 14px;cursor:pointer;background:'+cat.bg+';user-select:none">'
+      +'<div id="dpCatIcon'+cat.id+'" style="font-size:12px;color:'+cat.color+';transition:transform .2s">\u25b6</div>'
       +'<div style="display:flex;align-items:center;gap:8px">'
-        +'<span style="font-size:14px">'+cat.icon+'</span>'
+        +'<span style="font-size:15px">'+cat.icon+'</span>'
         +'<div>'
           +'<div style="font-size:12px;font-weight:700;color:'+cat.color+'">C'+cat.id+' \u2014 '+cat.label+'</div>'
-          +'<div style="font-size:10px;color:var(--tm)">'+grupo.length+' leads \u00b7 '+pct+'% del total</div>'
+          +'<div style="font-size:10px;color:var(--tm)">'+grupoLeads.length+' leads \u00b7 '+pct+'% \u00b7 '+anuncios.length+' anuncio'+(anuncios.length!==1?'s':'')+'</div>'
         +'</div>'
-        +'<div style="margin-left:12px;height:6px;background:var(--bd);border-radius:3px;flex:1;max-width:160px"><div style="height:100%;background:'+cat.color+';border-radius:3px;width:'+pct+'%"></div></div>'
+        +'<div style="margin-left:10px;height:5px;background:var(--bd);border-radius:3px;width:120px;flex-shrink:0"><div style="height:100%;background:'+cat.color+';border-radius:3px;width:'+pct+'%"></div></div>'
       +'</div>'
-      +'<div style="font-size:11px;color:var(--tm)"></div>'
-      +'<div style="font-size:11px;color:var(--tm)"></div>'
-      +'<div style="font-size:11px;color:var(--tm)"></div>'
-      +'<div style="font-size:11px;color:var(--tm)"></div>'
-      +'<div style="font-size:11px;color:var(--tm)"></div>'
+      +'<div></div><div></div><div></div><div></div><div></div>'
     +'</div>';
-    // Filas de leads (ocultas por defecto)
+
+    // NIVEL 2: anuncios dentro de la categoría (ocultos)
     html+='<div id="dpCatBody'+cat.id+'" style="display:none">';
-    if(!grupo.length){
-      html+='<div style="padding:10px 14px;font-size:11px;color:var(--tm);font-style:italic">Sin leads en esta categor\u00eda</div>';
+
+    if(!grupoLeads.length){
+      html+='<div style="padding:10px 14px 10px 38px;font-size:11px;color:var(--tm);font-style:italic">Sin leads en esta categor\u00eda</div>';
     } else {
-      grupo.forEach(function(l){
-        var calidad=l._iaCalidad||'...';
-        var estanc=l._iaEstanc||'...';
-        var resumen=l._iaResumen||'Pendiente an\u00e1lisis IA';
-        var calColor=calidad==='Alta'?'#059669':calidad==='Media'?'#d97706':'#dc2626';
-        var fecha=l.lastInteraction?new Date(l.lastInteraction).toLocaleDateString('es-CL'):'—';
-        var anuncio=l.interest||'—';
-        if(anuncio.length>22) anuncio=anuncio.slice(0,20)+'…';
-        var vendNom=cUsr(l.assignedTo)||l.assignedTo||'—';
-        html+='<div onclick="dpToggleLead(\''+l.id+'\')" style="display:grid;grid-template-columns:28px 1fr 60px 80px 90px 90px 100px;gap:8px;align-items:center;padding:8px 14px;border-top:1px solid var(--bd);cursor:pointer;background:var(--p)" onmouseover="this.style.background=\'var(--p2)\'" onmouseout="this.style.background=\'var(--p)\'">'
-          +'<div id="dpLdIcon'+l.id+'" style="font-size:11px;color:var(--tm);text-align:center">\u25b6</div>'
-          +'<div>'
-            +'<div style="font-size:12px;font-weight:600;color:var(--ts)">'+esc(l.name)+'</div>'
-            +'<div style="font-size:10px;color:var(--tm)">'+esc(anuncio)+'</div>'
+      anuncios.forEach(function(anuncio,ai){
+        var anLeads=anuncioMap[anuncio];
+        var anId='dpAn_'+cat.id+'_'+ai;
+        var calAlta=anLeads.filter(function(l){return l._iaCalidad==='Alta';}).length;
+        var calMed=anLeads.filter(function(l){return l._iaCalidad==='Media';}).length;
+        var calBaj=anLeads.filter(function(l){return l._iaCalidad==='Baja';}).length;
+
+        // Fila de anuncio
+        html+='<div id="'+anId+'_row" style="border-top:1px solid var(--bd)">';
+        html+='<div onclick="dpToggleAn(\''+anId+'\')" style="display:grid;grid-template-columns:24px 1fr 70px 90px 80px 90px 90px;gap:6px;align-items:center;padding:8px 14px 8px 28px;cursor:pointer;background:var(--p2);user-select:none">'
+          +'<div id="'+anId+'_icon" style="font-size:11px;color:var(--tm);transition:transform .2s">\u25b6</div>'
+          +'<div style="display:flex;align-items:center;gap:6px">'
+            +'<span style="font-size:12px">\ud83d\udccc</span>'
+            +'<div>'
+              +'<div style="font-size:11px;font-weight:600;color:var(--ts)">'+esc(anuncio.slice(0,55))+(anuncio.length>55?'\u2026':'')+'</div>'
+              +'<div style="font-size:10px;color:var(--tm)">'+anLeads.length+' lead'+(anLeads.length!==1?'s':'')+' \u00b7 '
+                +(calAlta?'<span style="color:#059669;font-weight:600">'+calAlta+' Alta</span> ':'')
+                +(calMed?'<span style="color:#d97706;font-weight:600">'+calMed+' Media</span> ':'')
+                +(calBaj?'<span style="color:#dc2626;font-weight:600">'+calBaj+' Baja</span>':'')
+              +'</div>'
+            +'</div>'
           +'</div>'
-          +'<div style="font-size:10px;color:var(--tm)">'+esc(l.source||'—')+'</div>'
-          +'<div style="font-size:10px;color:var(--tm)">'+esc(vendNom)+'</div>'
-          +'<div style="font-size:10px;font-weight:600;color:'+calColor+'">'+calidad+'</div>'
-          +'<div style="font-size:10px;color:var(--tm)">'+esc(estanc.slice(0,18))+'</div>'
-          +'<div style="font-size:10px;color:var(--tm)">'+fecha+'</div>'
-        +'</div>'
-        +'<div id="dpLdDetail'+l.id+'" style="display:none;padding:10px 14px 14px 56px;background:var(--bg);border-top:1px dashed var(--bd)">'
-          +'<div style="font-size:11px;color:var(--ts);line-height:1.7"><strong>Resumen IA:</strong> '+esc(resumen)+'</div>'
-          +'<div style="font-size:11px;color:var(--tm);margin-top:4px"><strong>Tel:</strong> '+esc(l.phone)+'</div>'
-          +'<div style="font-size:11px;color:var(--tm)"><strong>Estado CRM:</strong> '+esc(l.status)+'</div>'
-          +'<div style="font-size:11px;color:var(--tm)"><strong>Anuncio/Inter\u00e9s:</strong> '+esc(l.interest||'—')+'</div>'
+          +'<div></div><div></div><div></div><div></div><div></div>'
         +'</div>';
+
+        // NIVEL 3: leads del anuncio (ocultos)
+        html+='<div id="'+anId+'_body" style="display:none">';
+        anLeads.forEach(function(l){
+          var calidad=l._iaCalidad||'...';
+          var estanc=l._iaEstanc||'...';
+          var resumen=l._iaResumen||'Pendiente an\u00e1lisis IA';
+          var calColor=calidad==='Alta'?'#059669':calidad==='Media'?'#d97706':calidad==='Baja'?'#dc2626':'#94a3b8';
+          var fechaIngreso=l.createdAt?new Date(l.createdAt).toLocaleDateString('es-CL'):'—';
+          var vendNom=dpNombre(l.assignedTo);
+          html+='<div onclick="dpToggleLead(\''+l.id+'\')" style="display:grid;grid-template-columns:24px 1fr 70px 90px 80px 90px 90px;gap:6px;align-items:center;padding:7px 14px 7px 42px;border-top:1px solid var(--bd);cursor:pointer;background:var(--p)" onmouseover="this.style.background=\'var(--p2)\'" onmouseout="this.style.background=\'var(--p)\'">'
+            +'<div id="dpLdIcon'+l.id+'" style="font-size:10px;color:var(--tm)">\u25b6</div>'
+            +'<div>'
+              +'<div style="font-size:12px;font-weight:600;color:var(--ts)">'+esc(l.name)+'</div>'
+              +'<div style="font-size:10px;color:var(--tm)">'+esc(l.phone||'—')+'</div>'
+            +'</div>'
+            +'<div style="font-size:10px;color:var(--tm)">'+esc(l.source||'—')+'</div>'
+            +'<div style="font-size:10px;color:var(--tm)">'+esc(vendNom)+'</div>'
+            +'<div style="font-size:10px;font-weight:700;color:'+calColor+'">'+calidad+'</div>'
+            +'<div style="font-size:10px;color:var(--tm)">'+esc(estanc)+'</div>'
+            +'<div style="font-size:10px;color:var(--tm)">'+fechaIngreso+'</div>'
+          +'</div>'
+          +'<div id="dpLdDetail'+l.id+'" style="display:none;padding:10px 14px 12px 56px;background:var(--bg);border-top:1px dashed var(--bd)">'
+            +'<div style="font-size:11px;color:var(--ts);line-height:1.8"><strong>Resumen IA:</strong> '+esc(resumen)+'</div>'
+            +'<div style="display:flex;gap:16px;flex-wrap:wrap;margin-top:6px;font-size:11px;color:var(--tm)">'
+              +'<div><strong>Estado CRM:</strong> '+esc(l.status)+'</div>'
+              +'<div><strong>Tel:</strong> '+esc(l.phone||'—')+'</div>'
+              +'<div><strong>Anuncio:</strong> '+esc(l.interest||'—')+'</div>'
+              +'<div><strong>Ingreso:</strong> '+fechaIngreso+'</div>'
+            +'</div>'
+          +'</div>';
+        });
+        html+='</div></div>';
       });
     }
     html+='</div></div>';
   });
+
   el.innerHTML=html;
   el.style.display='';
 }
@@ -352,6 +427,15 @@ function dpRenderAbanico(leads){
 function dpToggleCat(id){
   var body=document.getElementById('dpCatBody'+id);
   var icon=document.getElementById('dpCatIcon'+id);
+  if(!body) return;
+  var open=body.style.display!=='none';
+  body.style.display=open?'none':'';
+  if(icon) icon.style.transform=open?'':'rotate(90deg)';
+}
+
+function dpToggleAn(anId){
+  var body=document.getElementById(anId+'_body');
+  var icon=document.getElementById(anId+'_icon');
   if(!body) return;
   var open=body.style.display!=='none';
   body.style.display=open?'none':'';
@@ -377,11 +461,13 @@ async function ejecutarAnalisisProfundo(){
   var des=((document.getElementById('dpFiltroDes')||{}).value)||'';
   var has=((document.getElementById('dpFiltroHas')||{}).value)||'';
 
+  // Filtrar usando createdAt para rango de fechas
   var leads=(S.leads||[]).filter(function(l){
     if(origen && l.source!==origen) return false;
     if(vend && l.assignedTo!==vend) return false;
-    if(des && new Date(l.lastInteraction||l.createdAt||0)<new Date(des)) return false;
-    if(has && new Date(l.lastInteraction||l.createdAt||0)>new Date(has+'T23:59:59')) return false;
+    var created=new Date(l.createdAt||l.lastInteraction||0);
+    if(des && created<new Date(des)) return false;
+    if(has && created>new Date(has+'T23:59:59')) return false;
     return true;
   });
 
@@ -391,21 +477,22 @@ async function ejecutarAnalisisProfundo(){
   }
 
   btn.disabled=true;
-  btn.textContent='\u23f3 Analizando '+leads.length+'...';
+  btn.textContent='\u23f3 Cargando...';
   if(res) res.style.display='none';
 
-  // Mostrar abanico inicial sin datos IA (instantáneo)
   window._dpData=leads;
-  dpRenderKpis(leads);
-  dpRenderCharts(leads);
-  dpRenderAbanico(leads);
+  dpPopularAnuncios(leads);
 
   var elCount=document.getElementById('dpLeadsCount');
   if(elCount) elCount.textContent=leads.length+' lead'+(leads.length!==1?'s':'')+' en selecci\u00f3n';
 
+  // Render instantáneo sin IA
+  dpRenderKpis(leads);
+  dpRenderCharts(leads);
+  dpRenderAbanico(leads);
+
   btn.textContent='\u23f3 Clasificando con IA...';
 
-  // Llamar al endpoint de clasificación IA por lotes
   try{
     var filtros={};
     if(origen) filtros.source=origen;
@@ -421,20 +508,18 @@ async function ejecutarAnalisisProfundo(){
     if(!r.ok){var ej=await r.json();throw new Error(ej.error||'Error '+r.status);}
     var data=await r.json();
 
-    // Enriquecer leads con datos IA
     var mapa={};
-    (data.clasificaciones||[]).forEach(function(c){mapa[c.id]=c;});
+    (data.clasificaciones||[]).forEach(function(c){mapa[String(c.id)]=c;});
     leads.forEach(function(l){
-      var c=mapa[l.id]||mapa[String(l.id)];
+      var c=mapa[String(l.id)];
       if(c){l._iaCalidad=c.calidad;l._iaEstanc=c.estancamiento;l._iaResumen=c.resumen;}
     });
 
-    // Re-render con datos IA completos
+    // Re-render completo con datos IA
     dpRenderKpis(leads);
     dpRenderCharts(leads);
     dpRenderAbanico(leads);
   }catch(e){
-    // Si falla la IA, el abanico sigue mostrando con "Pendiente"
     console.warn('[IA clasificacion]',e.message);
   }
 
@@ -742,6 +827,7 @@ async function ejecutarAnalisisIA(){
 <div style="width:220px;flex-shrink:0;background:var(--p2);border:1px solid var(--bd);border-radius:12px;padding:14px;display:flex;flex-direction:column;gap:10px">
   <div style="font-weight:700;font-size:12px;color:var(--ts)">Filtros</div>
   <div><label style="font-size:10px;color:var(--tm);font-weight:600;display:block;margin-bottom:3px">ORIGEN</label><select id="dpFOrigen" onchange="dpAplicarFiltros()" style="width:100%;padding:6px;border-radius:6px;border:1px solid var(--bd);background:var(--bg);color:var(--ts);font-size:11px;font-family:inherit"><option value="">Todos</option><option value="Meta Ads">Meta Ads</option><option value="MercadoLibre">MercadoLibre</option><option value="Chileautos">Chileautos</option><option value="WhatsApp">WhatsApp</option><option value="Yapo">Yapo</option><option value="Manual">Manual</option></select></div>
+  <div><label style="font-size:10px;color:var(--tm);font-weight:600;display:block;margin-bottom:3px">ANUNCIO</label><select id="dpFAnuncio" onchange="dpAplicarFiltros()" style="width:100%;padding:6px;border-radius:6px;border:1px solid var(--bd);background:var(--bg);color:var(--ts);font-size:11px;font-family:inherit"><option value="">Todos</option></select></div>
   <div><label style="font-size:10px;color:var(--tm);font-weight:600;display:block;margin-bottom:3px">VENDEDOR</label><select id="dpFiltroVendedor" onchange="dpAplicarFiltros()" style="width:100%;padding:6px;border-radius:6px;border:1px solid var(--bd);background:var(--bg);color:var(--ts);font-size:11px;font-family:inherit"><option value="">Todos</option></select></div>
   <div><label style="font-size:10px;color:var(--tm);font-weight:600;display:block;margin-bottom:3px">CATEGORIA</label><select id="dpFCat" onchange="dpAplicarFiltros()" style="width:100%;padding:6px;border-radius:6px;border:1px solid var(--bd);background:var(--bg);color:var(--ts);font-size:11px;font-family:inherit"><option value="">Todas</option><option value="1">1 - Sin interacción</option><option value="2">2 - Con actividad</option><option value="3">3 - Intención alta</option><option value="4">4 - Agendado</option><option value="5">5 - Cerrado</option></select></div>
   <div><label style="font-size:10px;color:var(--tm);font-weight:600;display:block;margin-bottom:3px">CALIDAD IA</label><select id="dpFCalidad" onchange="dpAplicarFiltros()" style="width:100%;padding:6px;border-radius:6px;border:1px solid var(--bd);background:var(--bg);color:var(--ts);font-size:11px;font-family:inherit"><option value="">Todas</option><option value="Alta">Alta</option><option value="Media">Media</option><option value="Baja">Baja</option></select></div>
