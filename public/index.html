@@ -174,9 +174,9 @@ async function ejecutarAnalisisProfundo(){
   var has=(document.getElementById('dpFiltroHas')||{}).value||'';
   var leads=S.leads||[];
   if(vend)leads=leads.filter(function(l){return l.assignedTo===vend;});
-  if(leads.length===0){res.innerHTML='<div style="color:#f59e0b;padding:20px;text-align:center">⚠️ No hay leads con esos filtros.</div>';return;}
-  btn.disabled=true;btn.textContent='⏳ Analizando '+leads.length+' leads...';
-  res.innerHTML='<div style="text-align:center;padding:40px 20px;color:var(--tm)"><div style="font-size:32px;margin-bottom:12px">🧠</div><div id="dpStatus" style="font-weight:700;font-size:15px;margin-bottom:8px">Preparando análisis profundo de '+leads.length+' leads...</div><div style="font-size:12px;margin-bottom:20px">El reporte aparece aquí mientras se genera</div><div style="background:var(--bd);border-radius:4px;height:6px;width:100%;max-width:320px;margin:0 auto;overflow:hidden"><div id="dpBar" style="height:100%;background:#1e40af;width:2%;transition:width 0.4s;border-radius:4px"></div></div></div><div id="dpTexto" style="font-size:13px;line-height:1.8;color:var(--ts);padding:0 4px"></div>';
+  if(leads.length===0){res.innerHTML='<div style="color:#f59e0b;padding:20px;text-align:center">\u26a0\ufe0f No hay leads con esos filtros.</div>';return;}
+  btn.disabled=true;btn.textContent='\u23f3 Analizando '+leads.length+' leads...';
+  res.innerHTML='<div style="text-align:center;padding:40px 20px;color:var(--tm)"><div style="font-size:32px;margin-bottom:12px">\ud83e\udde0</div><div id="dpStatus" style="font-weight:700;font-size:15px;margin-bottom:8px">Preparando an\u00e1lisis profundo de '+leads.length+' leads...</div><div style="font-size:12px;margin-bottom:20px">El reporte aparece aqu\u00ed mientras se genera</div><div style="background:var(--bd);border-radius:4px;height:6px;width:100%;max-width:320px;margin:0 auto;overflow:hidden"><div id="dpBar" style="height:100%;background:#1e40af;width:2%;transition:width 0.4s;border-radius:4px"></div></div></div><div id="dpTexto" style="font-size:13px;line-height:1.8;color:var(--ts);padding:0 4px"></div>';
   var filtros={};
   if(vend)filtros.assignedTo=vend;
   if(des)filtros.desde=des;
@@ -190,29 +190,27 @@ async function ejecutarAnalisisProfundo(){
     var bar=document.getElementById('dpBar');
     var status=document.getElementById('dpStatus');
     var textoEl=document.getElementById('dpTexto');
-    var fmt=function(t){return t.replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>').replace(/
-/g,'<br>');};
+    var fmt=function(t){return t.replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>').split('\n').join('<br>');};
     while(true){
       var rd=await reader.read();
       if(rd.done)break;
       buf+=dec.decode(rd.value,{stream:true});
-      var lines=buf.split('
-');buf=lines.pop();
-      for(var i=0;i<lines.length;i++){
-        var line=lines[i];
+      var evts=buf.split('\n');buf=evts.pop();
+      for(var i=0;i<evts.length;i++){
+        var line=evts[i];
         if(!line.startsWith('data:'))continue;
         try{
           var d=JSON.parse(line.slice(5).trim());
           if(d.type==='start'){if(status)status.textContent='Analizando '+d.total+' leads con IA...';}
           else if(d.type==='delta'){texto+=d.text;chars+=d.text.length;if(textoEl)textoEl.innerHTML=fmt(texto);if(bar)bar.style.width=Math.min(95,Math.round(chars/max*100))+'%';}
-          else if(d.type==='done'){if(bar)bar.style.width='100%';if(status)status.textContent='Reporte completo — '+d.total+' leads analizados';btn.disabled=false;btn.textContent='🧠 Generar Análisis Profundo';}
+          else if(d.type==='done'){if(bar)bar.style.width='100%';if(status)status.textContent='Reporte completo \u2014 '+d.total+' leads analizados';btn.disabled=false;btn.textContent='\ud83e\udde0 Generar An\u00e1lisis Profundo';}
           else if(d.type==='error'){throw new Error(d.error);}
         }catch(pe){}
       }
     }
   }catch(e){
-    res.innerHTML='<div style="color:#ef4444;padding:20px;text-align:center">❌ '+e.message+'</div>';
-    btn.disabled=false;btn.textContent='🧠 Generar Análisis Profundo';
+    res.innerHTML='<div style="color:#ef4444;padding:20px;text-align:center">\u274c '+e.message+'</div>';
+    btn.disabled=false;btn.textContent='\ud83e\udde0 Generar An\u00e1lisis Profundo';
   }
 }
 function getFiltrosIA(){return{source:document.getElementById('iaFiltroSource')?.value||'',status:document.getElementById('iaFiltroStatus')?.value||'',assignedTo:document.getElementById('iaFiltroVendedor')?.value||'',desde:document.getElementById('iaFiltroDes')?.value||'',hasta:document.getElementById('iaFiltroHas')?.value||''};}
