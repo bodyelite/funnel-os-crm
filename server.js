@@ -1608,8 +1608,10 @@ app.post('/api/inventory/push', async (req, res) => {
       (i.link ? ' | ' + i.link : '')
     ).join('\n');
     scrapeCache = { ts: Date.now(), data: dataStr, items };
-    await tWrite(F.inventory, req.tenant, items);
-    console.log('[INV-PUSH] ' + items.length + ' autos actualizados por admin');
+    // req.tenant es undefined porque este endpoint no usa auth() — forzar demo_automotora
+    const pushTenant = req.tenant || 'demo_automotora';
+    await tWrite(F.inventory, pushTenant, items);
+    console.log('[INV-PUSH] ' + items.length + ' autos actualizados en tenant: ' + pushTenant);
     res.json({ ok: true, count: items.length });
   } catch(e) { res.status(500).json({ error: e.message }); }
 });
