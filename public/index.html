@@ -917,7 +917,7 @@ async function ejecutarAnalisisIA(){
 <div><div class="acl" style="display:flex;justify-content:space-between;align-items:center;"><span>Responder al cliente (→ WhatsApp)</span><button onclick="enviarPlantillaSaludo3()" style="background:#10b981;color:white;border:none;border-radius:4px;padding:4px 8px;font-size:11px;cursor:pointer;">📨 Enviar Plantilla (saludo3)</button></div><div class="acmp" style="gap:4px;">
     <input type="file" id="waFile" style="display:none;" onchange="uploadWAMedia()">
     <button onclick="document.getElementById('waFile').click()" style="background:#64748b;color:white;border:none;border-radius:4px;padding:0 8px;font-size:16px;cursor:pointer;" title="Enviar Archivo (Foto, Video, PDF)">📎</button>
-    <textarea id="aMsg" placeholder="Escribe un mensaje..." rows="2" style="flex:1;"></textarea>
+    <div style="flex:1;position:relative;"><div id="imgPastePreview" style="display:none;position:absolute;top:-72px;left:0;background:var(--p);border:1px solid var(--bd);border-radius:8px;padding:6px;z-index:10;display:none;align-items:center;gap:8px;"><img id="imgPasteThumb" style="height:60px;border-radius:4px;object-fit:cover;"><button onclick="cancelPastedImg()" style="background:#ef4444;color:#fff;border:none;border-radius:4px;padding:2px 7px;font-size:11px;cursor:pointer;">✕</button></div><textarea id="aMsg" placeholder="Escribe un mensaje... (Ctrl+V para pegar imagen)" rows="2" style="width:100%;box-sizing:border-box;" onpaste="handleMsgPaste(event)"></textarea></div>
     <button class="snb" id="aSnd">Enviar ➤</button>
 </div></div>
 <div class="ai-sum-box" id="aiSumBox"><div class="ai-label">🧠 Resumen IA</div><div class="ai-txt" id="aiSumTxt"></div></div>
@@ -1626,7 +1626,7 @@ function openModal(id){S.mid=id;renderModal();$('mbg').classList.add('show');(fu
 }
 function switchModalTab(tab){var g=document.getElementById('mtabGestion'),h=document.getElementById('mtabHistorial'),g2=document.getElementById('mtabGestion2');var mp=document.getElementById('mMainPane'),hp=document.getElementById('mHistPane'),gp=document.getElementById('mGestion2Pane');if(!g||!mp)return;[g,h,g2].forEach(function(t){if(t){t.style.color='var(--tm)';t.style.borderBottomColor='transparent';}});[mp,hp,gp].forEach(function(p){if(p)p.style.display='none';});if(tab==='historial'){if(h){h.style.color='var(--ac)';h.style.borderBottomColor='var(--ac)';}if(hp){hp.style.display='block';var l=findLead(S.mid);if(l)renderModalHistory(l);}}else if(tab==='gestion2'){if(g2){g2.style.color='var(--ac)';g2.style.borderBottomColor='var(--ac)';}if(gp){gp.style.display='block';var l=findLead(S.mid);if(l)renderHistorialGestion(l);}}else{g.style.color='var(--ac)';g.style.borderBottomColor='var(--ac)';mp.style.display='grid';}}
 
-function renderHistorialGestion(l){var pane=document.getElementById('mGestion2Pane');if(!pane)return;var _e=function(s){return String(s||'').replace(/[&<>"']/g,function(c){return({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]);});};var _dt=function(ts){try{return new Date(ts).toLocaleString('es-CL',{day:'2-digit',month:'2-digit',year:'2-digit',hour:'2-digit',minute:'2-digit'});}catch(e){return '';}};var items=[];(l.notes||[]).forEach(function(n){if(n.author==='Resumen IA')return;items.push({ts:n.ts||0,type:'nota',icon:'📝',label:_e(n.author||'Sistema'),content:_e(n.content||'')});});if(l.nextAction&&l.nextAction.text){items.push({ts:new Date(l.nextAction.date||l.nextAction.createdAt||0).getTime(),type:'tarea',icon:'📅',label:'Tarea agendada',content:_e(l.nextAction.text)+(l.nextAction.iaCompleted?' ✅':'')});}(l.pastActions||[]).forEach(function(a){items.push({ts:new Date(a.date||a.createdAt||0).getTime(),type:'tarea',icon:'✅',label:'Tarea completada',content:_e(a.text||'')});});(l.history||[]).forEach(function(h){items.push({ts:h.ts||0,type:'estado',icon:'🔄',label:'Cambio de estado',content:_e(h.content||'')});});items.sort(function(a,b){return(a.ts||0)-(b.ts||0);});var resHTML=l.ai_summary?'<div style="background:linear-gradient(135deg,#4f46e5,#7c3aed);border-radius:10px;padding:14px;margin-bottom:16px;color:#fff"><div style="font-size:10px;font-weight:700;opacity:.8;margin-bottom:6px">🧠 RESUMEN IA</div><div style="font-size:12px;line-height:1.6">'+_e(l.ai_summary)+'</div></div>':'';if(!items.length&&!l.ai_summary){pane.innerHTML='<div style="color:var(--tm);font-size:12px;padding:8px">Sin historial de gestión aún.</div>';return;}var colMap={nota:'var(--ac)',tarea:'#10b981',estado:'#f59e0b'};pane.innerHTML=resHTML+'<div style="font-size:10.5px;color:var(--tm);text-transform:uppercase;font-weight:700;margin-bottom:14px">📁 Bitácora Cronológica</div>'+items.map(function(item){var col=colMap[item.type]||'var(--ac)';return'<div style="display:flex;gap:10px;margin-bottom:12px"><div style="width:28px;height:28px;border-radius:50%;background:'+col+'22;border:2px solid '+col+';display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:13px">'+item.icon+'</div><div style="flex:1;background:var(--p2);border:1px solid var(--bd);border-radius:8px;padding:8px 10px"><div style="font-size:11px;font-weight:700;color:'+col+';margin-bottom:3px">'+item.label+'</div><div style="font-size:12px;color:var(--ts);line-height:1.5">'+item.content+'</div>'+(item.ts?'<div style="font-size:10px;color:var(--tm);margin-top:4px">'+_dt(item.ts)+'</div>':'')+'</div></div>';}).join('');}
+function renderHistorialGestion(l){var pane=document.getElementById('mGestion2Pane');if(!pane)return;var _e=function(s){return String(s||'').replace(/[&<>"']/g,function(c){return({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]);});};var _dt=function(ts){try{return new Date(ts).toLocaleString('es-CL',{day:'2-digit',month:'2-digit',year:'2-digit',hour:'2-digit',minute:'2-digit'});}catch(e){return '';}};var items=[];(l.notes||[]).forEach(function(n){if(n.author==='Resumen IA')return;var _adm=['gerente','Juan Carlos','Vmichea','Victor Michea','Rmino','Raul Miño','Aquiroga','Abril'];var _isAdm=_adm.some(function(a){return(n.author||'').toLowerCase().indexOf(a.toLowerCase())>-1;});items.push({ts:n.ts||0,type:_isAdm?'nota_admin':'nota',icon:_isAdm?'🔴':'📝',label:_e(n.author||'Sistema'),content:_e(n.content||'')});});if(l.nextAction&&l.nextAction.text){items.push({ts:new Date(l.nextAction.date||l.nextAction.createdAt||0).getTime(),type:'tarea',icon:'📅',label:'Tarea agendada',content:_e(l.nextAction.text)+(l.nextAction.iaCompleted?' ✅':'')});}(l.pastActions||[]).forEach(function(a){items.push({ts:new Date(a.date||a.createdAt||0).getTime(),type:'tarea',icon:'✅',label:'Tarea completada',content:_e(a.text||'')});});(l.history||[]).forEach(function(h){items.push({ts:h.ts||0,type:'estado',icon:'🔄',label:'Cambio de estado',content:_e(h.content||'')});});items.sort(function(a,b){return(a.ts||0)-(b.ts||0);});var resHTML=l.ai_summary?'<div style="background:linear-gradient(135deg,#4f46e5,#7c3aed);border-radius:10px;padding:14px;margin-bottom:16px;color:#fff"><div style="font-size:10px;font-weight:700;opacity:.8;margin-bottom:6px">🧠 RESUMEN IA</div><div style="font-size:12px;line-height:1.6">'+_e(l.ai_summary)+'</div></div>':'';if(!items.length&&!l.ai_summary){pane.innerHTML='<div style="color:var(--tm);font-size:12px;padding:8px">Sin historial de gestión aún.</div>';return;}var colMap={nota:'var(--ac)',nota_admin:'#ef4444',tarea:'#10b981',estado:'#f59e0b'};pane.innerHTML=resHTML+'<div style="font-size:10.5px;color:var(--tm);text-transform:uppercase;font-weight:700;margin-bottom:14px">📁 Bitácora Cronológica</div>'+items.map(function(item){var col=colMap[item.type]||'var(--ac)';return'<div style="display:flex;gap:10px;margin-bottom:12px"><div style="width:28px;height:28px;border-radius:50%;background:'+col+'22;border:2px solid '+col+';display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:13px">'+item.icon+'</div><div style="flex:1;background:var(--p2);border:1px solid var(--bd);border-radius:8px;padding:8px 10px"><div style="font-size:11px;font-weight:700;color:'+col+';margin-bottom:3px">'+item.label+'</div><div style="font-size:12px;color:var(--ts);line-height:1.5">'+item.content+'</div>'+(item.ts?'<div style="font-size:10px;color:var(--tm);margin-top:4px">'+_dt(item.ts)+'</div>':'')+'</div></div>';}).join('');}
 
 function renderModalHistory(l){
   var p=document.getElementById('mHistPane');if(!p)return;
@@ -1638,7 +1638,7 @@ function renderModalHistory(l){
       +'<div style="width:10px;height:10px;border-radius:50%;background:var(--ac);flex-shrink:0;margin-top:4px"></div>'
       +'<div style="flex:1"><div style="font-size:13px;color:var(--tx)">'+esc(h.content||'')+'</div>'
       +'<div style="font-size:11px;color:var(--tm);margin-top:3px">'+(h.ts?fDT(h.ts):'')+'</div></div></div>';
-  }).join('');
+  }).join('')+(function(){var _m=l.chatHistory||[];if(!_m.length)return '';var _ia=_m.filter(function(m){var a=(m.agentName||m.role||'').toLowerCase();return m.role!=='user'&&(a.indexOf('agente')>-1||a.indexOf('ia')>-1||a.indexOf('cata')>-1||a==='assistant');}).length;var _hu=_m.filter(function(m){var a=(m.agentName||m.role||'').toLowerCase();return m.role!=='user'&&a!=='assistant'&&a.indexOf('agente')===-1&&a.indexOf('ia')===-1&&a.indexOf('cata')===-1&&a.length>2;}).length;var _cl=_m.filter(function(m){return m.role==='user';}).length;var _t=_ia+_hu||1;return '<div style="margin-top:16px;padding-top:12px;border-top:1px solid var(--bd)">'+'<div style="font-size:9px;font-weight:800;color:var(--tm);text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px">📊 Estadística de interacciones</div>'+'<div style="display:flex;gap:14px;flex-wrap:wrap;font-size:10px;margin-bottom:6px">'+'<span style="color:#6366f1;font-weight:700">🤖 IA: '+_ia+' ('+Math.round(_ia/_t*100)+'%)</span>'+'<span style="color:#0891b2;font-weight:700">👤 Humano: '+_hu+' ('+Math.round(_hu/_t*100)+'%)</span>'+'<span style="color:#10b981;font-weight:700">💬 Cliente: '+_cl+'</span>'+'</div>'+'<div style="height:5px;border-radius:3px;overflow:hidden;display:flex;gap:1px">'+(_ia?'<div style="flex:'+_ia+';background:#6366f1;min-width:2px"></div>':'')+(_hu?'<div style="flex:'+_hu+';background:#0891b2;min-width:2px"></div>':'')+'</div></div>';}());
 }
 
 function closeModal(){S.mid=null;$('mbg').classList.remove('show');$('mNt').value='';$('aMsg').value='';}
@@ -1690,19 +1690,18 @@ function renderModal(){const l=findLead(S.mid);if(!l){closeModal();return;}$('mT
           <div style="margin-top:10px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;border-top:1px solid #1e293b;padding-top:10px;">
             <span style="color:#94a3b8;font-size:12px;">Registrar Oferta Taller ($)</span>
             <select id="offerInput" style="flex:1; padding:6px; background:var(--p3); border:1px solid var(--bd); border-radius:4px; font-size:11.5px; color:var(--tx);">
-              <option value="">Seleccionar precio de toma...</option>
-              <option value="4500000">$4.500.000</option>
-              <option value="5000000">$5.000.000</option>
-              <option value="6000000">$6.000.000</option>
-              <option value="7000000">$7.000.000</option>
-              <option value="8000000">$8.000.000</option>
-              <option value="9000000">$9.000.000</option>
-              <option value="10000000">$10.000.000</option>
-              <option value="11000000">$11.000.000</option>
-              <option value="12000000">$12.000.000</option>
-              <option value="13000000">$13.000.000</option>
-              <option value="14000000">$14.000.000</option>
-              <option value="15000000">$15.000.000</option>
+              <option value="">Seleccionar rango de toma...</option>
+              <option value="$4.000.000 - $5.000.000">$4.000.000 - $5.000.000</option>
+              <option value="$5.000.000 - $6.000.000">$5.000.000 - $6.000.000</option>
+              <option value="$6.000.000 - $7.000.000">$6.000.000 - $7.000.000</option>
+              <option value="$7.000.000 - $8.000.000">$7.000.000 - $8.000.000</option>
+              <option value="$8.000.000 - $9.000.000">$8.000.000 - $9.000.000</option>
+              <option value="$9.000.000 - $10.000.000">$9.000.000 - $10.000.000</option>
+              <option value="$10.000.000 - $11.000.000">$10.000.000 - $11.000.000</option>
+              <option value="$11.000.000 - $12.000.000">$11.000.000 - $12.000.000</option>
+              <option value="$12.000.000 - $13.000.000">$12.000.000 - $13.000.000</option>
+              <option value="$13.000.000 - $14.000.000">$13.000.000 - $14.000.000</option>
+              <option value="$14.000.000 - $15.000.000">$14.000.000 - $15.000.000</option>
             </select>
             <button onclick="registrarOferta('${lead.id}')" style="background:#22c55e;color:#fff;border:none;border-radius:6px;padding:6px 14px;font-size:12px;cursor:pointer;">✅ Registrar Oferta ($)</button>
           </div>
@@ -1757,21 +1756,20 @@ function renderModal(){const l=findLead(S.mid);if(!l){closeModal();return;}$('mT
           ${isAdmin ? `
           <div style="margin-top:10px; border-top:1px solid var(--bd); padding-top:10px; display:flex; gap:6px; align-items:center;">
             <select id="offerInput" style="flex:1; padding:6px; background:var(--p3); border:1px solid var(--bd); border-radius:4px; font-size:11.5px; color:var(--tx);">
-              <option value="">Seleccionar precio de toma...</option>
-              <option value="4500000">$4.500.000</option>
-              <option value="5000000">$5.000.000</option>
-              <option value="6000000">$6.000.000</option>
-              <option value="7000000">$7.000.000</option>
-              <option value="8000000">$8.000.000</option>
-              <option value="9000000">$9.000.000</option>
-              <option value="10000000">$10.000.000</option>
-              <option value="11000000">$11.000.000</option>
-              <option value="12000000">$12.000.000</option>
-              <option value="13000000">$13.000.000</option>
-              <option value="14000000">$14.000.000</option>
-              <option value="15000000">$15.000.000</option>
+              <option value="">Seleccionar rango de toma...</option>
+              <option value="$4.000.000 - $5.000.000">$4.000.000 - $5.000.000</option>
+              <option value="$5.000.000 - $6.000.000">$5.000.000 - $6.000.000</option>
+              <option value="$6.000.000 - $7.000.000">$6.000.000 - $7.000.000</option>
+              <option value="$7.000.000 - $8.000.000">$7.000.000 - $8.000.000</option>
+              <option value="$8.000.000 - $9.000.000">$8.000.000 - $9.000.000</option>
+              <option value="$9.000.000 - $10.000.000">$9.000.000 - $10.000.000</option>
+              <option value="$10.000.000 - $11.000.000">$10.000.000 - $11.000.000</option>
+              <option value="$11.000.000 - $12.000.000">$11.000.000 - $12.000.000</option>
+              <option value="$12.000.000 - $13.000.000">$12.000.000 - $13.000.000</option>
+              <option value="$13.000.000 - $14.000.000">$13.000.000 - $14.000.000</option>
+              <option value="$14.000.000 - $15.000.000">$14.000.000 - $15.000.000</option>
             </select>
-            <button onclick="registrarOferta('${lead.id}')" style="background:var(--ok); color:#fff; border:none; padding:6px 10px; border-radius:4px; cursor:pointer; font-size:11px; font-weight:bold;">✅ Confirmar</button>
+            <button onclick="registrarOferta('${lead.id}')" style="background:var(--ok); color:#fff; border:none; padding:6px 10px; border-radius:4px; cursor:pointer; font-size:11px; font-weight:bold;">✅ Confirmar</button> ${(S.user&&S.user.role==='admin')?`<button onclick="enviarPrecioCliente('${lead.id}')" style="background:linear-gradient(135deg,#7c3aed,#4f46e5);color:#fff;border:none;border-radius:6px;padding:6px 12px;font-size:11px;cursor:pointer;font-weight:700;margin-left:6px;">📤 Enviar precio al cliente</button>`:''}
           </div>` : ''}
         </div>
       `;
@@ -1955,10 +1953,11 @@ function renderMediaGallery(lead) {
   html += '<strong style="font-size:12px;color:#334155;display:block;margin-bottom:10px;">📷 Galería de Fotos</strong>';
   html += '<div style="display:flex;flex-wrap:wrap;gap:10px;">';
 
-  items.forEach(function(item) {
+  var _gUrls=items.map(function(it){return(it.url&&it.url.startsWith('http'))?it.url:'/api/media/'+it.url;});
+items.forEach(function(item,_gIdx) {
     const imgUrl = (item.url && item.url.startsWith('http')) ? item.url : '/api/media/' + item.url;
     html += '<div style="position:relative; width:90px; height:120px; display:flex; flex-direction:column; align-items:center; gap:4px;">';
-    html += '<div style="position:relative;width:90px;height:90px;border-radius:6px;border:2px solid #cbd5e1;background:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;overflow:hidden;" onclick="window.open(\''+imgUrl+'\',\'_blank\')">';
+    html += '<div style="position:relative;width:90px;height:90px;border-radius:6px;border:2px solid #cbd5e1;background:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;overflow:hidden;" onclick="openGalleryLightbox(_gIdx,_gUrls)">';\')">';
     html += '<img src="' + imgUrl + '" title="Clic para ver detalle o error" style="width:100%;height:100%;object-fit:cover;" onerror="this.onerror=null; this.src=\'https://via.placeholder.com/90/fee2e2/ef4444?text=VER+ERROR\';">';
     html += '</div>';
     html += '<button onclick="downloadMedia(\''+imgUrl+'\'); event.stopPropagation();" style="background:#3b82f6;color:white;border:none;border-radius:4px;padding:4px 0;font-size:10px;font-weight:bold;cursor:pointer;width:100%;box-shadow: 0 1px 2px rgba(0,0,0,0.1);z-index:10;">📥 Descargar</button>';
@@ -2910,6 +2909,85 @@ async function loadBackups(){
   }catch(e){status.textContent='Error: '+e.message;}
 }
 
+
+function openGalleryLightbox(idx,urls){
+  var lb=document.getElementById('rmgLightbox');
+  if(!lb){
+    lb=document.createElement('div');lb.id='rmgLightbox';
+    lb.style.cssText='position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.92);z-index:99999;display:flex;align-items:center;justify-content:center;';
+    lb.innerHTML='<button id="lbClose" style="position:absolute;top:16px;right:20px;background:none;border:none;color:#fff;font-size:28px;cursor:pointer;z-index:2">✕</button>'
+      +'<button id="lbPrev" style="position:absolute;left:16px;background:rgba(255,255,255,.15);border:none;color:#fff;font-size:36px;width:50px;height:50px;border-radius:50%;cursor:pointer;">‹</button>'
+      +'<img id="lbImg" style="max-width:88vw;max-height:85vh;border-radius:8px;object-fit:contain;">'
+      +'<button id="lbNext" style="position:absolute;right:16px;background:rgba(255,255,255,.15);border:none;color:#fff;font-size:36px;width:50px;height:50px;border-radius:50%;cursor:pointer;">›</button>'
+      +'<div id="lbCount" style="position:absolute;bottom:14px;left:50%;transform:translateX(-50%);color:#fff;font-size:12px;font-weight:600;opacity:.8"></div>';
+    document.body.appendChild(lb);
+    document.getElementById('lbClose').onclick=function(){lb.style.display='none';};
+    lb.onclick=function(e){if(e.target===lb)lb.style.display='none';};
+  }
+  var cur=idx||0;
+  function show(i){cur=((i%urls.length)+urls.length)%urls.length;document.getElementById('lbImg').src=urls[cur];document.getElementById('lbCount').textContent=(cur+1)+' / '+urls.length;}
+  document.getElementById('lbPrev').onclick=function(){show(cur-1);};
+  document.getElementById('lbNext').onclick=function(){show(cur+1);};
+  document.onkeydown=function(e){if(e.key==='ArrowRight')show(cur+1);else if(e.key==='ArrowLeft')show(cur-1);else if(e.key==='Escape')lb.style.display='none';};
+  lb.style.display='flex';show(cur);
+}
+
+var _pastedImgFile=null;
+function handleMsgPaste(e){
+  var items=(e.clipboardData||e.originalEvent&&e.originalEvent.clipboardData||{}).items||[];
+  for(var i=0;i<items.length;i++){
+    if(items[i].type.indexOf('image')>-1){
+      e.preventDefault();
+      var file=items[i].getAsFile();
+      _pastedImgFile=file;
+      var url=URL.createObjectURL(file);
+      var thumb=document.getElementById('imgPasteThumb');
+      var prev=document.getElementById('imgPastePreview');
+      if(thumb)thumb.src=url;
+      if(prev)prev.style.display='flex';
+      return;
+    }
+  }
+}
+function cancelPastedImg(){
+  _pastedImgFile=null;
+  var prev=document.getElementById('imgPastePreview');
+  var thumb=document.getElementById('imgPasteThumb');
+  if(prev)prev.style.display='none';
+  if(thumb)thumb.src='';
+}
+// Interceptar el envío para incluir imagen pegada si existe
+var _origSendMsg=null;
+document.addEventListener('DOMContentLoaded',function(){
+  setTimeout(function(){
+    var btn=document.getElementById('aSnd');
+    if(btn&&!btn._p7hooked){
+      btn._p7hooked=true;
+      var origClick=btn.onclick;
+      btn.addEventListener('click',function(e){
+        if(_pastedImgFile){
+          e.stopImmediatePropagation();
+          var fd=new FormData();
+          fd.append('file',_pastedImgFile,'screenshot_'+Date.now()+'.png');
+          fetch('/api/leads/'+S.mid+'/send-media',{method:'POST',headers:{'X-Auth-Token':S.token||''},body:fd})
+            .then(function(r){return r.json();})
+            .then(function(){cancelPastedImg();refresh();})
+            .catch(function(err){toast('Error al enviar imagen: '+err.message,true);});
+        }
+      },true);
+    }
+  },1500);
+});
+
+async function enviarPrecioCliente(leadId){
+  var sel=document.getElementById('offerInput');
+  var rango=sel?sel.value:'';
+  if(!rango)return toast('Selecciona primero un rango de precio',true);
+  if(!confirm('¿Enviar el rango "'+rango+'" al cliente por WhatsApp?'))return;
+  var r=await fetch('/api/tasacion/enviar-precio',{method:'POST',headers:{'Content-Type':'application/json','X-Auth-Token':S.token||''},body:JSON.stringify({leadId,rango})});
+  var d=await r.json();
+  if(r.ok){toast('Precio enviado al cliente ✓');refresh();}else{toast(d.error||'Error al enviar',true);}
+}
 </script>
 
 </body>
