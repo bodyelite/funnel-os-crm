@@ -1,11 +1,7 @@
 const webpush = require('web-push');
 'use strict';
 const{OpenAI}=require('openai');
-const STAFF_TASACION = [
-  {name:'Valentina',   phone:'56955145504'},
-  {name:'Recepcion',   phone:'56983300262'},
-  {name:'Juan Carlos', phone:'56937648536'}
-];
+// STAFF_TASACION eliminado — las alertas de tasación van a los admins del sistema (users.json)
 
 const openai=new OpenAI({apiKey:process.env.OPENAI_API_KEY});
 const express=require('express');
@@ -120,20 +116,6 @@ async function marcela(tenant, history, msg, notes, assignedName, leadSource) {
     if ((leadSource === 'Compra Directa' || leadSource === 'Compramos tu Auto' || leadSource === 'Compramos tu auto') && botCfg?.compras_rmg?.systemPrompt) {
       baseSysPrompt = botCfg.compras_rmg.systemPrompt;
       console.log('[BOT] Modo COMPRADORA activado (origen:', leadSource, ')');
-    }
-        // P4: Detección de respuesta post-precio en leads de compra
-    const esCompraLead = (leadSource === 'Compra Directa' || leadSource === 'Compramos tu Auto' || leadSource === 'Compramos tu auto');
-    if (esCompraLead && lead.tradeIn && lead.tradeIn.rangoPrecio) {
-      const msgLower = (body || '').toLowerCase();
-      const palabrasPositivas = ['sí', 'si', 'dale', 'acepto', 'ok', 'bueno', 'perfecto', 'me interesa', 'adelante', 'de acuerdo', 'agendemos', 'cuando', 'cuándo', 'horario'];
-      const palabrasNegativas = ['no', 'poco', 'bajo', 'barato', 'oferta', 'esperaba', 'mejor precio', 'más', 'mas', 'superior', 'consulta', 'evaluar'];
-      const esPositivo = palabrasPositivas.some(p => msgLower.includes(p));
-      const esNegativo = palabrasNegativas.some(p => msgLower.includes(p)) && !esPositivo;
-      if (esPositivo) {
-        baseSysPrompt = (baseSysPrompt || '') + '\n\nINSTRUCCIÓN ESPECIAL: El cliente acaba de aceptar el precio ofrecido. Debes INMEDIATAMENTE proponer agendar la inspección física del vehículo, indicando que dura aproximadamente 30 minutos. Sugiere días y horarios concretos (Lunes a Viernes de 9:00 a 18:00). Sé entusiasta y confirma el siguiente paso.';
-      } else if (esNegativo) {
-        baseSysPrompt = (baseSysPrompt || '') + '\n\nINSTRUCCIÓN ESPECIAL: El cliente no está conforme con el precio ofrecido o puso objeciones. Debes preguntar amablemente cuál es el valor que estima adecuado para su vehículo, y decirle que lo gestionarás con el equipo de compras para buscar una solución. No prometas montos. Sé empático.';
-      }
     }
     if (!baseSysPrompt) {
       console.error('[Bot-Config-Error] systemPrompt no encontrado en bot.json para tenant:', tenant);
@@ -1481,9 +1463,9 @@ app.post('/webhook',async(req,res)=>{
         ? [{ content: portalNote, author: 'Sistema', ts: Date.now() }]
         : [];
 
-      // Leads de Compra Directa van siempre a Rmino
+      // Leads de Compra Directa van siempre al usuario 'comprador'
       const esCompra = detectedSource === 'Compra Directa';
-      const assignedFinal = esCompra ? 'Rmino' : assignedObj.username;
+      const assignedFinal = esCompra ? 'comprador' : assignedObj.username;
 
       ld[tenant].unshift({
         id: Date.now(), name: contactName, phone: '+'+from,
@@ -1864,7 +1846,7 @@ app.post('/api/leads/migrar-compras', auth('admin'), async (req, res) => {
     let migrados = 0;
     leads.forEach(l => {
       if (FUENTES_COMPRA.includes(l.source) && l.assignedTo !== 'Rmino') {
-        l.assignedTo = 'Rmino';
+        l.assignedTo = 'comprador';
         l.notes = l.notes || [];
         l.notes.push({ content: 'Lead migrado a Compras RMG — asignado a Raúl Miño.', author: 'Sistema', ts: Date.now() });
         migrados++;
@@ -1976,32 +1958,6 @@ app.post('/api/tasacion/offer', auth('admin'), async (req, res) => {
   }
 });
 
-
-// ── P3: Enviar precio/rango al cliente por WhatsApp ────────────────────────
-app.post('/api/tasacion/enviar-precio', auth('admin'), async (req, res) => {
-  try {
-    const { leadId, rango } = req.body;
-    if (!leadId || !rango) return res.status(400).json({ error: 'leadId y rango requeridos' });
-    const leads = await tRead(F.leads, req.tenant, []);
-    const lead = leads.find(l => String(l.id) == String(leadId));
-    if (!lead) return res.status(404).json({ error: 'Lead no encontrado' });
-    const phone = (lead.phone || '').replace(/\D/g, '');
-    if (!phone) return res.status(400).json({ error: 'El lead no tiene teléfono' });
-    const msg = `Estimado/a ${lead.name}, nuestro equipo de compras ha revisado los antecedentes entregados y estima un valor de *${rango}* por su vehículo, sujeto a revisión física del mismo. ¿Le parece conveniente continuar con el proceso?`;
-    await sendWA(phone, msg);
-    // Guardar nota en bitácora
-    lead.notes = lead.notes || [];
-    lead.notes.push({ content: `Precio enviado al cliente: ${rango}`, author: req.user.name || req.user.username, ts: Date.now() });
-    if (lead.tradeIn) lead.tradeIn.rangoPrecio = rango;
-    lead.lastInteraction = new Date().toISOString();
-    await tWrite(F.leads, req.tenant, leads);
-    console.log('[PRECIO-CLIENTE] Enviado a', lead.name, ':', rango);
-    res.json({ ok: true });
-  } catch (e) {
-    console.error('[PRECIO-CLIENTE]', e.message);
-    res.status(500).json({ error: e.message });
-  }
-});
 
 // ── SPRINT 4: PATCH tradeIn fields ──────────────────────────────────────────
 app.patch('/api/leads/:id/tradein', auth('admin','vendedor'), async (req, res) => {
