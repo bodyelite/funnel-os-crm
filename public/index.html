@@ -1949,18 +1949,22 @@ function renderMediaGallery(lead) {
   const items = (lead.media || []).filter(function(item) { return item.type === 'image'; });
   if (!items.length) return;
 
-  let html = '<div id="media-gallery-section" data-lead-id="'+lead.id+'" style="margin-top:12px;padding:14px;background:#f8fafc;border:2px dashed #cbd5e1;border-radius:8px;">';
+  // Guardar URLs en variable global para el lightbox
+  window._galleryUrls = items.map(function(it) {
+    return (it.url && it.url.startsWith('http')) ? it.url : '/api/media/' + it.url;
+  });
+
+  let html = '<div id="media-gallery-section" data-lead-id="' + lead.id + '" style="margin-top:12px;padding:14px;background:#f8fafc;border:2px dashed #cbd5e1;border-radius:8px;">';
   html += '<strong style="font-size:12px;color:#334155;display:block;margin-bottom:10px;">📷 Galería de Fotos</strong>';
   html += '<div style="display:flex;flex-wrap:wrap;gap:10px;">';
 
-  var _gUrls=items.map(function(it){return(it.url&&it.url.startsWith('http'))?it.url:'/api/media/'+it.url;});
-items.forEach(function(item,_gIdx) {
+  items.forEach(function(item, idx) {
     const imgUrl = (item.url && item.url.startsWith('http')) ? item.url : '/api/media/' + item.url;
-    html += '<div style="position:relative; width:90px; height:120px; display:flex; flex-direction:column; align-items:center; gap:4px;">';
-    html += '<div style="position:relative;width:90px;height:90px;border-radius:6px;border:2px solid #cbd5e1;background:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;overflow:hidden;" onclick="openGalleryLightbox(_gIdx,_gUrls)>';
-    html += '<img src="' + imgUrl + '" title="Clic para ver detalle o error" style="width:100%;height:100%;object-fit:cover;" onerror="this.onerror=null; this.src=\'https://via.placeholder.com/90/fee2e2/ef4444?text=VER+ERROR\';">';
+    html += '<div style="position:relative;width:90px;height:120px;display:flex;flex-direction:column;align-items:center;gap:4px;">';
+    html += '<div style="width:90px;height:90px;border-radius:6px;border:2px solid #cbd5e1;background:#f1f5f9;cursor:pointer;display:flex;align-items:center;justify-content:center;overflow:hidden;" onclick="openGalleryLightbox(' + idx + ',window._galleryUrls)">';
+    html += '<img src="' + imgUrl + '" style="width:100%;height:100%;object-fit:cover;" onerror="this.style.display=\'none\';this.parentNode.innerHTML=\'<span style=&quot;font-size:10px;color:#94a3b8;text-align:center;padding:4px&quot;>📷 Ver foto</span>\'">';
     html += '</div>';
-    html += '<button onclick="downloadMedia(\''+imgUrl+'\'); event.stopPropagation();" style="background:#3b82f6;color:white;border:none;border-radius:4px;padding:4px 0;font-size:10px;font-weight:bold;cursor:pointer;width:100%;box-shadow: 0 1px 2px rgba(0,0,0,0.1);z-index:10;">📥 Descargar</button>';
+    html += '<button onclick="downloadMedia(\'' + imgUrl + '\');event.stopPropagation();" style="background:#3b82f6;color:white;border:none;border-radius:4px;padding:4px 0;font-size:10px;font-weight:bold;cursor:pointer;width:100%;">📥 Descargar</button>';
     html += '</div>';
   });
 
