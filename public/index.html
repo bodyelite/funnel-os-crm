@@ -1648,7 +1648,6 @@ function renderModal(){const l=findLead(S.mid);if(!l){closeModal();return;}$('mT
   renderModalCtx(l);renderModalChat(l);renderModalNotes(l);
   renderModalHistory(l);var _ab=$("mAssignBlock"),_ms=$("mAssign");if(_ab&&S.user&&S.user.role==="admin"){_ab.style.display="block";_ms.innerHTML=(S.users||[]).filter(function(u){return u.role==="vendedor";}).map(function(u){return'<option value="'+esc(u.username)+'"'+(u.username===l.assignedTo?' selected':'')+'>'+esc(u.name)+'</option>';}).join("");}else if(_ab){_ab.style.display="none";}
     // ── SPRINT 4: Sección Retoma / Tasación ──────────────────────────────────
-    setTimeout(preseleccionarRango, 300);
     (function injectTradeInSection() {
       const modalId = typeof id !== 'undefined' ? id : null; const lead = typeof l !== 'undefined' ? l : S.leads.find(x => x.id == modalId); if(!lead) return; const ti = lead.tradeIn || {};
       const isAdmin = S.user && S.user.role === 'admin';
@@ -1717,6 +1716,14 @@ function renderModal(){const l=findLead(S.mid);if(!l){closeModal();return;}$('mT
         div.innerHTML = html;
         anchor.parentNode && anchor.parentNode.insertBefore(div.firstElementChild, anchor.nextSibling);
       }
+      // Pre-seleccionar rango guardado
+      setTimeout(function(){
+        var sel=document.getElementById('offerInput');
+        if(!sel)return;
+        var ld=(S.leads||[]).find(function(x){return x.id==S.mid;});
+        var rng=ld&&ld.tradeIn&&ld.tradeIn.rangoPrecio;
+        if(rng){for(var i=0;i<sel.options.length;i++){if(sel.options[i].value===rng){sel.selectedIndex=i;break;}}}
+      }, 200);
     })();
     // ── Fin Sprint 4 tradeIn UI ───────────────────────────────────────────────
 
