@@ -1648,6 +1648,7 @@ function renderModal(){const l=findLead(S.mid);if(!l){closeModal();return;}$('mT
   renderModalCtx(l);renderModalChat(l);renderModalNotes(l);
   renderModalHistory(l);var _ab=$("mAssignBlock"),_ms=$("mAssign");if(_ab&&S.user&&S.user.role==="admin"){_ab.style.display="block";_ms.innerHTML=(S.users||[]).filter(function(u){return u.role==="vendedor";}).map(function(u){return'<option value="'+esc(u.username)+'"'+(u.username===l.assignedTo?' selected':'')+'>'+esc(u.name)+'</option>';}).join("");}else if(_ab){_ab.style.display="none";}
     // ── SPRINT 4: Sección Retoma / Tasación ──────────────────────────────────
+    setTimeout(preseleccionarRango, 300);
     (function injectTradeInSection() {
       const modalId = typeof id !== 'undefined' ? id : null; const lead = typeof l !== 'undefined' ? l : S.leads.find(x => x.id == modalId); if(!lead) return; const ti = lead.tradeIn || {};
       const isAdmin = S.user && S.user.role === 'admin';
@@ -1880,7 +1881,19 @@ window.solicitarTasacion = async function(leadId) {
   const r = await fetch('/api/tasacion/request', { method:'POST', headers:h, body:JSON.stringify({leadId}) });
   toast(r.ok ? 'Tasación solicitada a taller 🔧' : 'Error al solicitar', !r.ok);
 };
-window.registrarOferta = async function(leadId) {
+window.function preseleccionarRango(){
+  // Pre-seleccionar el rango guardado si existe
+  var sel=document.getElementById('offerInput');
+  if(!sel)return;
+  var lead=(S.leads||[]).find(function(l){return l.id==S.mid;});
+  var rango=lead&&lead.tradeIn&&lead.tradeIn.rangoPrecio;
+  if(rango){
+    for(var i=0;i<sel.options.length;i++){
+      if(sel.options[i].value===rango){sel.selectedIndex=i;break;}
+    }
+  }
+}
+registrarOferta = async function(leadId) {
   const sel = document.getElementById('offerInput');
   const rango = sel ? sel.value : '';
   if (!rango) return toast('Selecciona un rango de precio', true);

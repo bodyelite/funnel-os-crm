@@ -1948,19 +1948,53 @@ app.post('/api/tasacion/offer', auth('admin'), async (req, res) => {
     const fmt = esRango ? offerAmount : new Intl.NumberFormat('es-CL', { style:'currency', currency:'CLP', maximumFractionDigits:0 }).format(lead.tradeIn.offer);
     if (lead.assignedTo) {
       const users = await tRead(F.users, tenant, []);
-      const vendedor = users.find(u => u.username === lead.assignedTo) || RMG_VENDORS.find(v => v.username === lead.assignedTo);
+      const vendedor = users.find(u => u.username === lead.assignedTo);
+      // Solo notificar si el vendedor tiene teléfono (ej: usuario 'comprador' no tiene)
       if (vendedor && vendedor.phone) {
-        const msg = `✅ TASACIÓN LISTA\nLead: ${lead.name}\nRetoma: ${lead.tradeIn.make} ${lead.tradeIn.model} ${lead.tradeIn.year}\nOferta taller: ${fmt}\nYa puedes informar al cliente.`;
-        await sendWA(vendedor.phone, msg);
+        const msg = `✅ TASACIÓN LISTA\nLead: ${lead.name}\nRetoma: ${lead.tradeIn.make} ${lead.tradeIn.model} ${lead.tradeIn.year}\nRango estimado: ${fmt}\nYa puedes informar al cliente.`;
+        await sendWA(vendedor.phone, msg).catch(e => console.warn('[TASACION-WA]', e.message));
       }
     }
-    res.json({ ok: true, offer: lead.tradeIn.offer, status: lead.tradeIn.status });
+    // Registrar rango en notas de bitácora
+    lead.notes = lead.notes || [];
+    lead.notes.push({ content: `Rango de compra registrado: ${fmt}`, author: 'Sistema', ts: Date.now() });
+    await tWrite(F.leads, tenant, leads);
+    res.json({ ok: true, offer: lead.tradeIn.offer, rangoPrecio: lead.tradeIn.rangoPrecio, status: lead.tradeIn.status });
   } catch (err) {
     console.error('/api/tasacion/offer error:', err);
     res.status(500).json({ error: err.message });
   }
 });
 
+
+// ── ENVIAR PRECIO AL CLIENTE (registra en chat + bitácora) ─────────────────
+app.post('/api/tasacion/enviar-precio', auth('admin'), async (req, res) => {
+  try {
+    const { leadId, rango } = req.body;
+    if (!leadId || !rango) return res.status(400).json({ error: 'leadId y rango requeridos' });
+    const leads = await tRead(F.leads, tenant, []);
+    const lead = leads.find(l => String(l.id) == String(leadId));
+    if (!lead) return res.status(404).json({ error: 'Lead no encontrado' });
+    const tenant = req.tenant;
+    const phone = (lead.phone || '').replace(/\D/g, '');
+    if (!phone) return res.status(400).json({ error: 'Lead sin teléfono' });
+    const msg = `Estimado/a ${lead.name}, nuestro equipo de compras ha revisado los antecedentes de su vehículo y estima un valor de *${rango}*, sujeto a revisión física. ¿Le parece adecuado continuar con el proceso?`;
+    await sendWA(phone, msg);
+    // Registrar en chatHistory para que aparezca en el chat
+    lead.chatHistory = lead.chatHistory || [];
+    lead.chatHistory.push({ role: 'assistant', content: msg, agentName: 'Equipo Compras', ts: Date.now() });
+    lead.lastInteraction = new Date().toISOString();
+    // Registrar en bitácora
+    lead.notes = lead.notes || [];
+    lead.notes.push({ content: `Precio enviado al cliente: ${rango}`, author: req.user?.name || req.user?.username || 'Admin', ts: Date.now() });
+    await tWrite(F.leads, tenant, leads);
+    console.log('[PRECIO-CLIENTE] Enviado a', lead.name, ':', rango);
+    res.json({ ok: true });
+  } catch (e) {
+    console.error('[PRECIO-CLIENTE]', e.message);
+    res.status(500).json({ error: e.message });
+  }
+});
 
 // ── SPRINT 4: PATCH tradeIn fields ──────────────────────────────────────────
 app.patch('/api/leads/:id/tradein', auth('admin','vendedor'), async (req, res) => {
