@@ -1881,11 +1881,12 @@ window.solicitarTasacion = async function(leadId) {
   toast(r.ok ? 'Tasación solicitada a taller 🔧' : 'Error al solicitar', !r.ok);
 };
 window.registrarOferta = async function(leadId) {
-  const offerAmount = parseFloat((document.getElementById('offerInput')||{}).value||'0');
-  if (!offerAmount) return toast('Ingresa un monto válido', true);
-  const h = {'Content-Type':'application/json','X-Auth-Token': S.token||''};
-  const r = await fetch('/api/tasacion/offer', { method:'POST', headers:h, body:JSON.stringify({leadId, offerAmount}) });
-  if (r.ok) { toast('Oferta registrada ✓ Vendedor notificado'); closeModal(); refresh(); }
+  const sel = document.getElementById('offerInput');
+  const rango = sel ? sel.value : '';
+  if (!rango) return toast('Selecciona un rango de precio', true);
+  const hd = {'Content-Type':'application/json','X-Auth-Token': S.token||''};
+  const r = await fetch('/api/tasacion/offer', { method:'POST', headers:hd, body:JSON.stringify({leadId, offerAmount: rango}) });
+  if (r.ok) { toast('Rango registrado ✓ Equipo notificado'); closeModal(); refresh(); }
 };
 </script>
 

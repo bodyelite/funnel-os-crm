@@ -1937,12 +1937,15 @@ app.post('/api/tasacion/offer', auth('admin'), async (req, res) => {
     if (!lead) return res.status(404).json({ error: 'Lead no encontrado' });
 
     if (!lead.tradeIn) lead.tradeIn = { make:'', model:'', year:'', color:'', status:'Pendiente', offer:0 };
-    lead.tradeIn.offer = Number(offerAmount);
+    // offerAmount puede ser número o rango string como "$7.000.000 - $8.000.000"
+    const esRango = typeof offerAmount === 'string' && offerAmount.includes('-');
+    lead.tradeIn.offer = esRango ? 0 : Number(offerAmount);
+    lead.tradeIn.rangoPrecio = esRango ? offerAmount : null;
     lead.tradeIn.status = 'Evaluado';
 
     await tWrite(F.leads, tenant, leads);
 
-    const fmt = new Intl.NumberFormat('es-CL', { style:'currency', currency:'CLP', maximumFractionDigits:0 }).format(lead.tradeIn.offer);
+    const fmt = esRango ? offerAmount : new Intl.NumberFormat('es-CL', { style:'currency', currency:'CLP', maximumFractionDigits:0 }).format(lead.tradeIn.offer);
     if (lead.assignedTo) {
       const users = await tRead(F.users, tenant, []);
       const vendedor = users.find(u => u.username === lead.assignedTo) || RMG_VENDORS.find(v => v.username === lead.assignedTo);
