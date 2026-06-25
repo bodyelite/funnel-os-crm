@@ -1970,12 +1970,12 @@ app.post('/api/tasacion/offer', auth('admin'), async (req, res) => {
 // ── ENVIAR PRECIO AL CLIENTE (registra en chat + bitácora) ─────────────────
 app.post('/api/tasacion/enviar-precio', auth('admin'), async (req, res) => {
   try {
+    const tenant = req.tenant;
     const { leadId, rango } = req.body;
     if (!leadId || !rango) return res.status(400).json({ error: 'leadId y rango requeridos' });
     const leads = await tRead(F.leads, tenant, []);
     const lead = leads.find(l => String(l.id) == String(leadId));
     if (!lead) return res.status(404).json({ error: 'Lead no encontrado' });
-    const tenant = req.tenant;
     const phone = (lead.phone || '').replace(/\D/g, '');
     if (!phone) return res.status(400).json({ error: 'Lead sin teléfono' });
     const msg = `Estimado/a ${lead.name}, nuestro equipo de compras ha revisado los antecedentes de su vehículo y estima un valor de *${rango}*, sujeto a revisión física. ¿Le parece adecuado continuar con el proceso?`;
