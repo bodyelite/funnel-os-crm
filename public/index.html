@@ -649,7 +649,7 @@ async function ejecutarAnalisisIA(){
 </div>
 <div id="av" class="app" style="display:none">
 <aside class="sb"><h1 id="bizName">FunnelOS</h1><div class="who" id="uBadge">—</div><nav><button class="active" data-view="dashboard">📊 Operación</button><button data-view="leads">📋 Leads</button><button data-view="chileautos" id="navCA" style="background:#e8f5e9;color:#2e7d32;font-weight:700">🏷 Chileautos</button><button data-view="espera-general" id="navEG" style="background:#ede9fe;color:#6d28d9;font-weight:700;display:none">⏳ En Espera</button><button data-view="compras" id="navCompras" style="background:#fff7ed;color:#d97706;font-weight:700">🛍 Compras RMG</button>
-<button data-view="pipeline">🗂 Pipeline</button><button data-view="analytics" id="navA">📈 Analítica</button><button data-view="team" id="navT">👥 Equipo</button><button data-view="inventario" id="navInv">🚗 Inventario</button><button data-view="bi" id="navBI" style="background:linear-gradient(135deg,#1a1a2e,#16213e);color:#a78bfa;border:none;border-radius:8px;padding:7px 13px;font-size:12px;font-weight:700;cursor:pointer;margin-left:4px;font-family:inherit">🧠 BI</button><button data-view="analisis" id="navAnalisis" style="background:linear-gradient(135deg,#7c3aed,#4f46e5);color:#fff;border:none;border-radius:8px;padding:7px 13px;font-size:12px;font-weight:700;cursor:pointer;margin-left:4px;font-family:inherit">🔍 Análisis IA</button><button data-view="config" id="navC">⚙️ Config</button></nav><button onclick="syncInventario()" style="margin-top:6px;width:100%;background:linear-gradient(135deg,#16a34a,#15803d);color:#fff;border:none;border-radius:8px;padding:8px 13px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit" id="btnSyncInv">🔄 Sync RMG</button>
+<button data-view="pipeline">🗂 Pipeline</button><button data-view="analytics" id="navA">📈 Analítica</button><button data-view="team" id="navT">👥 Equipo</button><button data-view="inventario" id="navInv">🚗 Inventario</button><button data-view="bi" id="navBI" style="background:linear-gradient(135deg,#1a1a2e,#16213e);color:#a78bfa;border:none;border-radius:8px;padding:7px 13px;font-size:12px;font-weight:700;cursor:pointer;margin-left:4px;font-family:inherit">🧠 BI</button><button data-view="analisis" id="navAnalisis" style="background:linear-gradient(135deg,#7c3aed,#4f46e5);color:#fff;border:none;border-radius:8px;padding:7px 13px;font-size:12px;font-weight:700;cursor:pointer;margin-left:4px;font-family:inherit">🔍 Análisis IA</button><button data-view="auditoria" id="navAuditoria" style="background:linear-gradient(135deg,#0f766e,#0891b2);color:#fff;border:none;border-radius:8px;padding:7px 13px;font-size:12px;font-weight:700;cursor:pointer;margin-left:4px;font-family:inherit">🔍 Auditoría</button><button data-view="config" id="navC">⚙️ Config</button></nav><button onclick="syncInventario()" style="margin-top:6px;width:100%;background:linear-gradient(135deg,#16a34a,#15803d);color:#fff;border:none;border-radius:8px;padding:8px 13px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit" id="btnSyncInv">🔄 Sync RMG</button>
 <button id="btnInstallApp" onclick="installApp()" style="display:none;margin-top:8px;background:linear-gradient(135deg,#D4A843,#F2C955);color:#0f172a;border:none;border-radius:8px;padding:8px 12px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;align-items:center;gap:6px;letter-spacing:.04em">📲 Instalar App</button>
 <button class="lout" id="loutB">Cerrar sesión</button></aside>
 <main class="mn">
@@ -902,6 +902,32 @@ async function ejecutarAnalisisIA(){
 </div>
 
 </div>
+</div>
+</section>
+
+<section id="view-auditoria" class="view" style="padding:20px;max-width:1400px;margin:0 auto">
+<div class="st">🔍 Auditoría de Gestión</div>
+<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:18px;background:var(--p2);border:1px solid var(--bd);border-radius:10px;padding:12px 16px">
+  <div style="display:flex;gap:4px">
+    <button id="audFH" onclick="audSetRange('hoy')" style="padding:6px 12px;border-radius:7px;border:1px solid var(--bd);background:var(--bg);color:var(--ts);font-size:12px;cursor:pointer;font-family:inherit;font-weight:600">Hoy</button>
+    <button id="audFAy" onclick="audSetRange('ayer')" style="padding:6px 12px;border-radius:7px;border:1px solid var(--bd);background:var(--bg);color:var(--ts);font-size:12px;cursor:pointer;font-family:inherit;font-weight:600">Ayer</button>
+    <button id="audF7" onclick="audSetRange('7d')" style="padding:6px 12px;border-radius:7px;border:1px solid var(--ac);background:var(--ac);color:#fff;font-size:12px;cursor:pointer;font-family:inherit;font-weight:600">7 días</button>
+    <button id="audF30" onclick="audSetRange('30d')" style="padding:6px 12px;border-radius:7px;border:1px solid var(--bd);background:var(--bg);color:var(--ts);font-size:12px;cursor:pointer;font-family:inherit;font-weight:600">30 días</button>
+    <button id="audFP" onclick="audSetRange('custom')" style="padding:6px 12px;border-radius:7px;border:1px solid var(--bd);background:var(--bg);color:var(--ts);font-size:12px;cursor:pointer;font-family:inherit;font-weight:600">Personalizado</button>
+  </div>
+  <div id="audCustomDates" style="display:none;align-items:center;gap:6px">
+    <input type="date" id="audDes" onchange="renderAuditoria()" style="padding:6px 9px;border-radius:7px;border:1px solid var(--bd);background:var(--bg);color:var(--ts);font-size:12px;font-family:inherit">
+    <span style="color:var(--tm);font-size:12px">—</span>
+    <input type="date" id="audHas" onchange="renderAuditoria()" style="padding:6px 9px;border-radius:7px;border:1px solid var(--bd);background:var(--bg);color:var(--ts);font-size:12px;font-family:inherit">
+  </div>
+  <select id="audVend" onchange="renderAuditoria()" style="padding:6px 10px;border-radius:7px;border:1px solid var(--bd);background:var(--bg);color:var(--ts);font-size:12px;font-family:inherit">
+    <option value="">Todos los vendedores</option>
+  </select>
+  <div id="audCount" style="margin-left:auto;font-size:12px;font-weight:700;color:var(--tm)">— leads</div>
+</div>
+<div style="display:flex;gap:16px;align-items:flex-start">
+  <div id="audTableWrap" style="flex:1;min-width:0"></div>
+  <div id="audPanel" style="display:none;width:360px;flex-shrink:0;background:var(--p);border:1px solid var(--bd);border-radius:12px;padding:16px;max-height:calc(100vh - 180px);overflow-y:auto;position:sticky;top:20px"></div>
 </div>
 </section>
 
@@ -1881,7 +1907,7 @@ $('btnResumen').addEventListener('click',async()=>{
 
 $('mSv').addEventListener('click',async()=>{if(!S.mid)return;const btn=$('mSv');btn.disabled=true;btn.textContent='…';try{const l=findLead(S.mid);const st=$('mSt').value;const note=$('mNt').value.trim();const payload={}; if(st&&st!==l?.status) { if(!note){toast('⚠️ OBLIGATORIO: Escribe una leyenda en la bitácora', true); btn.disabled=false; btn.textContent='Guardar cambios'; return;} const aT=$('agendaText').value.trim(), aD=$('agendaDate').value; if(!aT || !aD){toast('⚠️ OBLIGATORIO: Agenda una tarea (fecha/hora)', true); btn.disabled=false; btn.textContent='Guardar cambios'; return;} payload.status=st; }if(S.user&&S.user.role==="admin"){var _a=$("mAssign");if(_a&&_a.value&&_a.value!==l?.assignedTo)payload.assignedTo=_a.value;}if(note)payload.note=note;if(!Object.keys(payload).length){toast('Sin cambios');btn.disabled=false;btn.textContent='Guardar cambios';return;}await api('PATCH','/api/leads/'+S.mid,payload);$('mNt').value='';toast('Lead actualizado ✓');await refresh();renderModal();}catch(e){toast(e.message,true);}finally{btn.disabled=false;btn.textContent='Guardar cambios';}});
 function loadBI(t){const f=document.getElementById('biFr');const b1=document.getElementById('biT1');const b2=document.getElementById('biT2');if(!f)return;if(t==='mapa'){f.src='/mapa_zonas_v4.html';if(b1){b1.style.color='#6d28d9';b1.style.borderBottomColor='#6d28d9';}if(b2){b2.style.color='#888';b2.style.borderBottomColor='transparent';}}else{f.src='/agente_precios.html';if(b2){b2.style.color='#6d28d9';b2.style.borderBottomColor='#6d28d9';}if(b1){b1.style.color='#888';b1.style.borderBottomColor='transparent';}}}
-document.querySelectorAll('.sb nav button').forEach(btn=>{btn.addEventListener('click',async()=>{const view=btn.dataset.view;document.querySelectorAll('.sb nav button').forEach(b=>b.classList.remove('active'));document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));btn.classList.add('active');$('view-'+view).classList.add('active');S.view=view;$('mainTb').style.display=view==='config'?'none':'';if(view==='bi'){loadBI('mapa');}else if(view==='analisis'){initAnalisisIA();}else if(view==='config'){await loadConfig();await loadUsers();loadBackups();}else if(view==='inventario'){await renderInventario();}});});
+document.querySelectorAll('.sb nav button').forEach(btn=>{btn.addEventListener('click',async()=>{const view=btn.dataset.view;document.querySelectorAll('.sb nav button').forEach(b=>b.classList.remove('active'));document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));btn.classList.add('active');$('view-'+view).classList.add('active');S.view=view;$('mainTb').style.display=view==='config'?'none':'';if(view==='bi'){loadBI('mapa');}else if(view==='analisis'){initAnalisisIA();}else if(view==='auditoria'){initAuditoria();}else if(view==='config'){await loadConfig();await loadUsers();loadBackups();}else if(view==='inventario'){await renderInventario();}});});
 syncQ();updRI();
 if(S.token&&S.user)enterApp();else{const _av=$('av');const _lv=$('lv');if(_av)_av.style.display='none';if(_lv)_lv.style.display='grid';}
 </script>
@@ -3025,6 +3051,184 @@ async function enviarPrecioCliente(leadId){
   var r=await fetch('/api/tasacion/enviar-precio',{method:'POST',headers:{'Content-Type':'application/json','X-Auth-Token':S.token||''},body:JSON.stringify({leadId,rango})});
   var d=await r.json();
   if(r.ok){toast('Precio enviado al cliente ✓');refresh();}else{toast(d.error||'Error al enviar',true);}
+}
+</script>
+
+<script>
+// ─── AUDITORÍA DE GESTIÓN ────────────────────────────────────────────────
+var _audRange='7d';
+function audSetRange(r){
+  _audRange=r;
+  var map={hoy:'audFH',ayer:'audFAy','7d':'audF7','30d':'audF30',custom:'audFP'};
+  Object.keys(map).forEach(function(k){
+    var btn=$(map[k]);if(!btn)return;
+    btn.style.background=k===r?'var(--ac)':'var(--bg)';
+    btn.style.color=k===r?'#fff':'var(--ts)';
+    btn.style.borderColor=k===r?'var(--ac)':'var(--bd)';
+  });
+  var cd=$('audCustomDates');if(cd)cd.style.display=r==='custom'?'flex':'none';
+  renderAuditoria();
+}
+function audGetRange(){
+  var now=new Date(),t=new Date(now.getFullYear(),now.getMonth(),now.getDate());
+  if(_audRange==='hoy')return{des:t,has:now};
+  if(_audRange==='ayer'){var y=new Date(t);y.setDate(y.getDate()-1);return{des:y,has:new Date(t.getTime()-1)};}
+  if(_audRange==='7d'){var d=new Date(t);d.setDate(d.getDate()-6);return{des:d,has:now};}
+  if(_audRange==='30d'){var d=new Date(t);d.setDate(d.getDate()-29);return{des:d,has:now};}
+  if(_audRange==='custom'){
+    var dv=($('audDes')||{}).value,hv=($('audHas')||{}).value;
+    return{des:dv?new Date(dv):null,has:hv?new Date(hv+'T23:59:59'):null};
+  }
+  return{des:null,has:now};
+}
+function initAuditoria(){
+  var sel=$('audVend');
+  if(sel){
+    sel.innerHTML='<option value="">Todos los vendedores</option>';
+    (S.users||[]).filter(function(u){return u.role==='vendedor';}).forEach(function(u){
+      sel.innerHTML+='<option value="'+esc(u.username)+'">'+esc(u.name)+'</option>';
+    });
+  }
+  audSetRange('7d');
+}
+function audMsgCounts(l){
+  var msgs=l.chatHistory||[];
+  return{
+    c:msgs.filter(function(m){return m.role==='user';}).length,
+    ia:msgs.filter(function(m){return m.role!=='user'&&m.role!=='agent';}).length,
+    h:msgs.filter(function(m){return m.role==='agent';}).length
+  };
+}
+function audAlertEmoji(l){
+  return l.alertLevel==='fresh'?'🟢':l.alertLevel==='risk'?'🟡':l.alertLevel==='critical'?'🔴':'⚪';
+}
+function audDiag(l){
+  var msgs=[];
+  if(!l.nextAction||!l.nextAction.text)msgs.push('Sin próxima acción agendada');
+  if(!(l.notes||[]).length)msgs.push('Sin notas de gestión');
+  if(l.alertLevel==='critical')msgs.push('Sin respuesta > 60 min');
+  if(!(l.chatHistory||[]).some(function(m){return m.role==='agent';}))msgs.push('Sin respuesta humana');
+  var d=Math.floor((Date.now()-new Date(l.createdAt||l.lastInteraction||0).getTime())/86400000);
+  if(d>7&&l.status==='Nuevo')msgs.push(d+'d en estado Nuevo');
+  return msgs.length?'⚠️ '+msgs.join(' · '):'✅ Gestión al día';
+}
+function renderAuditoria(){
+  var wrap=$('audTableWrap');if(!wrap)return;
+  var range=audGetRange();
+  var fv=($('audVend')||{}).value||'';
+  var leads=(S.leads||[]).filter(function(l){
+    if(fv&&l.assignedTo!==fv)return false;
+    var ts=new Date(l.createdAt||l.lastInteraction||0);
+    if(range.des&&ts<range.des)return false;
+    if(range.has&&ts>range.has)return false;
+    return true;
+  });
+  var cnt=$('audCount');if(cnt)cnt.textContent=leads.length+' lead'+(leads.length!==1?'s':'');
+  if(!leads.length){
+    wrap.innerHTML='<div style="text-align:center;padding:40px;color:var(--tm);background:var(--p2);border:1px solid var(--bd);border-radius:10px">Sin leads en el período seleccionado.</div>';
+    closeAuditPanel();return;
+  }
+  var grp={};
+  leads.forEach(function(l){var v=l.assignedTo||'__sin__';if(!grp[v])grp[v]=[];grp[v].push(l);});
+  var cols='28px 1fr 100px 95px 70px 46px 82px 120px 80px';
+  var hd='<div style="display:grid;grid-template-columns:'+cols+';gap:8px;padding:8px 12px;background:var(--p2);font-size:10px;font-weight:700;color:var(--tm);text-transform:uppercase;letter-spacing:.06em;border-bottom:1px solid var(--bd)">'+
+    '<div></div><div>Cliente / Teléfono</div><div>Auto</div><div>Estado</div><div>Origen</div><div>CRM</div><div>Última</div><div>Próx. Acción</div><div>C / IA / H</div></div>';
+  var html='<div style="background:var(--p);border:1px solid var(--bd);border-radius:10px;overflow:hidden">'+hd;
+  Object.keys(grp).sort().forEach(function(vKey){
+    var vendName=(function(){var u=(S.users||[]).find(function(x){return x.username===vKey;});return u?u.name:vKey==='__sin__'?'Sin asignar':vKey;})();
+    var vLeads=grp[vKey];
+    html+='<div style="padding:7px 12px;background:linear-gradient(90deg,var(--ac)18,var(--p2));font-size:12px;font-weight:700;color:var(--ts);border-top:2px solid var(--ac)">'+
+      '👤 '+esc(vendName)+' <span style="font-weight:400;color:var(--tm)">('+vLeads.length+')</span></div>';
+    vLeads.forEach(function(l){
+      var mc=audMsgCounts(l);
+      var d=Math.floor((Date.now()-new Date(l.createdAt||l.lastInteraction||0).getTime())/86400000);
+      var na=l.nextAction&&l.nextAction.date?
+        '<div style="font-size:10px;color:#f59e0b;font-weight:600">⏰ '+new Date(l.nextAction.date).toLocaleString('es-CL',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})+'</div>'+
+        (l.nextAction.text?'<div style="font-size:10px;color:var(--tm)">'+esc((l.nextAction.text||'').substring(0,28))+'</div>':'')
+        :'<span style="font-size:10px;color:var(--tm)">Sin agendar</span>';
+      html+='<div class="aud-row" data-id="'+l.id+'" style="display:grid;grid-template-columns:'+cols+';gap:8px;padding:9px 12px;border-top:1px solid var(--bd);cursor:pointer;align-items:center;transition:background .12s" onmouseover="this.style.background=\'var(--p2)\'" onmouseout="this.style.background=\'\'">'+
+        '<div style="font-size:15px;text-align:center">'+audAlertEmoji(l)+'</div>'+
+        '<div><div style="font-size:12px;font-weight:700;color:var(--ts)">'+esc(l.name)+'</div><div style="font-size:10px;color:var(--tm)">'+esc(l.phone||'—')+'</div></div>'+
+        '<div style="font-size:11px;color:var(--ts);overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="'+esc(l.interest||'')+'">'+esc(l.interest||'—')+'</div>'+
+        '<div>'+stpl(l.status)+'</div>'+
+        cSrc(l.source)+
+        '<div style="font-size:11px;color:var(--tm);font-weight:600">'+d+'d</div>'+
+        '<div style="font-size:11px;color:var(--tm)">'+fDT(l.lastClientTs||l.lastInteraction)+'</div>'+
+        '<div>'+na+'</div>'+
+        '<div style="font-size:11px;font-weight:700"><span style="color:#10b981">'+mc.c+'</span><span style="color:var(--tm)"> / </span><span style="color:#6366f1">'+mc.ia+'</span><span style="color:var(--tm)"> / </span><span style="color:#0891b2">'+mc.h+'</span></div>'+
+        '</div>';
+    });
+  });
+  html+='</div>';
+  wrap.innerHTML=html;
+  wrap.querySelectorAll('.aud-row[data-id]').forEach(function(el){
+    el.addEventListener('click',function(){openAuditPanel(+el.dataset.id);});
+  });
+}
+function openAuditPanel(id){
+  var l=findLead(id);if(!l)return;
+  document.querySelectorAll('.aud-row').forEach(function(r){r.style.outline='';});
+  var ar=document.querySelector('.aud-row[data-id="'+id+'"]');
+  if(ar)ar.style.outline='2px solid var(--ac)';
+  var _e=esc;
+  var _dt=function(ts){try{return new Date(ts).toLocaleString('es-CL',{day:'2-digit',month:'2-digit',year:'2-digit',hour:'2-digit',minute:'2-digit'});}catch(e){return'—';}};
+  var items=[];
+  (l.notes||[]).forEach(function(n){if(n.author==='Resumen IA')return;items.push({ts:n.ts||0,icon:'📝',color:'var(--ac)',label:_e(n.author||'Nota'),content:_e(n.content||'')});});
+  (l.pastActions||[]).forEach(function(a){items.push({ts:new Date(a.doneAt||a.date||a.createdAt||0).getTime(),icon:'✅',color:'#10b981',label:'Tarea completada',content:_e(a.text||'')});});
+  (l.history||[]).forEach(function(h){items.push({ts:h.ts||0,icon:'🔄',color:'#f59e0b',label:'Cambio de estado',content:_e(h.content||'')});});
+  items.sort(function(a,b){return(a.ts||0)-(b.ts||0);});
+  var mc=audMsgCounts(l);
+  var d=Math.floor((Date.now()-new Date(l.createdAt||l.lastInteraction||0).getTime())/86400000);
+  var diag=audDiag(l);
+  var diagOk=diag.startsWith('✅');
+  var h='<div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:12px">'+
+    '<div><div style="font-size:14px;font-weight:800;color:var(--ts)">'+_e(l.name)+'</div>'+
+    '<div style="font-size:11px;color:var(--tm);margin-top:2px">'+_e(l.phone||'—')+'</div></div>'+
+    '<button onclick="closeAuditPanel()" style="background:none;border:none;font-size:22px;cursor:pointer;color:var(--tm);line-height:1;padding:0 2px">×</button></div>';
+  h+='<div style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:12px">'+cUsr(l.assignedTo)+' '+cSrc(l.source)+' '+stpl(l.status)+
+    '<span style="background:var(--p2);border:1px solid var(--bd);border-radius:12px;padding:2px 8px;font-size:11px;color:var(--tm)">'+d+'d en CRM</span>'+
+    '<span style="font-size:16px">'+audAlertEmoji(l)+'</span></div>';
+  if(l.ai_summary){
+    h+='<div style="background:linear-gradient(135deg,#4f46e5,#7c3aed);border-radius:10px;padding:12px;margin-bottom:12px;color:#fff">'+
+      '<div style="font-size:9px;font-weight:700;opacity:.8;margin-bottom:5px">🧠 RESUMEN IA</div>'+
+      '<div style="font-size:11.5px;line-height:1.6">'+_e(l.ai_summary)+'</div></div>';
+  }
+  h+='<div style="background:var(--p2);border:1px solid var(--bd);border-radius:8px;padding:10px;margin-bottom:12px">'+
+    '<div style="font-size:9px;font-weight:700;color:var(--tm);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px">📊 Mensajes</div>'+
+    '<div style="display:flex;gap:12px;font-size:11px">'+
+    '<span style="color:#10b981;font-weight:700">💬 Cliente: '+mc.c+'</span>'+
+    '<span style="color:#6366f1;font-weight:700">🤖 IA: '+mc.ia+'</span>'+
+    '<span style="color:#0891b2;font-weight:700">👤 Humano: '+mc.h+'</span></div></div>';
+  if(l.nextAction&&l.nextAction.text){
+    var nad=new Date(l.nextAction.date);var isPast=nad<new Date();
+    h+='<div style="background:'+(isPast?'#fef3c7':'#ecfdf5')+';border:1px solid '+(isPast?'#f59e0b':'#10b981')+';border-radius:8px;padding:10px;margin-bottom:12px">'+
+      '<div style="font-size:9px;font-weight:700;color:'+(isPast?'#92400e':'#065f46')+';text-transform:uppercase;margin-bottom:4px">📅 Próxima Acción'+(isPast?' — VENCIDA':'')+'</div>'+
+      '<div style="font-size:12px;font-weight:600;color:var(--ts)">'+_e(l.nextAction.text)+'</div>'+
+      '<div style="font-size:10px;color:var(--tm);margin-top:3px">'+nad.toLocaleString('es-CL',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'})+'</div></div>';
+  }
+  h+='<div style="background:'+(diagOk?'#ecfdf5':'#fff7ed')+';border:1px solid '+(diagOk?'#10b981':'#f59e0b')+';border-radius:8px;padding:10px;margin-bottom:14px">'+
+    '<div style="font-size:9px;font-weight:700;color:'+(diagOk?'#065f46':'#92400e')+';text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px">🩺 Diagnóstico</div>'+
+    '<div style="font-size:12px;color:var(--ts);line-height:1.5">'+_e(diag)+'</div></div>';
+  if(items.length){
+    h+='<div style="font-size:9px;font-weight:700;color:var(--tm);text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px">📁 Bitácora Cronológica</div>';
+    h+=items.map(function(item){
+      return'<div style="display:flex;gap:8px;margin-bottom:10px">'+
+        '<div style="width:26px;height:26px;border-radius:50%;background:'+item.color+'22;border:2px solid '+item.color+';display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:12px">'+item.icon+'</div>'+
+        '<div style="flex:1;background:var(--p2);border:1px solid var(--bd);border-radius:8px;padding:8px 10px">'+
+        '<div style="font-size:10px;font-weight:700;color:'+item.color+';margin-bottom:2px">'+item.label+'</div>'+
+        '<div style="font-size:11.5px;color:var(--ts);line-height:1.5">'+item.content+'</div>'+
+        (item.ts?'<div style="font-size:10px;color:var(--tm);margin-top:3px">'+_dt(item.ts)+'</div>':'')+'</div></div>';
+    }).join('');
+  }else{
+    h+='<div style="text-align:center;color:var(--tm);font-size:12px;padding:12px">Sin historial de gestión aún.</div>';
+  }
+  h+='<button onclick="openModal('+l.id+')" style="width:100%;margin-top:4px;background:var(--ac);color:#fff;border:none;border-radius:8px;padding:11px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">📋 Ir a ficha completa →</button>';
+  var panel=$('audPanel');
+  if(panel){panel.innerHTML=h;panel.style.display='block';}
+}
+function closeAuditPanel(){
+  var p=$('audPanel');if(p)p.style.display='none';
+  document.querySelectorAll('.aud-row').forEach(function(r){r.style.outline='';});
 }
 </script>
 
