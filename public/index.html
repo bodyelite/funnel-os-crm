@@ -453,7 +453,7 @@ function dpRenderAbanico(leads){
           +'<div id="dpLdIcon'+l.id+'" style="font-size:9px;color:var(--tm);transition:transform .2s">\u25b6</div>'
           +'<div>'
             +'<div style="display:flex;align-items:center;gap:5px">'
-              +'<span style="font-size:11px;font-weight:700;color:var(--ts)">'+esc(l.name)+'</span>'
+              +'<span onclick="event.stopPropagation();openModal('+l.id+')" style="font-size:11px;font-weight:700;color:var(--ts);cursor:pointer;border-bottom:1px dashed var(--ac)">'+esc(l.name)+'</span>'
               +(alertaIA?'<span style="font-size:9px;background:rgba(99,102,241,.15);color:#4f46e5;border-radius:4px;padding:1px 5px;font-weight:700">\ud83e\udd16 Sin contacto humano</span>':'')
             +'</div>'
             +'<div style="font-size:9px;color:var(--tm);margin-top:1px">'+esc(l.phone||'—')+' \u00b7 <span style="color:'+diasColor+';font-weight:600">'+diasSin+' sin resp.</span> \u00b7 '+met.diasCRM+'d en CRM</div>'
