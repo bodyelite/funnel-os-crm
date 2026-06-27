@@ -252,16 +252,16 @@ async function scrapeRMG() {
 
       let j = i + 1;
 
-      // Precio Lista: siguiente h2 con $
-      while (j < toks.length && !(toks[j].level === 2 && toks[j].text.includes('$'))) j++;
+      // Precio Lista: siguiente h2 con $ O número con puntos (precio sin $)
+      while (j < toks.length && !(toks[j].level === 2 && (toks[j].text.includes('$') || /^[\d.]{7,}$/.test(toks[j].text.trim())))) j++;
       const precioLista = j < toks.length ? parsePrecio(toks[j].text) : 0;
       j++;
 
       // h6 "Precio Credito:"
       while (j < toks.length && !/precio cr/i.test(toks[j].text)) j++;
       j++;
-      // h2 con $
-      while (j < toks.length && !(toks[j].level === 2 && toks[j].text.includes('$'))) j++;
+      // h2 con $ O numero con puntos
+      while (j < toks.length && !(toks[j].level === 2 && (toks[j].text.includes('$') || /^[\d.]{7,}$/.test(toks[j].text.trim())))) j++;
       const precioCredito = j < toks.length ? parsePrecio(toks[j].text) : 0;
       j++;
 
