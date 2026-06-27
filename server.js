@@ -373,27 +373,27 @@ async function scrapeRMG() {
 
 /* [NODO FANTASMA DESTRUIDO: Cron Viejo (Variable tenant)] */
 
-// Arranque: scrape en vivo, si falla precarga inventory.json al cache
+// Arranque: scrape directo de rmgautos.cl — sin fallback a disco viejo
+// Si falla, reintenta cada 2 minutos hasta tener datos frescos
 (async () => {
   try {
     await scrapeRMG();
-    console.log('[BOOT] scrapeRMG OK:', scrapeCache.items?.length, 'autos');
+    console.log('[BOOT] scrapeRMG OK:', scrapeCache.items?.length, 'autos en vivo');
   } catch(e) {
-    console.warn('[BOOT] scrapeRMG falló:', e.message, '— precargando inventory.json');
+    console.warn('[BOOT] scrapeRMG falló en boot:', e.message);
   }
-  // Si el scrape no llenó el cache, precargar desde disco
+  // Si aun no hay datos, reintentar cada 2 min hasta conseguirlos
   if (!scrapeCache.items || !scrapeCache.items.length) {
-    try {
-      const dbInv = await tRead(F.inventory, 'demo_automotora');
-      if (Array.isArray(dbInv) && dbInv.length) {
-        const pSign = String.fromCharCode(36);
-        const dataStr = dbInv.map(i =>
-          `- ${i.brand||''} ${i.model||''}${i.year?' '+i.year:''}${i.km?' | '+i.km:''} | ${pSign}${(i.price||0).toLocaleString('es-CL')}${i.link?' | '+i.link:''}`
-        ).join('\n');
-        scrapeCache = { ts: Date.now(), data: dataStr, items: dbInv };
-        console.log('[BOOT] Cache precargado desde inventory.json:', dbInv.length, 'autos');
-      }
-    } catch(eB) { console.warn('[BOOT] No se pudo precargar inventory.json:', eB.message); }
+    console.warn('[BOOT] Sin datos — reintentando cada 2 min...');
+    const retry = setInterval(async () => {
+      try {
+        await scrapeRMG();
+        if (scrapeCache.items && scrapeCache.items.length) {
+          console.log('[BOOT-RETRY] scrapeRMG OK:', scrapeCache.items.length, 'autos');
+          clearInterval(retry);
+        }
+      } catch(e) { console.warn('[BOOT-RETRY] fallo:', e.message); }
+    }, 2 * 60 * 1000);
   }
 })();
 
