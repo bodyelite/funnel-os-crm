@@ -1552,7 +1552,18 @@ function renderTeam(){
 
 function _renderTeamAlerts(team,leads){}
 async function syncInventario(){
-  toast('✅ El inventario se sincroniza automáticamente cada hora desde GitHub Actions. Último sync: '+new Date().toLocaleTimeString('es-CL'));
+  const btn = document.getElementById('btnSyncInv');
+  if(btn){ btn.disabled=true; btn.textContent='⏳ Sincronizando...'; }
+  try{
+    const data = await api('GET','/api/precios/inventario');
+    const count = data.count || 0;
+    toast('✅ Inventario actualizado: '+count+' vehículos desde rmgautos.cl');
+    await renderInventario();
+  } catch(e){
+    toast('❌ Error al sincronizar: '+e.message, true);
+  } finally {
+    if(btn){ btn.disabled=false; btn.textContent='🔄 Sync RMG'; }
+  }
 }
 
 async function renderInventario(){

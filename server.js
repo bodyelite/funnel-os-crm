@@ -362,6 +362,8 @@ async function scrapeRMG() {
 
     scrapeCache = { ts: now, data: [...new Set(autos)].join('\n'), items: structuredItems };
     console.log('[RMG-Scraper v4] ' + structuredItems.length + ' autos OK');
+    // Persistir en disco como respaldo ante reinicios
+    try { await tWrite(F.inventory, 'demo_automotora', structuredItems); console.log('[RMG-Scraper] inventory.json actualizado en disco'); } catch(eP) { console.warn('[RMG-Scraper] No se pudo persistir inventory.json:', eP.message); }
     return scrapeCache.data;
   } catch(e) {
     console.warn('[RMG-Scraper] Error:', e.message, '— usando cache o fallback');
@@ -372,6 +374,9 @@ async function scrapeRMG() {
 /* [NODO FANTASMA DESTRUIDO: Cron Viejo (Variable tenant)] */
 
 scrapeRMG().catch(()=>{});
+
+// Cron: re-scrapear rmgautos.cl cada 30 minutos para mantener cache vivo
+setInterval(() => { scrapeRMG().catch(e => console.warn('[RMG-Cron]', e.message)); }, 30 * 60 * 1000);
 
 function invStr(inv){if(!Array.isArray(inv)||!inv.length)return'(sin inventario)';return inv.map(i=>`- [${i.id}] ${i.brand||''} ${i.model}${i.year?' '+i.year:''} | Stock:${i.stock} | $${(i.price||0).toLocaleString('es-CL')}${i.fuel?'|'+i.fuel:''}${i.highlights?'|'+i.highlights:''}`).join('\n');}
 
