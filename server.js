@@ -327,7 +327,7 @@ async function scrapeRMG() {
         j++;
       }
 
-      const cardLink   = linkMap[autoIdx] || 'https://rmgautos.cl/usados/';
+      const cardLink   = linkMap[autoIdx * 2] || 'https://rmgautos.cl/usados/'; // *2: cada auto tiene 2 hrefs en HTML (imagen+titulo)
       const modeloDisp = (modelo && modelo.toUpperCase() !== marca) ? modelo : '';
       const fullModel  = [marca, modeloDisp, version].filter(Boolean).join(' ');
       const highlights = [anno?'Año '+anno:'', km?km.toLocaleString('es-CL')+' km':'', fuel, trans, tipo].filter(Boolean).join(' · ');
