@@ -122,25 +122,8 @@ async function marcela(tenant, history, msg, notes, assignedName, leadSource) {
       return { reply: 'Dame un segundito, estoy validando la info en el sistema...', intent_signal: 'NONE' };
     }
 
-    // Inventario: scrape en vivo → fallback BD → fallback texto
-    let invS = scrapeCache.data;
-    if (!invS) {
-      try {
-        const dbInv = await tRead(F.inventory, tenant, []);
-        if (Array.isArray(dbInv) && dbInv.length > 0) {
-          const pSign = String.fromCharCode(36);
-          invS = dbInv.map(i =>
-            `- ${i.brand||''} ${i.model||''}${i.year?' '+i.year:''}`
-            + (i.km ? ` | ${i.km}` : '')
-            + ` | ${pSign}${(i.price||0).toLocaleString('es-CL')}`
-            + (i.fuel ? ` | ${i.fuel}` : '')
-            + (i.link ? ` | ${i.link}` : '')
-          ).join('\n');
-          console.log('[marcela] scrapeCache vacío — usando inventario BD:', dbInv.length, 'autos');
-        }
-      } catch(eInv) { console.warn('[marcela] Error leyendo inventario BD:', eInv.message); }
-    }
-    if (!invS) invS = '(sin inventario disponible temporalmente)';
+    // Inventario: solo desde scrapeCache en memoria
+    let invS = scrapeCache.data || '(sin inventario disponible temporalmente)';
     const knowledge = botCfg?.knowledge || [];
     // Incluir TODAS las notas de Sistema/Bot (sin slice para no perder la nota de portal del primer mensaje)
     const sysNotes = (notes||[]).filter(n => n.author === 'Sistema' || n.author === 'Bot').map(n => n.content).join(' | ');
@@ -343,7 +326,6 @@ async function scrapeRMG() {
 
     scrapeCache = { ts: now, data: [...new Set(autos)].join('\n'), items: structuredItems };
     console.log('[RMG-Scraper v5] ' + structuredItems.length + ' autos OK');
-    try { await tWrite(F.inventory, 'demo_automotora', structuredItems); console.log('[RMG-Scraper] inventory.json actualizado'); } catch(eP) { console.warn('[RMG-Scraper] No pudo persistir:', eP.message); }
     return scrapeCache.data;
   } catch(e) {
     console.warn('[RMG-Scraper] Error:', e.message, '— usando cache');
@@ -863,7 +845,7 @@ app.get('/api/config',auth(),async(req,res)=>res.json(await tRead(F.config,req.t
 app.put('/api/config',auth('admin'),async(req,res)=>{const u={...await tRead(F.config,req.tenant,{}),...req.body};await tWrite(F.config,req.tenant,u);res.json(u);});
 app.get('/api/bot',auth('admin'),async(req,res)=>res.json(await tRead(F.bot,req.tenant,{})));
 app.put('/api/bot',auth('admin'),async(req,res)=>{const u={...await tRead(F.bot,req.tenant,{}),...req.body};await tWrite(F.bot,req.tenant,u);res.json(u);});
-app.get('/api/inventory',auth('admin','vendedor'),async(req,res)=>res.json(await tRead(F.inventory,req.tenant)));
+app.get('/api/inventory',auth('admin','vendedor'),async(req,res)=>res.json((scrapeCache.items&&scrapeCache.items.length)?scrapeCache.items:[]));
 
 app.post('/api/force-sla',auth('admin'),async(req,res)=>{
   const leads=await tRead(F.leads,req.tenant);
@@ -1613,21 +1595,15 @@ app.post('/api/inventory/push', async (req, res) => {
     scrapeCache = { ts: Date.now(), data: dataStr, items };
     // req.tenant es undefined porque este endpoint no usa auth() — forzar demo_automotora
     const pushTenant = req.tenant || 'demo_automotora';
-    await tWrite(F.inventory, pushTenant, items);
-    console.log('[INV-PUSH] ' + items.length + ' autos actualizados en tenant: ' + pushTenant);
+    // inventory se mantiene solo en memoria (scrapeCache), no en disco
+    console.log('[INV-PUSH] ' + items.length + ' autos actualizados en scrapeCache');
     res.json({ ok: true, count: items.length });
   } catch(e) { res.status(500).json({ error: e.message }); }
 });
 
 app.get('/api/inventory/scraper',auth('admin','vendedor'),async(req,res)=>{
-  let dbInv = await tRead(F.inventory,req.tenant);
-  if(!Array.isArray(dbInv)) dbInv = [];
-  const webItems = (scrapeCache.items && scrapeCache.items.length) ? scrapeCache.items : [];
-  const finalInv = webItems.length > 0 ? webItems : dbInv;
-  if (webItems.length > 0) {
-    try { await tWrite(F.inventory, req.tenant, webItems); } catch(e) { console.error('[INV-SYNC]', e.message); }
-  }
-  res.json({ts:scrapeCache.ts, raw:scrapeCache.data||'', structured: finalInv});
+  const inv = (scrapeCache.items && scrapeCache.items.length) ? scrapeCache.items : [];
+  res.json({ts:scrapeCache.ts, raw:scrapeCache.data||'', structured: inv});
 });
 setInterval(async()=>{
   for(const t of TENANTS){
@@ -1794,15 +1770,7 @@ app.get('/api/precios/mercado',auth('admin','vendedor'),async(req,res)=>{
 app.get('/api/precios/inventario',auth('admin','vendedor'),async(req,res)=>{
   try{
     await scrapeRMG();
-    let inv = (scrapeCache.items && scrapeCache.items.length) ? scrapeCache.items : [];
-    // Fallback a inventory.json si scrape falla o devuelve vacío
-    if (!inv.length) {
-      const dbInv = await tRead(F.inventory, req.tenant);
-      if (Array.isArray(dbInv) && dbInv.length) {
-        inv = dbInv;
-        console.log('[INV] scrape vacío — usando inventory.json:', inv.length, 'autos');
-      }
-    }
+    const inv = (scrapeCache.items && scrapeCache.items.length) ? scrapeCache.items : [];
     res.json({ok:true, count:inv.length, data:inv, ts:scrapeCache.ts||Date.now()});
   }
   catch(e){res.status(500).json({error:e.message});}
