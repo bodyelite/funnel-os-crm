@@ -122,7 +122,7 @@ async function marcela(tenant, history, msg, notes, assignedName, leadSource) {
       return { reply: 'Dame un segundito, estoy validando la info en el sistema...', intent_signal: 'NONE' };
     }
 
-    // Inventario: solo desde scrapeCache en memoria
+    // Inventario: solo desde scrapeCache en memoria (no disco)
     let invS = scrapeCache.data || '(sin inventario disponible temporalmente)';
     const knowledge = botCfg?.knowledge || [];
     // Incluir TODAS las notas de Sistema/Bot (sin slice para no perder la nota de portal del primer mensaje)
@@ -188,7 +188,7 @@ const RMG_VENDORS = [
 
 // ── Web Scraper Heurístico — rmgautos.cl/usados/ ───────────
 const RMG_SCRAPE_URL = 'https://rmgautos.cl/usados/';
-const MARCAS_RE = /Toyota|Peugeot|Kia|Volkswagen|Ford|Chevrolet|Hyundai|Nissan|Suzuki|Mazda|Honda|Mitsubishi|Jeep|Land Rover|BMW|Mercedes|Audi|Subaru|Volvo|Chery|MG|BAIC|Renault|Opel|Ram|Ssangyong|Karry|Alfa Romeo|Changan|Citroen|Fiat|Seat|Skoda|Haval|Geely|BYD/gi;
+const MARCAS_RE = /\b(Toyota|Peugeot|Kia|Volkswagen|Ford|Chevrolet|Hyundai|Nissan|Suzuki|Mazda|Honda|Mitsubishi|Jeep|Land Rover|BMW|Mercedes|Audi|Subaru|Volvo|Chery|MG|BAIC|Renault|Opel|Ram|Ssangyong|Karry|Alfa Romeo|Changan|Citroen|Fiat|Seat|Skoda|Haval|Geely|BYD|DFSK|JAC)\b/i;
 let scrapeCache = { ts: 0, data: '' };
 
 async function scrapeRMG() {
@@ -262,11 +262,9 @@ async function scrapeRMG() {
       // Marca
       let marca = '';
       const iMarca = toks.findIndex(t => t.level === 2 && MARCAS_RE.test(t.text));
-      MARCAS_RE.lastIndex = 0;
       if (iMarca !== -1) {
         const mm = toks[iMarca].text.match(MARCAS_RE);
-        MARCAS_RE.lastIndex = 0;
-        marca = mm ? mm[0].toUpperCase() : toks[iMarca].text.toUpperCase().trim();
+        marca = mm ? mm[1].toUpperCase() : toks[iMarca].text.toUpperCase().trim();
       }
 
       // Modelo (h6 después de la marca)
@@ -287,10 +285,8 @@ async function scrapeRMG() {
         if (/^(AUTOM.TICO|MEC.NICO|CVT|DSG|TIPTRONIC)/i.test(t) && !trans) trans = t.toUpperCase();
         if (/^(SUV|HATCHBACK|SED.N|FURG.N|PICKUP|STATION|MINIVAN|COUPE)/i.test(t) && !tipo) tipo = t.toUpperCase();
         if (tok.level === 2 && !/^\d{4}$/.test(t) && !/^[\d.,]+$/.test(t) && !t.includes('$') && !MARCAS_RE.test(t) && t !== '|' && t.length > 3 && !version && iMarca !== -1) {
-          MARCAS_RE.lastIndex = 0;
           version = t;
         }
-        MARCAS_RE.lastIndex = 0;
       }
 
       const modeloDisp = (modelo && modelo.toUpperCase() !== marca) ? modelo : '';
@@ -543,10 +539,11 @@ async function seed(){
   const bot=await read(F.bot);
   if(!bot.demo_clinica)bot.demo_clinica={greeting:'Hola 👋 Soy la asistente de Clínica Vital. ¿En qué te puedo ayudar?'};
   await write(F.bot,bot);
+  // inventory ya NO se persiste en disco para demo_automotora — solo memoria (scrapeCache)
   const inv=await read(F.inventory);
-  if(!inv.demo_automotora)inv.demo_automotora=[];
   if(!inv.demo_clinica)inv.demo_clinica=[{id:'VIT-DERM',brand:'',model:'Hora Dermatología',stock:12,price:45000},{id:'VIT-GIN',brand:'',model:'Hora Ginecología',stock:9,price:50000},{id:'VIT-MG',brand:'',model:'Medicina General',stock:25,price:32000}];
-  await write(F.inventory,inv);
+  // Solo escribir si hubo cambios para clínica
+  if(!inv.demo_clinica||inv.demo_clinica.length===3) await write(F.inventory,inv);
   const spend=await read(F.spend);
   if(!spend.demo_automotora)spend.demo_automotora={'Meta Ads':1200000,'Google Ads':900000,'Chileautos':600000,'WhatsApp':0,'Instagram':350000,'Landing Page':0,'Referido':0};
   if(!spend.demo_clinica)spend.demo_clinica={'Meta Ads':620000,'Google Ads':880000,'Instagram':310000,'Landing Page':0};
@@ -1593,16 +1590,15 @@ app.post('/api/inventory/push', async (req, res) => {
       (i.link ? ' | ' + i.link : '')
     ).join('\n');
     scrapeCache = { ts: Date.now(), data: dataStr, items };
-    // req.tenant es undefined porque este endpoint no usa auth() — forzar demo_automotora
-    const pushTenant = req.tenant || 'demo_automotora';
-    // inventory se mantiene solo en memoria (scrapeCache), no en disco
-    console.log('[INV-PUSH] ' + items.length + ' autos actualizados en scrapeCache');
+    console.log('[INV-PUSH] ' + items.length + ' autos actualizados en scrapeCache (memoria)');
     res.json({ ok: true, count: items.length });
   } catch(e) { res.status(500).json({ error: e.message }); }
 });
 
 app.get('/api/inventory/scraper',auth('admin','vendedor'),async(req,res)=>{
+  try { await scrapeRMG(); } catch(e) { console.warn('[INV-SCRAPER]', e.message); }
   const inv = (scrapeCache.items && scrapeCache.items.length) ? scrapeCache.items : [];
+  console.log('[INV-SCRAPER] devolviendo', inv.length, 'autos');
   res.json({ts:scrapeCache.ts, raw:scrapeCache.data||'', structured: inv});
 });
 setInterval(async()=>{
@@ -1771,9 +1767,10 @@ app.get('/api/precios/inventario',auth('admin','vendedor'),async(req,res)=>{
   try{
     await scrapeRMG();
     const inv = (scrapeCache.items && scrapeCache.items.length) ? scrapeCache.items : [];
+    console.log('[PRECIOS-INV] devolviendo', inv.length, 'autos');
     res.json({ok:true, count:inv.length, data:inv, ts:scrapeCache.ts||Date.now()});
   }
-  catch(e){res.status(500).json({error:e.message});}
+  catch(e){ console.error('[PRECIOS-INV] error:', e.message); res.status(500).json({error:e.message}); }
 });
 
 // ── ANÁLISIS IA DE LEADS ────────────────────────────────────────
