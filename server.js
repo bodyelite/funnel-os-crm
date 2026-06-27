@@ -1790,7 +1790,19 @@ app.get('/api/precios/mercado',auth('admin','vendedor'),async(req,res)=>{
 });
 
 app.get('/api/precios/inventario',auth('admin','vendedor'),async(req,res)=>{
-  try{await scrapeRMG();const inv=(scrapeCache.items&&scrapeCache.items.length)?scrapeCache.items:[];res.json({ok:true,count:inv.length,data:inv,ts:scrapeCache.ts});}
+  try{
+    await scrapeRMG();
+    let inv = (scrapeCache.items && scrapeCache.items.length) ? scrapeCache.items : [];
+    // Fallback a inventory.json si scrape falla o devuelve vacío
+    if (!inv.length) {
+      const dbInv = await tRead(F.inventory, req.tenant);
+      if (Array.isArray(dbInv) && dbInv.length) {
+        inv = dbInv;
+        console.log('[INV] scrape vacío — usando inventory.json:', inv.length, 'autos');
+      }
+    }
+    res.json({ok:true, count:inv.length, data:inv, ts:scrapeCache.ts||Date.now()});
+  }
   catch(e){res.status(500).json({error:e.message});}
 });
 
