@@ -1941,7 +1941,7 @@ window.solicitarTasacion = async function(leadId) {
   const r = await fetch('/api/tasacion/request', { method:'POST', headers:h, body:JSON.stringify({leadId}) });
   toast(r.ok ? 'Tasación solicitada a taller 🔧' : 'Error al solicitar', !r.ok);
 };
-window.function preseleccionarRango(){
+window.preseleccionarRango = function preseleccionarRango(){
   // Pre-seleccionar el rango guardado si existe
   var sel=document.getElementById('offerInput');
   if(!sel)return;
