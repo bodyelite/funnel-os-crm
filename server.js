@@ -1438,7 +1438,8 @@ app.post('/webhook',async(req,res)=>{
         const titularAd = hasReferral ? (adTracing.headline || '') : '';
         const adId = hasReferral ? (adTracing.source_id || '') : '';
 
-        if (titularAd.toLowerCase().includes('compra') || titularAd.toLowerCase().includes('vende') || (typeof body === 'string' && body.match(/compra directa|evaluar la venta|quiero vender|tasar|retoma|vender mi auto/i))) {
+        const HEADLINES_COMPRA = ['compramos tu auto','vende tu auto','te compramos tu auto','vende tu auto hoy'];
+        if (HEADLINES_COMPRA.some(h => titularAd.toLowerCase().includes(h)) || (typeof body === 'string' && body.match(/compra directa|evaluar la venta|quiero vender|tasar|retoma|vender mi auto/i))) {
             detectedSource = 'Compra Directa';
         }
         
@@ -1529,7 +1530,8 @@ app.post('/webhook',async(req,res)=>{
     let newInterest = null;
 
     if (mt_meta) {
-        newSource = (adTracing && adTracing.headline && (adTracing.headline.toLowerCase().includes('compra') || adTracing.headline.toLowerCase().includes('vende'))) ? 'Compra Directa' : 'Meta Ads';
+        const _HEADLINES_COMPRA = ['compramos tu auto','vende tu auto','te compramos tu auto','vende tu auto hoy'];
+        newSource = (adTracing && adTracing.headline && _HEADLINES_COMPRA.some(h => adTracing.headline.toLowerCase().includes(h))) ? 'Compra Directa' : 'Meta Ads';
         newInterest = (adTracing && adTracing.headline) ? adTracing.headline : 'Anuncio Meta Ads';
         if (newInterest.includes('3008') || newInterest.includes('Peugeot')) newInterest = 'Peugeot 3008 Hybrid (con TV de regalo 📺)';
         else if (newInterest.includes('Silverado') || newInterest.includes('Trailboss')) newInterest = 'Silverado Trailboss (Transferencia Gratis 📄)';
@@ -1687,7 +1689,7 @@ setInterval(async () => {
         if (FINAL_ST.has(lead.status)) continue;
 
         // ─── TAREA 1: Alerta SLA riesgo a los 20 min sin atencion ──────────
-        if (lead.status === 'Nuevo' && !lead.reassigned && !lead.riskAlertSent) {
+        if (enHorarioHabil() && lead.status === 'Nuevo' && !lead.reassigned && !lead.riskAlertSent) {
           const ref = lead.lastClientTs || lead.lastInteraction;
           if (ref) {
             const minsSinAtencion = (Date.now() - new Date(ref).getTime()) / 60000;
