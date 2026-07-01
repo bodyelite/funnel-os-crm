@@ -445,6 +445,40 @@ function enHorarioHabil() {
   return totalMins >= startMins && totalMins <= endMins;
 }
 
+function _pretendSantiagoMs(date) {
+  const options = { timeZone: 'America/Santiago', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false };
+  const parts = new Intl.DateTimeFormat('en-US', options).formatToParts(date);
+  const o = {};
+  for (const p of parts) if (p.type !== 'literal') o[p.type] = p.value;
+  let hh = parseInt(o.hour, 10); if (hh === 24) hh = 0;
+  return Date.UTC(parseInt(o.year, 10), parseInt(o.month, 10) - 1, parseInt(o.day, 10), hh, parseInt(o.minute, 10), parseInt(o.second, 10));
+}
+
+function businessMinutesBetween(fromDate, toDate) {
+  const from = new Date(fromDate), to = new Date(toDate);
+  if (isNaN(from.getTime()) || isNaN(to.getTime()) || to <= from) return 0;
+  const pf = _pretendSantiagoMs(from);
+  const pt = _pretendSantiagoMs(to);
+  const DAY = 86400000;
+  let dayStart = Math.floor(pf / DAY) * DAY;
+  let total = 0;
+  while (dayStart < pt) {
+    const wd = new Date(dayStart).getUTCDay();
+    let winStartMin = null, winEndMin = null;
+    if (wd >= 1 && wd <= 5) { winStartMin = 10 * 60; winEndMin = 18 * 60 + 30; }
+    else if (wd === 6) { winStartMin = 10 * 60; winEndMin = 14 * 60; }
+    if (winStartMin !== null) {
+      const winStart = dayStart + winStartMin * 60000;
+      const winEnd = dayStart + winEndMin * 60000;
+      const ovStart = Math.max(winStart, pf, dayStart);
+      const ovEnd = Math.min(winEnd, pt, dayStart + DAY);
+      if (ovEnd > ovStart) total += (ovEnd - ovStart) / 60000;
+    }
+    dayStart += DAY;
+  }
+  return total;
+}
+
 function calcAlert(lead){
   // Si no estamos en horario hábil, el SLA se congela en 'fresh' (a menos que ya estuviera crítico/en riesgo antes de cerrar)
   if (!enHorarioHabil()) {
@@ -463,7 +497,7 @@ function calcAlert(lead){
   if(!applies)return'none';
   const ref=(lead.status==='esperando_respuesta_chileautos'||lead.status==='esperando_respuesta_general')?lead.lastInteraction:(lead.lastClientTs||lead.lastInteraction);
   if(!ref)return'none';
-  const m=(Date.now()-new Date(ref).getTime())/60000;
+  const m=businessMinutesBetween(ref, new Date());
   if(m>SLA_YELLOW)return'critical';
   if(m>SLA_GREEN)return'risk';
   return'fresh';
@@ -490,7 +524,7 @@ async function applySlaRules(tenant){
     }
     if(lead.status==='Nuevo'){
       const ref=(lead.status==='esperando_respuesta_chileautos'||lead.status==='esperando_respuesta_general')?lead.lastInteraction:(lead.lastClientTs||lead.lastInteraction);
-      const mins=ref?(Date.now()-new Date(ref).getTime())/60000:0;
+      const mins=ref?businessMinutesBetween(ref, new Date()):0;
       if(mins>SLA_REASSIGN&&!lead.reassigned && enHorarioHabil()){
         const nextObj=await rrNext(tenant,lead.assignedTo);
         if(nextObj&&nextObj.username!==lead.assignedTo){
