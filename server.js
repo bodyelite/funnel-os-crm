@@ -414,35 +414,48 @@ async function getSellers(tenant) {
 async function rrNext(tenant,exclude=null){const sl=await getSellers(tenant);if(!sl.length)return null;const pool=exclude?sl.filter(s=>s.username!==exclude):sl;const list=pool.length?pool:sl;const rr=await read(F.rr);const idx=(rr[tenant]||0)%list.length;rr[tenant]=(idx+1)%list.length;await write(F.rr,rr);return list[idx];}
 
 
+function _santiagoNowString() {
+  try {
+    return new Intl.DateTimeFormat('es-CL', { timeZone: 'America/Santiago', hour: 'numeric', minute: 'numeric', hour12: false, weekday: 'long' }).format(new Date());
+  } catch (e) {
+    return 'ERROR:' + e.message;
+  }
+}
+
 function enHorarioHabil() {
-  const d = new Date();
-  // Ajuste a hora de Chile (UTC-4 o UTC-3 dependiendo de la época, asumimos zona local del servidor)
-  // Lo ideal es fijarlo a la zona horaria de Chile si el servidor está en otra parte.
-  // Usaremos Intl.DateTimeFormat para estar seguros.
-  const options = { timeZone: 'America/Santiago', hour: 'numeric', minute: 'numeric', hour12: false, weekday: 'long' };
-  const formatter = new Intl.DateTimeFormat('es-CL', options);
-  const parts = formatter.formatToParts(d);
-  
-  let hour = 0, minute = 0, weekday = '';
-  for (const p of parts) {
-    if (p.type === 'hour') hour = parseInt(p.value, 10);
-    if (p.type === 'minute') minute = parseInt(p.value, 10);
-    if (p.type === 'weekday') weekday = p.value.toLowerCase();
+  try {
+    const d = new Date();
+    const options = { timeZone: 'America/Santiago', hour: 'numeric', minute: 'numeric', hour12: false, weekday: 'long' };
+    const formatter = new Intl.DateTimeFormat('es-CL', options);
+    const parts = formatter.formatToParts(d);
+
+    let hour = null, minute = null, weekday = '';
+    for (const p of parts) {
+      if (p.type === 'hour') hour = parseInt(p.value, 10);
+      if (p.type === 'minute') minute = parseInt(p.value, 10);
+      if (p.type === 'weekday') weekday = p.value.toLowerCase();
+    }
+
+    if (hour === null || minute === null || !weekday || isNaN(hour) || isNaN(minute)) {
+      console.error('[TZ-ERROR] enHorarioHabil: Intl no devolvio hour/minute/weekday validos. parts=', JSON.stringify(parts), '| TZ env:', process.env.TZ, '| Node:', process.version);
+      return false;
+    }
+
+    if (weekday === 'domingo') return false;
+
+    const totalMins = hour * 60 + minute;
+    const startMins = 10 * 60;
+    const endMins = 18 * 60 + 30;
+
+    if (weekday === 'sábado' || weekday === 'sabado') {
+        return totalMins >= startMins && totalMins <= (14 * 60);
+    }
+
+    return totalMins >= startMins && totalMins <= endMins;
+  } catch (e) {
+    console.error('[TZ-ERROR] enHorarioHabil lanzo excepcion, se congela SLA por seguridad:', e.message, '| TZ env:', process.env.TZ, '| Node:', process.version);
+    return false;
   }
-
-  // Si es Domingo, nunca es hábil
-  if (weekday === 'domingo') return false;
-
-  const totalMins = hour * 60 + minute;
-  const startMins = 10 * 60; // 10:00
-  const endMins = 18 * 60 + 30; // 18:30
-
-  // Si es Sábado, el cierre es a las 14:00 según lo que me comentaste antes
-  if (weekday === 'sábado' || weekday === 'sabado') {
-      return totalMins >= startMins && totalMins <= (14 * 60);
-  }
-
-  return totalMins >= startMins && totalMins <= endMins;
 }
 
 function _pretendSantiagoMs(date) {
@@ -526,6 +539,7 @@ async function applySlaRules(tenant){
       const ref=(lead.status==='esperando_respuesta_chileautos'||lead.status==='esperando_respuesta_general')?lead.lastInteraction:(lead.lastClientTs||lead.lastInteraction);
       const mins=ref?businessMinutesBetween(ref, new Date()):0;
       if(mins>SLA_REASSIGN&&!lead.reassigned && enHorarioHabil()){
+        console.log('[SLA-REASSIGN]', 'lead='+lead.name, 'mins='+mins.toFixed(1), 'Santiago='+_santiagoNowString());
         const nextObj=await rrNext(tenant,lead.assignedTo);
         if(nextObj&&nextObj.username!==lead.assignedTo){
           const aiSumR=lead.ai_summary?' Resumen IA: '+lead.ai_summary:'';
@@ -2459,4 +2473,4 @@ setTimeout(runHourlyBackup, 5 * 60 * 1000);
 setInterval(runHourlyBackup, 60 * 60 * 1000);
 // ─────────────────────────────────────────────────────────────────────────────
 
-app.listen(PORT,()=>{console.log(`🚀 FunnelOS :${PORT} | SLA_GREEN=${SLA_GREEN} SLA_REASSIGN=${SLA_REASSIGN} SLA_YELLOW=${SLA_YELLOW}`);seed().catch(console.error);});
+app.listen(PORT,()=>{console.log(`🚀 FunnelOS :${PORT} | SLA_GREEN=${SLA_GREEN} SLA_REASSIGN=${SLA_REASSIGN} SLA_YELLOW=${SLA_YELLOW}`);console.log('[TZ-CHECK] Node:',process.version,'| TZ env:',process.env.TZ,'| Santiago ahora:',_santiagoNowString(),'| enHorarioHabil():',enHorarioHabil());seed().catch(console.error);});
